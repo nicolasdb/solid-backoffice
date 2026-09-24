@@ -1,0 +1,38 @@
+# Serves the static build (dist/) behind nginx-gateway, which handles TLS and
+# routing. Deliberately independent of the provider stack: the app is its own
+# project, and only the pod is shared with it.
+#
+# Rename the service, container_name and labels for each app — the container
+# name is what the gateway vhost proxies to.
+services:
+  APP-web:
+    image: nginx:alpine
+    container_name: APP-web
+    restart: unless-stopped
+
+    networks:
+      - gateway
+
+    volumes:
+      # Built locally and rsynced — nothing is compiled on the server, so there
+      # is no node toolchain to maintain there. This is a bind mount, so a new
+      # build is served without restarting the container.
+      - ./dist:/usr/share/nginx/html:ro
+      - ./deploy/nginx-site.conf:/etc/nginx/conf.d/default.conf:ro
+
+    labels:
+      app.name: "APP-web"
+      app.description: "Static SPA built from solid-kit"
+      app.domain: "APP.example.org"
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/index.html"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  # Shared with nginx-gateway, which creates it.
+  gateway:
+    external: true
