@@ -5,17 +5,19 @@
  * `#app`. That is enough for an app of this size, and it is what the three apps
  * this kit was extracted from all converged on independently.
  *
- * Replace `renderHome` with the real thing. Everything above it is the part
- * worth keeping unchanged between apps.
+ * `renderHome` hands over to the backoffice's own screens; everything above
+ * it is the kit's shell, kept unchanged.
  */
 import "./styles/core.css";
 import "./styles/theme.css";
 import "./styles/patterns.css";
-import { completeLogin, getSession, loginWithIdentifier, logout } from "./lib/auth";
+import { completeLogin, loginWithIdentifier, logout } from "./lib/auth";
 import { describePodError, getPrimaryPodUrl, isAuthError } from "./lib/pod";
 import { APP_NAME, DEFAULT_IDENTIFIER } from "./config";
 import { focusView } from "./ui/a11y";
 import { renderError, renderPending } from "./ui/patterns";
+import { renderMembership } from "./onboarding";
+import "./styles/backoffice.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
@@ -130,67 +132,15 @@ function renderErrorView(webId: string, err: unknown): void {
 }
 
 /**
- * Replace this. It exists to prove the chain end to end — session, WebID, pod
- * root — so a new app starts from something known to work rather than from a
- * blank file.
- *
- * The links to the kit's reference pages live HERE, in the placeholder, rather
- * than in the shell above: replacing this function is what removes them. An app
- * built from the kit gets no stray links pointing at pages its users have no
- * business seeing, and nothing has to be remembered or configured off.
- * Both reference pages still ship in `dist/` — /styleguide.html and
- * /guidelines.html — they just stop being linked from the app.
+ * Slice A is the whole home screen for now: the member's side of the
+ * handshake. The kit's links to /styleguide.html and /guidelines.html went
+ * with the kit's placeholder; both pages still ship in dist/.
  */
 async function renderHome(webId: string, podUrl: string): Promise<void> {
-  app.innerHTML = `
-    <main class="screen stack">
-      <div class="topbar">
-        <span class="meta">${esc(APP_NAME)}</span>
-        <button id="logout" class="ghost">Sign out</button>
-      </div>
-      <h1>Connected</h1>
-      <p class="lead">This is where the app goes.</p>
-      <dl class="stack">
-        <div>
-          <dt class="label-mono">WebID</dt>
-          <dd><code>${esc(webId)}</code></dd>
-        </div>
-        <div>
-          <dt class="label-mono">Pod root</dt>
-          <dd><code>${esc(podUrl)}</code></dd>
-        </div>
-      </dl>
-      <p class="meta">
-        Session id <code>${esc(getSession().info.sessionId)}</code> — must be
-        unique per app, see src/config.ts.
-      </p>
-
-      <hr />
-
-      <nav class="stack">
-        <p class="label-mono">Kit reference</p>
-        <p>
-          <a href="/styleguide.html">Design system</a>
-          <span class="meta">
-            — tokens, type scale and components, with live contrast ratios.
-          </span>
-        </p>
-        <p>
-          <a href="/guidelines.html">UX guidelines</a>
-          <span class="meta">
-            — the interaction patterns, running, and how their limits are set.
-          </span>
-        </p>
-        <p class="meta">This block goes when you replace <code>renderHome</code>.</p>
-      </nav>
-    </main>
-  `;
-  document.querySelector<HTMLButtonElement>("#logout")!.addEventListener("click", async () => {
+  await renderMembership(app, webId, podUrl, async () => {
     await logout();
     renderLoginView();
   });
-
-  focusView(app);
 }
 
 main();

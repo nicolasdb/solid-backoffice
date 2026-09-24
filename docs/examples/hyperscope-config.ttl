@@ -1,0 +1,21 @@
+# config.ttl — what the backoffice needs to know about a collective.
+#
+# Upload to https://pod.nicolasdb.eu/hyperscope/config.ttl, then give it
+# Read for acl:AuthenticatedAgent: people read it BEFORE they are members,
+# to know where to send their request. Nothing in it is secret.
+#
+# The hs: namespace is provisional (solid-kit ADR 006, open questions).
+
+@prefix hs:   <https://pod.nicolasdb.eu/hyperscope/vocab#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix ldp:  <http://www.w3.org/ns/ldp#> .
+
+<#collective> a hs:Collective ;
+    foaf:name "HyperScope" ;
+    # The IRI members point at with org:memberOf. Already in membres.ttl.
+    hs:group <membres.ttl#hyperscope> ;
+    ldp:inbox <inbox/> ;
+    # The WebID members grant Read to when they share. Never a group.
+    hs:agent <agents/agent#me> ;
+    # Created at the root of each member's pod.
+    hs:bundleFolder "output2hyperscope/" .

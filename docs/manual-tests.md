@@ -218,3 +218,38 @@ And two from the laws the kit follows without a machine check
   — WebID, pod URL, with or without a trailing slash?
 
 See [`ux-principles.md`](ux-principles.md) for where these come from.
+
+---
+
+## Slice A — member side of the handshake
+
+Run with a test account that is **not** already a member (Neil's), against the
+live HyperScope pod. Before starting, the collective's owner has:
+
+- uploaded `docs/examples/hyperscope-config.ttl` to
+  `hyperscope/config.ttl`, with Read for `acl:AuthenticatedAgent`;
+- checked that `hyperscope/inbox/` gives `acl:AuthenticatedAgent` Append.
+
+Then, signed in as the test account:
+
+1. **Name.** Save a name. Open the profile document in a new tab: `foaf:name`
+   is there, and nothing else in the profile changed.
+2. **Agent.** Add a WebID; remove it; undo. The profile carries
+   `acl:delegates` exactly once.
+3. **Inbox.** "Ask to join" is disabled before the inbox exists. Create it.
+   `inbox/.acl` has the owner block and `acl:AuthenticatedAgent` Append with
+   `acl:default`; the profile has `ldp:inbox`.
+4. **Join.** Ask to join. The profile has `org:memberOf`; a new `as:Join`
+   appears in `hyperscope/inbox/` (check as the owner). The screen says
+   "pending", not "refused", although the test account cannot read the roster.
+5. **Accept by hand.** As the owner, add the test WebID to `membres.ttl`.
+   Reload: the screen says "You are a member" (only if members can read
+   `membres.ttl`; otherwise it stays "pending", which is a finding).
+6. **Share.** Share the folder. `output2hyperscope/.acl` grants
+   `agent#me` Read with `acl:default`, and an `as:Announce` is in the inbox.
+   Put a file in the folder and run the pull procedure: it is picked up.
+7. **Stop sharing, then undo.** The grant disappears, then comes back.
+8. **Leave.** The state becomes "left" while the roster still lists the
+   account.
+
+Write down anything the copy got wrong, not just what failed.

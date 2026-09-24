@@ -1,0 +1,265 @@
+/**
+ * Collectives, membership and publication — solid-kit ADR 006, member side.
+ *
+ * Everything here is either a pure parse/serialize function (tested without a
+ * pod) or a thin write that does one protocol step. The backoffice is generic:
+ * nothing about a particular collective is hardcoded. A collective is described
+ * by a `config.ttl` on its own pod, and `src/config.ts` only lists where those
+ * files are.
+ *
+ * Two rules from the ADR that the code has to keep:
+ *
+ * - MEMBERSHIP IS READ FROM BOTH SIDES, NEVER STORED. The member's profile says
+ *   `org:memberOf`; the collective's roster says `foaf:member`. The state is
+ *   computed from the two every time. There is no "status" field to go stale.
+ * - MEMBERSHIP GRANTS NOTHING. Joining writes the profile and sends a request;
+ *   publishing is a separate, per-WebID ACL grant. Never a group in an ACL.
+ */
+import { DataFactory, Parser, Writer, type Quad } from "n3";
+import {
+  getSolidDataset,
+  getThing,
+  saveSolidDatasetAt,
+  setThing,
+  addUrl,
+  removeUrl,
+  setStringNoLocale,
+  setUrl,
+  getUrlAll,
+  createThing,
+} from "@inrupt/solid-client";
+import { authFetch } from "./auth";
+
+export const NS = {
+  foaf: "http://xmlns.com/foaf/0.1/",
+  org: "http://www.w3.org/ns/org#",
+  acl: "http://www.w3.org/ns/auth/acl#",
+  ldp: "http://www.w3.org/ns/ldp#",
+  as: "https://www.w3.org/ns/activitystreams#",
+  xsd: "http://www.w3.org/2001/XMLSchema#",
+  rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+  /**
+   * PROVISIONAL. The same namespace the pull procedure's provenance.ttl uses.
+   * It lives on the HyperScope pod although the pattern is generic; moving it
+   * is an open question in ADR 006, and every term that uses it is here, so the
+   * move is one line.
+   */
+  hs: "https://pod.nicolasdb.eu/hyperscope/vocab#",
+} as const;
+
+const FOAF_NAME = NS.foaf + "name";
+const FOAF_MEMBER = NS.foaf + "member";
+const MEMBER_OF = NS.org + "memberOf";
+const DELEGATES = NS.acl + "delegates";
+const INBOX = NS.ldp + "inbox";
+
+/** What a collective's `config.ttl` declares. */
+export interface Collective {
+  configUrl: string;
+  /** The IRI members point at with `org:memberOf`, and the roster lists under. */
+  group: string;
+  name: string;
+  /** Where `as:Join` and `as:Announce` go. Signed-in agents may Append. */
+  inbox: string;
+  /** The collective's agent: the WebID a member grants Read to when publishing. */
+  agent: string;
+  /** The container name a member publishes through, e.g. "output2hyperscope/". */
+  bundleFolder: string;
+}
+
+function parse(turtle: string, base: string): Quad[] {
+  return new Parser({ baseIRI: base }).parse(turtle);
+}
+
+function objectsOf(quads: Quad[], subject: string, predicate: string): string[] {
+  return quads
+    .filter((q) => q.subject.value === subject && q.predicate.value === predicate)
+    .map((q) => q.object.value);
+}
+
+/**
+ * Parses a collective's `config.ttl`. Throws, naming what is missing, rather
+ * than filling a default: a guessed agent WebID is a grant to the wrong party.
+ */
+export function parseCollectiveConfig(turtle: string, configUrl: string): Collective {
+  const quads = parse(turtle, configUrl);
+  const subject = quads.find(
+    (q) => q.predicate.value === NS.rdf + "type" && q.object.value === NS.hs + "Collective"
+  )?.subject.value;
+  if (!subject) throw new Error(`${configUrl} declares no hs:Collective.`);
+
+  const one = (predicate: string, label: string): string => {
+    const values = objectsOf(quads, subject, predicate);
+    if (values.length !== 1) {
+      throw new Error(`${configUrl}: expected exactly one ${label}, found ${values.length}.`);
+    }
+    return values[0];
+  };
+
+  const bundleFolder = one(NS.hs + "bundleFolder", "hs:bundleFolder");
+  if (!/^[A-Za-z0-9._-]+\/$/.test(bundleFolder)) {
+    throw new Error(`${configUrl}: hs:bundleFolder must be one folder name ending in "/".`);
+  }
+
+  return {
+    configUrl,
+    group: one(NS.hs + "group", "hs:group"),
+    name: one(FOAF_NAME, "foaf:name"),
+    inbox: one(INBOX, "ldp:inbox"),
+    agent: one(NS.hs + "agent", "hs:agent"),
+    bundleFolder,
+  };
+}
+
+/** What a WebID profile declares, member side. */
+export interface MemberDeclaration {
+  name: string | null;
+  memberOf: string[];
+  delegates: string[];
+  inbox: string | null;
+}
+
+export function parseProfile(turtle: string, profileDocUrl: string, webId: string): MemberDeclaration {
+  const quads = parse(turtle, profileDocUrl);
+  return {
+    name: objectsOf(quads, webId, FOAF_NAME)[0] ?? null,
+    memberOf: objectsOf(quads, webId, MEMBER_OF),
+    delegates: objectsOf(quads, webId, DELEGATES),
+    inbox: objectsOf(quads, webId, INBOX)[0] ?? null,
+  };
+}
+
+/** The WebIDs a roster lists as `foaf:member` of the group. */
+export function parseRoster(turtle: string, rosterUrl: string, group: string): string[] {
+  return objectsOf(parse(turtle, rosterUrl), group, FOAF_MEMBER);
+}
+
+export type MembershipState = "member" | "pending" | "left" | "none" | "unknown";
+
+/**
+ * The ADR 006 table. `listed` is `null` when the roster could not be read —
+ * which is the normal case for someone whose request is still pending, since
+ * only members may read it. That is "unknown", never "not a member".
+ */
+export function membershipState(declares: boolean, listed: boolean | null): MembershipState {
+  if (listed === null) return declares ? "pending" : "unknown";
+  if (declares) return listed ? "member" : "pending";
+  return listed ? "left" : "none";
+}
+
+/** The profile document holding a WebID: the WebID without its fragment. */
+export function profileDocOf(webId: string): string {
+  const url = new URL(webId);
+  url.hash = "";
+  return url.href;
+}
+
+function activity(type: "Join" | "Announce", fields: {
+  actor: string;
+  object: string;
+  target?: string;
+  summary?: string;
+  published?: Date;
+}): string {
+  const { namedNode, literal, quad } = DataFactory;
+  const self = namedNode("");
+  const writer = new Writer({ prefixes: { as: NS.as, xsd: NS.xsd } });
+  writer.addQuad(quad(self, namedNode(NS.rdf + "type"), namedNode(NS.as + type)));
+  writer.addQuad(quad(self, namedNode(NS.as + "actor"), namedNode(fields.actor)));
+  writer.addQuad(quad(self, namedNode(NS.as + "object"), namedNode(fields.object)));
+  if (fields.target) writer.addQuad(quad(self, namedNode(NS.as + "target"), namedNode(fields.target)));
+  if (fields.summary) writer.addQuad(quad(self, namedNode(NS.as + "summary"), literal(fields.summary)));
+  writer.addQuad(
+    quad(
+      self,
+      namedNode(NS.as + "published"),
+      literal((fields.published ?? new Date()).toISOString(), namedNode(NS.xsd + "dateTime"))
+    )
+  );
+  let out = "";
+  writer.end((err, result) => {
+    if (err) throw err;
+    out = result;
+  });
+  return out;
+}
+
+/** "I ask to join": the member's side of the handshake, sent to the collective's inbox. */
+export function buildJoin(actor: string, group: string, name: string | null, published?: Date): string {
+  return activity("Join", {
+    actor,
+    object: group,
+    summary: name ? `${name} asks to join.` : undefined,
+    published,
+  });
+}
+
+/** "This is published": the bundle URI, which the collective's agent now follows. */
+export function buildAnnounce(actor: string, bundle: string, group: string, published?: Date): string {
+  return activity("Announce", { actor, object: bundle, target: group, published });
+}
+
+/** POSTs an activity to an inbox. Returns the created notification's URL. */
+export async function sendToInbox(inbox: string, turtle: string): Promise<string | null> {
+  const res = await authFetch(inbox, {
+    method: "POST",
+    headers: { "Content-Type": "text/turtle" },
+    body: turtle,
+  });
+  if (!res.ok) {
+    throw new Error(`The inbox at ${inbox} refused the message (${res.status}).`);
+  }
+  return res.headers.get("location");
+}
+
+/**
+ * Edits the signed-in user's own profile. solid-client sends only the changed
+ * triples as a PATCH, so a concurrent edit to some other triple in the same
+ * document survives — which is why this is not a read-modify-PUT.
+ */
+export async function updateOwnProfile(
+  webId: string,
+  edit: (thing: ReturnType<typeof createThing>) => ReturnType<typeof createThing>
+): Promise<void> {
+  const docUrl = profileDocOf(webId);
+  const dataset = await getSolidDataset(docUrl, { fetch: authFetch });
+  const thing = getThing(dataset, webId) ?? createThing({ url: webId });
+  await saveSolidDatasetAt(docUrl, setThing(dataset, edit(thing)), { fetch: authFetch });
+}
+
+export async function readOwnProfile(webId: string): Promise<MemberDeclaration> {
+  const docUrl = profileDocOf(webId);
+  const res = await authFetch(docUrl, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  if (!res.ok) throw new Error(`Could not read your profile (${res.status}).`);
+  return parseProfile(await res.text(), docUrl, webId);
+}
+
+export const profileEdits = {
+  setName: (name: string) => (t: ReturnType<typeof createThing>) => setStringNoLocale(t, FOAF_NAME, name),
+  addDelegate: (agent: string) => (t: ReturnType<typeof createThing>) =>
+    getUrlAll(t, DELEGATES).includes(agent) ? t : addUrl(t, DELEGATES, agent),
+  removeDelegate: (agent: string) => (t: ReturnType<typeof createThing>) => removeUrl(t, DELEGATES, agent),
+  join: (group: string) => (t: ReturnType<typeof createThing>) =>
+    getUrlAll(t, MEMBER_OF).includes(group) ? t : addUrl(t, MEMBER_OF, group),
+  leave: (group: string) => (t: ReturnType<typeof createThing>) => removeUrl(t, MEMBER_OF, group),
+  setInbox: (inbox: string) => (t: ReturnType<typeof createThing>) => setUrl(t, INBOX, inbox),
+};
+
+/** Reads and parses a collective's config. */
+export async function loadCollective(configUrl: string): Promise<Collective> {
+  const res = await authFetch(configUrl, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  if (!res.ok) throw new Error(`Could not read ${configUrl} (${res.status}).`);
+  return parseCollectiveConfig(await res.text(), configUrl);
+}
+
+/**
+ * Whether the roster lists this WebID, or `null` if the roster cannot be read.
+ * The roster is the document holding the group IRI.
+ */
+export async function isListed(collective: Collective, webId: string): Promise<boolean | null> {
+  const rosterUrl = profileDocOf(collective.group);
+  const res = await authFetch(rosterUrl, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  if (res.status === 401 || res.status === 403 || res.status === 404) return null;
+  if (!res.ok) throw new Error(`Could not read ${rosterUrl} (${res.status}).`);
+  return parseRoster(await res.text(), rosterUrl, collective.group).includes(webId);
+}

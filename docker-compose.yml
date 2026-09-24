@@ -5,9 +5,9 @@
 # Rename the service, container_name and labels for each app — the container
 # name is what the gateway vhost proxies to.
 services:
-  APP-web:
+  solid-backoffice-web:
     image: nginx:alpine
-    container_name: APP-web
+    container_name: solid-backoffice-web
     restart: unless-stopped
 
     networks:
@@ -21,9 +21,9 @@ services:
       - ./deploy/nginx-site.conf:/etc/nginx/conf.d/default.conf:ro
 
     labels:
-      app.name: "APP-web"
-      app.description: "Static SPA built from solid-kit"
-      app.domain: "APP.example.org"
+      app.name: "solid-backoffice-web"
+      app.description: "Backoffice: accounts, permissions, membership"
+      app.domain: "backoffice.nicolasdb.eu"
 
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost/index.html"]

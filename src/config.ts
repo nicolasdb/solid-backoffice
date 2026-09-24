@@ -6,7 +6,7 @@
  */
 
 /** Shown on the provider's consent screen. Name the app, not the kit. */
-export const APP_NAME = "Solid Kit App";
+export const APP_NAME = "Backoffice";
 
 /**
  * Stable across reloads so `restorePreviousSession` can find the session again.
@@ -17,7 +17,7 @@ export const APP_NAME = "Solid Kit App";
  * ids plus distinct origins is belt and braces; distinct ids alone is the part
  * you control from here.
  */
-export const SESSION_ID = "solid-kit-app";
+export const SESSION_ID = "solid-backoffice";
 
 /**
  * Prefilled in the login field. Either an OIDC issuer URL or a WebID works —
@@ -25,3 +25,17 @@ export const SESSION_ID = "solid-kit-app";
  * people know where their pod lives, not what their WebID is.
  */
 export const DEFAULT_IDENTIFIER = "https://pod.nicolasdb.eu/";
+
+/**
+ * The collectives this backoffice offers to join, as URLs of their `config.ttl`.
+ *
+ * This list is the only collective-specific thing in the app. What a collective
+ * IS — its name, roster, inbox, agent, and the folder members share through —
+ * lives in that file on the collective's own pod (see src/lib/collective.ts for
+ * the shape), so a second collective such as Maps of Making is one line here
+ * and one file there, not a code change.
+ *
+ * The file must be readable by anyone signed in: people read it BEFORE they are
+ * members, to know where to send the request.
+ */
+export const COLLECTIVE_CONFIGS: string[] = ["https://pod.nicolasdb.eu/hyperscope/config.ttl"];

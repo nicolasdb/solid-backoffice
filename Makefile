@@ -5,8 +5,8 @@
 # compiled there, so there is no node toolchain to maintain on the server.
 #
 # ── Per-app settings: change these four and the rest follows ─────────────────
-APP         := solid-kit-app
-DOMAIN      := app.example.org
+APP         := solid-backoffice
+DOMAIN      := backoffice.nicolasdb.eu
 CONTAINER   := $(APP)-web
 REMOTE      := hetzner
 REMOTE_PATH := /home/nicolas/$(APP)

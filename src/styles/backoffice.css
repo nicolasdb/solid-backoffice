@@ -1,0 +1,51 @@
+/*
+  The backoffice's own components. Tokens only — no raw values — so the
+  kit's audit and both themes keep applying.
+*/
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+}
+
+.step.is-done {
+  border-color: var(--border-subtle);
+  background: var(--surface);
+}
+
+.step-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.step-head h2 {
+  font-size: var(--text-h3);
+  margin: 0;
+}
+
+.plain-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.plain-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step code {
+  overflow-wrap: anywhere;
+}
