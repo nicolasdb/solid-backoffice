@@ -49,3 +49,20 @@
 .step code {
   overflow-wrap: anywhere;
 }
+
+/* A long WebID must wrap inside the card, not push its button out of it. */
+.plain-list code {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.step .error-state {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.step .error-state h2 {
+  font-size: var(--text-h3);
+  margin: 0;
+}

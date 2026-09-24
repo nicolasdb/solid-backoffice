@@ -4,16 +4,20 @@
 # Read for acl:AuthenticatedAgent: people read it BEFORE they are members,
 # to know where to send their request. Nothing in it is secret.
 #
+# <#hyperscope> is the collective's IRI and also its group IRI: members write
+# `org:memberOf <https://pod.nicolasdb.eu/hyperscope/config.ttl#hyperscope>`,
+# so following that link from a profile leads here.
+#
 # The hs: namespace is provisional (solid-kit ADR 006, open questions).
 
 @prefix hs:   <https://pod.nicolasdb.eu/hyperscope/vocab#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix ldp:  <http://www.w3.org/ns/ldp#> .
 
-<#collective> a hs:Collective ;
+<#hyperscope> a hs:Collective, foaf:Group ;
     foaf:name "HyperScope" ;
-    # The IRI members point at with org:memberOf. Already in membres.ttl.
-    hs:group <membres.ttl#hyperscope> ;
+    # Who the collective recognises. Readable by members only.
+    hs:roster <membres.ttl> ;
     ldp:inbox <inbox/> ;
     # The WebID members grant Read to when they share. Never a group.
     hs:agent <agents/agent#me> ;

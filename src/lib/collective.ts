@@ -53,12 +53,21 @@ const MEMBER_OF = NS.org + "memberOf";
 const DELEGATES = NS.acl + "delegates";
 const INBOX = NS.ldp + "inbox";
 
-/** What a collective's `config.ttl` declares. */
+/**
+ * What a collective's `config.ttl` declares.
+ *
+ * The collective's IRI IS the group IRI: `config.ttl#hyperscope`. So the
+ * `org:memberOf` link in a member's profile, followed, leads straight to this
+ * description — the app finds a member's collectives from their profile, with
+ * no list of collectives built into it.
+ */
 export interface Collective {
   configUrl: string;
   /** The IRI members point at with `org:memberOf`, and the roster lists under. */
   group: string;
   name: string;
+  /** The document listing `<group> foaf:member <WebID>`. Readable by members only. */
+  roster: string;
   /** Where `as:Join` and `as:Announce` go. Signed-in agents may Append. */
   inbox: string;
   /** The collective's agent: the WebID a member grants Read to when publishing. */
@@ -81,12 +90,18 @@ function objectsOf(quads: Quad[], subject: string, predicate: string): string[] 
  * Parses a collective's `config.ttl`. Throws, naming what is missing, rather
  * than filling a default: a guessed agent WebID is a grant to the wrong party.
  */
-export function parseCollectiveConfig(turtle: string, configUrl: string): Collective {
+export function parseCollectiveConfig(turtle: string, configUrl: string, expected?: string): Collective {
   const quads = parse(turtle, configUrl);
-  const subject = quads.find(
-    (q) => q.predicate.value === NS.rdf + "type" && q.object.value === NS.hs + "Collective"
-  )?.subject.value;
-  if (!subject) throw new Error(`${configUrl} declares no hs:Collective.`);
+  const declared = quads
+    .filter((q) => q.predicate.value === NS.rdf + "type" && q.object.value === NS.hs + "Collective")
+    .map((q) => q.subject.value);
+  const subject = expected ? declared.find((d) => d === expected) : declared[0];
+  if (!subject) {
+    throw new Error(`${configUrl} declares no hs:Collective${expected ? ` named ${expected}` : ""}.`);
+  }
+  if (!expected && declared.length > 1) {
+    throw new Error(`${configUrl} declares several collectives; use the address of one of them.`);
+  }
 
   const one = (predicate: string, label: string): string => {
     const values = objectsOf(quads, subject, predicate);
@@ -103,8 +118,9 @@ export function parseCollectiveConfig(turtle: string, configUrl: string): Collec
 
   return {
     configUrl,
-    group: one(NS.hs + "group", "hs:group"),
+    group: subject,
     name: one(FOAF_NAME, "foaf:name"),
+    roster: one(NS.hs + "roster", "hs:roster"),
     inbox: one(INBOX, "ldp:inbox"),
     agent: one(NS.hs + "agent", "hs:agent"),
     bundleFolder,
@@ -245,21 +261,36 @@ export const profileEdits = {
   setInbox: (inbox: string) => (t: ReturnType<typeof createThing>) => setUrl(t, INBOX, inbox),
 };
 
-/** Reads and parses a collective's config. */
-export async function loadCollective(configUrl: string): Promise<Collective> {
-  const res = await authFetch(configUrl, { headers: { Accept: "text/turtle" }, cache: "no-store" });
-  if (!res.ok) throw new Error(`Could not read ${configUrl} (${res.status}).`);
-  return parseCollectiveConfig(await res.text(), configUrl);
+/** A load failure that keeps its HTTP status, so the screen can say who can fix it. */
+export interface CollectiveLoadError extends Error {
+  status?: number;
+  address: string;
 }
 
 /**
- * Whether the roster lists this WebID, or `null` if the roster cannot be read.
- * The roster is the document holding the group IRI.
+ * Loads a collective from its address: the collective's IRI
+ * (`…/config.ttl#hyperscope`, what a profile's `org:memberOf` holds) or just
+ * the config document's URL (what an invitation link carries).
+ */
+export async function loadCollective(address: string): Promise<Collective> {
+  const docUrl = profileDocOf(address);
+  const res = await authFetch(docUrl, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  if (!res.ok) {
+    const err = new Error(`Could not read ${docUrl} (${res.status}).`) as CollectiveLoadError;
+    err.status = res.status;
+    err.address = address;
+    throw err;
+  }
+  return parseCollectiveConfig(await res.text(), docUrl, address === docUrl ? undefined : address);
+}
+
+/**
+ * Whether the roster lists this WebID, or `null` if the roster cannot be read
+ * — the normal case for an applicant, since only members may read it.
  */
 export async function isListed(collective: Collective, webId: string): Promise<boolean | null> {
-  const rosterUrl = profileDocOf(collective.group);
-  const res = await authFetch(rosterUrl, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  const res = await authFetch(collective.roster, { headers: { Accept: "text/turtle" }, cache: "no-store" });
   if (res.status === 401 || res.status === 403 || res.status === 404) return null;
-  if (!res.ok) throw new Error(`Could not read ${rosterUrl} (${res.status}).`);
-  return parseRoster(await res.text(), rosterUrl, collective.group).includes(webId);
+  if (!res.ok) throw new Error(`Could not read ${collective.roster} (${res.status}).`);
+  return parseRoster(await res.text(), collective.roster, collective.group).includes(webId);
 }

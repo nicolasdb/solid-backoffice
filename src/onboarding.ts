@@ -11,8 +11,7 @@
  * POSTed to a collective's inbox. That is the single-writer rule (pocpod0 BP-6)
  * seen from the member's side.
  */
-import { COLLECTIVE_CONFIGS } from "./config";
-import { ensureContainer, describePodError, isAuthError } from "./lib/pod";
+import { ensureContainer, describePodError, exists, isAuthError } from "./lib/pod";
 import { getAccess, isValidWebId, setAgentAccess, setAuthenticatedAccess } from "./lib/acl";
 import {
   buildAnnounce,
@@ -25,6 +24,7 @@ import {
   sendToInbox,
   updateOwnProfile,
   type Collective,
+  type CollectiveLoadError,
   type MemberDeclaration,
   type MembershipState,
 } from "./lib/collective";
@@ -40,31 +40,92 @@ interface CollectiveView {
 
 interface Loaded {
   profile: MemberDeclaration;
+  /** `<pod>/inbox/` exists but the profile does not advertise it. */
+  unadvertisedInbox: string | null;
   collectives: CollectiveView[];
-  /** Configs that could not be loaded, with why — shown, never hidden. */
-  broken: { url: string; reason: string }[];
+  /** Addresses that could not be loaded, with why — shown, never hidden. */
+  broken: { address: string; status?: number; reason: string }[];
+  /** `org:memberOf` values that are not collectives this app manages. */
+  other: string[];
 }
 
-const STATE_LABEL: Record<MembershipState, string> = {
-  member: "You are a member.",
-  pending: "Request sent. Waiting for the collective to accept it.",
-  left: "The collective still lists you, but your profile no longer says you belong.",
-  none: "Not a member.",
-  unknown: "Not a member.",
-};
+/* ── Invitations ───────────────────────────────────────────────────────── */
 
+/**
+ * An invitation is a link: `…/?collective=<address>`. The address survives the
+ * sign-in round trip in sessionStorage, because the kit strips the query
+ * string from the OIDC redirect. Call before anything else on startup.
+ */
+const INVITE_KEY = "solid-backoffice.invite";
+
+export function captureInvite(): void {
+  const address = new URL(window.location.href).searchParams.get("collective");
+  if (!address) return;
+  try {
+    sessionStorage.setItem(INVITE_KEY, address);
+  } catch {
+    // Storage blocked: the invitation is lost after sign-in, and the person
+    // can still paste the address into the form. Not worth failing over.
+  }
+}
+
+function pendingInvite(): string | null {
+  try {
+    return sessionStorage.getItem(INVITE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setInvite(address: string | null): void {
+  try {
+    if (address) sessionStorage.setItem(INVITE_KEY, address);
+    else sessionStorage.removeItem(INVITE_KEY);
+  } catch {
+    /* see captureInvite */
+  }
+}
+
+/* ── Loading ───────────────────────────────────────────────────────────── */
+
+/**
+ * Which collectives to show comes from the person, never from the app: the
+ * ones their profile says they belong to, plus the one they were invited to
+ * or typed in. Nothing is assumed.
+ */
 async function load(webId: string, podUrl: string): Promise<Loaded> {
   const profile = await readOwnProfile(webId);
-  const results = await Promise.allSettled(COLLECTIVE_CONFIGS.map((url) => loadCollective(url)));
+  const invite = pendingInvite();
+
+  let unadvertisedInbox: string | null = null;
+  if (!profile.inbox) {
+    const candidate = new URL("inbox/", podUrl).href;
+    if (await exists(candidate)) unadvertisedInbox = candidate;
+  }
+
+  const addresses = [...profile.memberOf, ...(invite ? [invite] : [])];
+  const results = await Promise.allSettled(addresses.map((a) => loadCollective(a)));
 
   const collectives: CollectiveView[] = [];
   const broken: Loaded["broken"] = [];
+  const other: string[] = [];
+  const seen = new Set<string>();
+
   for (const [i, result] of results.entries()) {
+    const address = addresses[i];
+    const fromProfile = i < profile.memberOf.length;
     if (result.status === "rejected") {
-      broken.push({ url: COLLECTIVE_CONFIGS[i], reason: describePodError(result.reason) });
+      const status = (result.reason as CollectiveLoadError).status;
+      // A profile can say it belongs to organisations that are not collectives
+      // of this kind at all. That is not an error — just not ours to manage.
+      if (fromProfile && status === undefined) other.push(address);
+      else broken.push({ address, status, reason: describePodError(result.reason) });
       continue;
     }
     const collective = result.value;
+    if (seen.has(collective.group)) continue;
+    seen.add(collective.group);
+
     const listed = await isListed(collective, webId);
     const folderUrl = new URL(collective.bundleFolder, podUrl).href;
     collectives.push({
@@ -74,8 +135,16 @@ async function load(webId: string, podUrl: string): Promise<Loaded> {
       published: await grantsRead(folderUrl, webId, collective.agent),
     });
   }
-  return { profile, collectives, broken };
+  return { profile, unadvertisedInbox, collectives, broken, other };
 }
+
+const STATE_LABEL: Record<MembershipState, string> = {
+  member: "You are a member.",
+  pending: "Request sent. Waiting for the collective to accept it.",
+  left: "The collective still lists you, but your profile no longer says you belong.",
+  none: "Not a member.",
+  unknown: "Not a member.",
+};
 
 /** Whether the folder's own ACL grants the agent Read. Missing folder: no. */
 async function grantsRead(folderUrl: string, webId: string, agent: string): Promise<boolean> {
@@ -111,7 +180,7 @@ export async function renderMembership(
     return;
   }
 
-  const { profile, collectives, broken } = data;
+  const { profile, unadvertisedInbox, collectives, broken, other } = data;
   const rerender = () => renderMembership(app, webId, podUrl, onLogout);
 
   app.innerHTML = `
@@ -128,9 +197,16 @@ export async function renderMembership(
 
       ${stepName(profile)}
       ${stepAgent(profile)}
-      ${stepInbox(profile)}
+      ${stepInbox(profile, unadvertisedInbox)}
       ${collectives.map((c, i) => stepCollective(c, i, profile)).join("")}
-      ${broken.map(renderBroken).join("")}
+      ${broken.map((b) => `<section class="step">${renderBroken(b)}</section>`).join("")}
+      ${stepFindCollective(collectives.length === 0)}
+      ${
+        other.length
+          ? `<p class="meta">Other memberships in your profile, not managed here:
+             ${other.map((o) => `<code>${esc(o)}</code>`).join(", ")}</p>`
+          : ""
+      }
     </main>`;
 
   app.querySelector("#logout")!.addEventListener("click", onLogout);
@@ -163,7 +239,7 @@ export async function renderMembership(
   const inboxButton = app.querySelector<HTMLButtonElement>("#make-inbox");
   if (inboxButton) {
     bindButton(inboxButton, async () => {
-      const inbox = new URL("inbox/", podUrl).href;
+      const inbox = unadvertisedInbox ?? new URL("inbox/", podUrl).href;
       // Order matters: the profile advertises the inbox LAST, so it never
       // points at an inbox that does not exist or that nobody may post to.
       await ensureContainer(inbox);
@@ -172,6 +248,29 @@ export async function renderMembership(
       announce("Inbox ready.");
     }, rerender);
   }
+
+  bindForm(app, "#find-form", async (form) => {
+    const address = (form.elements.namedItem("address") as HTMLInputElement).value.trim();
+    if (!isValidWebId(address)) throw new Error("A collective's address starts with https:// and has no spaces.");
+    // Load it now, so a wrong address fails here, next to the field.
+    await loadCollective(address);
+    setInvite(address);
+  }, rerender);
+
+  broken.forEach((entry) => {
+    const id = `dismiss-broken-${encodeURIComponent(entry.address)}`;
+    document.getElementById(id)?.addEventListener("click", () => {
+      if (pendingInvite() === entry.address) setInvite(null);
+      rerender();
+    });
+  });
+
+  app.querySelectorAll<HTMLButtonElement>("[data-dismiss]").forEach((button) =>
+    button.addEventListener("click", () => {
+      if (pendingInvite() === button.dataset.dismiss) setInvite(null);
+      rerender();
+    })
+  );
 
   collectives.forEach((view, i) => {
     const { collective, folderUrl } = view;
@@ -184,6 +283,8 @@ export async function renderMembership(
         // would leave the collective holding a request the profile denies.
         await updateOwnProfile(webId, profileEdits.join(collective.group));
         await sendToInbox(collective.inbox, buildJoin(webId, collective.group, profile.name));
+        // The profile now carries the link; the invitation has done its job.
+        setInvite(null);
         announce(`Request sent to ${collective.name}.`);
       }, rerender);
     }
@@ -284,19 +385,56 @@ function stepAgent(profile: MemberDeclaration): string {
   );
 }
 
-function stepInbox(profile: MemberDeclaration): string {
+function stepInbox(profile: MemberDeclaration, unadvertised: string | null): string {
+  if (profile.inbox) {
+    return step(
+      "Your inbox",
+      true,
+      `<p class="lead">Collectives answer your requests here.</p>
+       <p><code>${esc(profile.inbox)}</code></p>`
+    );
+  }
+  if (unadvertised) {
+    return step(
+      "Your inbox",
+      false,
+      `<p class="lead">
+         You already have <code>${esc(unadvertised)}</code>, but your profile does
+         not say it is your inbox, so nobody can find it. Using it lets anyone
+         signed in leave you a message there, without reading the others.
+       </p>
+       <p><button id="make-inbox">Use this inbox</button></p>`
+    );
+  }
   return step(
     "Your inbox",
-    Boolean(profile.inbox),
-    profile.inbox
-      ? `<p class="lead">Collectives answer your requests here.</p>
-         <p><code>${esc(profile.inbox)}</code></p>`
-      : `<p class="lead">
-           A folder where anyone signed in can leave you a message but not read
-           the others. Collectives answer your requests here.
-         </p>
-         <p><button id="make-inbox">Create my inbox</button></p>`
+    false,
+    `<p class="lead">
+       A folder where anyone signed in can leave you a message but not read
+       the others. Collectives answer your requests here.
+     </p>
+     <p><button id="make-inbox">Create my inbox</button></p>`
   );
+}
+
+function stepFindCollective(first: boolean): string {
+  return `
+    <section class="step">
+      <div class="step-head">
+        <h2>${first ? "Join a collective" : "Join another collective"}</h2>
+      </div>
+      <p class="lead">
+        Paste the address the collective gave you, or open the invitation link
+        they sent.
+      </p>
+      <form id="find-form" class="field">
+        <label for="address">Collective's address</label>
+        <input id="address" name="address" type="url"
+               placeholder="https://…/config.ttl" required />
+        <div><button type="submit" class="ghost">Look it up</button></div>
+      </form>
+      <p class="step-error error" role="alert" hidden></p>
+    </section>`;
 }
 
 function stepCollective(view: CollectiveView, i: number, profile: MemberDeclaration): string {
@@ -307,7 +445,8 @@ function stepCollective(view: CollectiveView, i: number, profile: MemberDeclarat
     <p class="lead">${esc(STATE_LABEL[state])}</p>
     ${!profile.inbox && !declared ? `<p class="meta">Create your inbox first, so the answer has somewhere to land.</p>` : ""}
     <p>
-      ${!declared ? `<button id="join-${i}"${profile.inbox ? "" : " disabled"}>Ask to join</button>` : ""}
+      ${!declared ? `<button id="join-${i}"${profile.inbox ? "" : " disabled"}>Ask to join</button>
+                     <button class="ghost" data-dismiss="${esc(view.collective.configUrl)}">Not now</button>` : ""}
       ${state === "pending" ? `<button id="resend-${i}" class="ghost">Send the request again</button>` : ""}
       ${declared ? `<button id="leave-${i}" class="ghost">Leave</button>` : ""}
     </p>`;
@@ -339,14 +478,18 @@ function stepCollective(view: CollectiveView, i: number, profile: MemberDeclarat
   );
 }
 
-function renderBroken(entry: { url: string; reason: string }): string {
+function renderBroken(entry: Loaded["broken"][number]): string {
+  const closed = entry.status === 401 || entry.status === 403;
   return renderError({
-    title: "A collective could not be loaded",
+    title: closed ? "This collective is not open to newcomers yet" : "This collective could not be found",
     detail: entry.reason,
-    recovery:
-      "The rest of this page is unaffected. The collective's config.ttl is missing " +
-      "or unreadable; whoever runs it can fix that on their pod.",
-    technical: entry.url,
+    recovery: closed
+      ? "Its description exists but only its members may read it. Whoever runs " +
+        "the collective needs to let anyone signed in read its config.ttl. " +
+        "Nothing on your side is wrong."
+      : "Check the address with whoever gave it to you. The rest of this page is unaffected.",
+    action: { label: "Forget this address", id: `dismiss-broken-${encodeURIComponent(entry.address)}` },
+    technical: entry.address,
   });
 }
 

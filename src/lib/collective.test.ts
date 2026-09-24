@@ -19,24 +19,32 @@ const CONFIG = `
 @prefix hs:   <${NS.hs}> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix ldp:  <http://www.w3.org/ns/ldp#> .
-<#collective> a hs:Collective ;
+<#hyperscope> a hs:Collective ;
   foaf:name "HyperScope" ;
-  hs:group <membres.ttl#hyperscope> ;
+  hs:roster <membres.ttl> ;
   ldp:inbox <inbox/> ;
   hs:agent <agents/agent#me> ;
   hs:bundleFolder "output2hyperscope/" .
 `;
 
 describe("parseCollectiveConfig", () => {
-  it("resolves every IRI against the config's own location", () => {
+  it("resolves every IRI against the config's own location; the collective IS the group", () => {
     expect(parseCollectiveConfig(CONFIG, CONFIG_URL)).toEqual({
       configUrl: CONFIG_URL,
-      group: "https://pod.example/hyperscope/membres.ttl#hyperscope",
+      group: "https://pod.example/hyperscope/config.ttl#hyperscope",
       name: "HyperScope",
+      roster: "https://pod.example/hyperscope/membres.ttl",
       inbox: "https://pod.example/hyperscope/inbox/",
       agent: "https://pod.example/hyperscope/agents/agent#me",
       bundleFolder: "output2hyperscope/",
     });
+  });
+
+  it("picks the collective a memberOf link names, when a document declares several", () => {
+    const two = CONFIG + `<#other> a hs:Collective ; foaf:name "Other" ; hs:roster <o.ttl> ;
+      ldp:inbox <o/> ; hs:agent <o#me> ; hs:bundleFolder "o/" .`;
+    expect(parseCollectiveConfig(two, CONFIG_URL, CONFIG_URL + "#other").name).toBe("Other");
+    expect(() => parseCollectiveConfig(two, CONFIG_URL)).toThrow(/several/);
   });
 
   it("refuses a config with no agent rather than guessing one", () => {
@@ -72,11 +80,13 @@ describe("parseProfile and parseRoster", () => {
     });
   });
 
-  it("reads the roster — the file membres.ttl already on the common pod", () => {
+  it("reads the roster, whose subject is the collective's IRI in config.ttl", () => {
     const turtle = `
       @prefix foaf: <http://xmlns.com/foaf/0.1/> .
-      <#hyperscope> a foaf:Group ; foaf:member <${WEBID}> .`;
-    expect(parseRoster(turtle, "https://pod.example/hyperscope/membres.ttl", GROUP)).toEqual([WEBID]);
+      <config.ttl#hyperscope> foaf:member <${WEBID}> .`;
+    expect(
+      parseRoster(turtle, "https://pod.example/hyperscope/membres.ttl", "https://pod.example/hyperscope/config.ttl#hyperscope")
+    ).toEqual([WEBID]);
   });
 
   it("finds the profile document by dropping the fragment, not by guessing a layout", () => {
@@ -134,7 +144,16 @@ describe("activities", () => {
   });
 });
 
-describe("docs/examples/hyperscope-config.ttl", () => {
+describe("docs/examples — the files to upload", () => {
+  it("membres.ttl lists members under the group IRI that config.ttl declares", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const turtle = readFileSync(resolve(process.cwd(), "docs/examples/hyperscope-membres.ttl"), "utf8");
+    expect(
+      parseRoster(turtle, "https://pod.nicolasdb.eu/hyperscope/membres.ttl", "https://pod.nicolasdb.eu/hyperscope/config.ttl#hyperscope")
+    ).toEqual(["https://pod.nicolasdb.eu/hyperscope_ndb/profile/card#me"]);
+  });
+
   it("is the file to upload, so it must parse to the live HyperScope values", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
@@ -142,8 +161,9 @@ describe("docs/examples/hyperscope-config.ttl", () => {
     const url = "https://pod.nicolasdb.eu/hyperscope/config.ttl";
     expect(parseCollectiveConfig(turtle, url)).toEqual({
       configUrl: url,
-      group: "https://pod.nicolasdb.eu/hyperscope/membres.ttl#hyperscope",
+      group: "https://pod.nicolasdb.eu/hyperscope/config.ttl#hyperscope",
       name: "HyperScope",
+      roster: "https://pod.nicolasdb.eu/hyperscope/membres.ttl",
       inbox: "https://pod.nicolasdb.eu/hyperscope/inbox/",
       agent: "https://pod.nicolasdb.eu/hyperscope/agents/agent#me",
       bundleFolder: "output2hyperscope/",

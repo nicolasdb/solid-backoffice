@@ -10,8 +10,9 @@ const WEBID = "https://pod.example/neil/profile/card#me";
 const POD = "https://pod.example/neil/";
 const COLLECTIVE = {
   configUrl: "https://pod.example/hs/config.ttl",
-  group: "https://pod.example/hs/membres.ttl#hs",
+  group: "https://pod.example/hs/config.ttl#hs",
   name: "HyperScope",
+  roster: "https://pod.example/hs/membres.ttl",
   inbox: "https://pod.example/hs/inbox/",
   agent: "https://pod.example/hs/agents/agent#me",
   bundleFolder: "output2hyperscope/",
@@ -21,11 +22,13 @@ let profile = { name: null as string | null, memberOf: [] as string[], delegates
 let listed: boolean | null = null;
 let agentGrants: { webId: string; modes: string[] }[] = [];
 let failInbox = false;
+let inboxFolderExists = false;
+let configStatus: number | null = null;
 
 vi.mock("./lib/auth", () => ({ authFetch: vi.fn() }));
-vi.mock("./config", () => ({ COLLECTIVE_CONFIGS: ["https://pod.example/hs/config.ttl"] }));
 vi.mock("./lib/pod", () => ({
   ensureContainer: async (url: string) => void calls.push(`ensure ${url}`),
+  exists: async () => inboxFolderExists,
   describePodError: (err: unknown) => (err instanceof Error ? err.message : String(err)),
   isAuthError: () => false,
 }));
@@ -42,7 +45,13 @@ vi.mock("./lib/collective", async (importOriginal) => {
   return {
     ...actual,
     readOwnProfile: async () => profile,
-    loadCollective: async () => COLLECTIVE,
+    loadCollective: async (address: string) => {
+      if (configStatus !== null) {
+        throw Object.assign(new Error(`Could not read ${address} (${configStatus}).`), { status: configStatus, address });
+      }
+      if (address === COLLECTIVE.configUrl || address === COLLECTIVE.group) return COLLECTIVE;
+      throw Object.assign(new Error("not a collective"), { address });
+    },
     isListed: async () => listed,
     updateOwnProfile: async (_w: string, edit: (t: unknown) => unknown) => {
       calls.push(`profile ${edit.name || "edit"}`);
@@ -55,7 +64,14 @@ vi.mock("./lib/collective", async (importOriginal) => {
   };
 });
 
-const { renderMembership } = await import("./onboarding");
+const { renderMembership, captureInvite } = await import("./onboarding");
+
+/** Arrive through an invitation link, as a newcomer would. */
+function invitedTo(address: string): void {
+  window.history.replaceState(null, "", `/?collective=${encodeURIComponent(address)}`);
+  captureInvite();
+  window.history.replaceState(null, "", "/");
+}
 
 async function render(): Promise<HTMLElement> {
   const app = document.createElement("div");
@@ -75,9 +91,49 @@ beforeEach(() => {
   listed = null;
   agentGrants = [];
   failInbox = false;
+  inboxFolderExists = false;
+  configStatus = null;
+  sessionStorage.clear();
+  invitedTo(COLLECTIVE.configUrl);
 });
 
 describe("slice A — the member's side of the handshake", () => {
+  it("assumes no collective: without an invitation or a membership, it only offers to look one up", async () => {
+    sessionStorage.clear();
+    const app = await render();
+    expect(app.querySelector("#join-0")).toBeNull();
+    expect(app.textContent).toContain("Join a collective");
+    expect(app.querySelector("#find-form")).not.toBeNull();
+  });
+
+  it("finds a member's collectives from the org:memberOf in their profile", async () => {
+    sessionStorage.clear();
+    profile.memberOf = [COLLECTIVE.group, "https://example.org/some-club#org"];
+    listed = true;
+    const app = await render();
+    expect(app.textContent).toContain("You are a member.");
+    expect(app.textContent).toContain("not managed here");
+  });
+
+  it("says who can fix a collective whose description is closed to newcomers", async () => {
+    configStatus = 403;
+    const app = await render();
+    expect(app.textContent).toContain("not open to newcomers yet");
+    expect(app.textContent).toContain("Nothing on your side is wrong.");
+  });
+
+  it("offers an existing inbox/ the profile does not advertise, instead of a new one", async () => {
+    inboxFolderExists = true;
+    const app = await render();
+    expect(app.textContent).toContain("Use this inbox");
+    await click(app, "#make-inbox");
+    expect(calls).toEqual([
+      `ensure ${POD}inbox/`,
+      `acl ${POD}inbox/ authenticated append`,
+      "profile edit",
+    ]);
+  });
+
   it("will not send a join request before there is an inbox for the answer", async () => {
     const app = await render();
     expect(app.querySelector<HTMLButtonElement>("#join-0")!.disabled).toBe(true);

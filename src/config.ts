@@ -26,16 +26,7 @@ export const SESSION_ID = "solid-backoffice";
  */
 export const DEFAULT_IDENTIFIER = "https://pod.nicolasdb.eu/";
 
-/**
- * The collectives this backoffice offers to join, as URLs of their `config.ttl`.
- *
- * This list is the only collective-specific thing in the app. What a collective
- * IS — its name, roster, inbox, agent, and the folder members share through —
- * lives in that file on the collective's own pod (see src/lib/collective.ts for
- * the shape), so a second collective such as Maps of Making is one line here
- * and one file there, not a code change.
- *
- * The file must be readable by anyone signed in: people read it BEFORE they are
- * members, to know where to send the request.
- */
-export const COLLECTIVE_CONFIGS: string[] = ["https://pod.nicolasdb.eu/hyperscope/config.ttl"];
+// No list of collectives lives here. Which collectives someone sees comes from
+// their own profile (`org:memberOf`), an invitation link (`?collective=`), or
+// an address they paste — see src/onboarding.ts. An app that assumes a
+// collective is one that shows it to people who never asked for it.

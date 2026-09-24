@@ -16,7 +16,7 @@ import { describePodError, getPrimaryPodUrl, isAuthError } from "./lib/pod";
 import { APP_NAME, DEFAULT_IDENTIFIER } from "./config";
 import { focusView } from "./ui/a11y";
 import { renderError, renderPending } from "./ui/patterns";
-import { renderMembership } from "./onboarding";
+import { captureInvite, renderMembership } from "./onboarding";
 import "./styles/backoffice.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -29,6 +29,8 @@ function esc(value: string): string {
 }
 
 async function main(): Promise<void> {
+  // Before sign-in: the redirect back from the provider drops the query string.
+  captureInvite();
   const state = await completeLogin();
 
   if (!state.loggedIn) {

@@ -33,9 +33,11 @@ been run live.
 
 ## Architecture
 
-- `src/config.ts` — `COLLECTIVE_CONFIGS` is the only collective-specific line
-  in the app. A collective is described by its own `config.ttl`
-  (`docs/examples/`), not by code.
+- `src/config.ts` — the kit's settings. **No collective is listed in the
+  app**: a person sees the collectives their profile's `org:memberOf` links
+  lead to, plus an invitation (`?collective=`) or a pasted address. The
+  collective's IRI is `config.ttl#<name>`, which is also the group IRI, so
+  the link from a profile dereferences to its description (`docs/examples/`).
 - `src/lib/acl.ts` — WAC, per solid-kit ADR 003: parsed with a real Turtle
   parser, written as hand-written Turtle, conditional writes, and a refusal
   (never a rewrite) when an `.acl` holds something it cannot represent.

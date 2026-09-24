@@ -228,15 +228,19 @@ live HyperScope pod. Before starting, the collective's owner has:
 
 - uploaded `docs/examples/hyperscope-config.ttl` to
   `hyperscope/config.ttl`, with Read for `acl:AuthenticatedAgent`;
+- changed `membres.ttl`'s subject to `<config.ttl#hyperscope>`;
 - checked that `hyperscope/inbox/` gives `acl:AuthenticatedAgent` Append.
 
-Then, signed in as the test account:
+Then open the invitation link, `/?collective=https://pod.nicolasdb.eu/hyperscope/config.ttl`,
+and sign in as the test account. Opening the app without the link must show
+no collective at all, only "Join a collective".
 
 1. **Name.** Save a name. Open the profile document in a new tab: `foaf:name`
    is there, and nothing else in the profile changed.
 2. **Agent.** Add a WebID; remove it; undo. The profile carries
    `acl:delegates` exactly once.
-3. **Inbox.** "Ask to join" is disabled before the inbox exists. Create it.
+3. **Inbox.** "Ask to join" is disabled before the inbox exists. Create it,
+   or, if `inbox/` already exists but the profile does not say so, use it.
    `inbox/.acl` has the owner block and `acl:AuthenticatedAgent` Append with
    `acl:default`; the profile has `ldp:inbox`.
 4. **Join.** Ask to join. The profile has `org:memberOf`; a new `as:Join`
