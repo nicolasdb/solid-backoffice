@@ -11,6 +11,13 @@ commit `9ed8327`. Every divergence from the kit is a diff against that commit.
 
 ## What it does now
 
+The home screen reads your roles from the pods at each sign-in
+([docs/explanation/membership.md](docs/explanation/membership.md#roles)):
+**You run** (when your pod root holds a collective's `config.ttl`), **You**
+(your profile), and **You belong to**. A collective is never offered to join
+itself, and can join another collective.
+
+
 Slice A, the member's side of the handshake in
 [solid-kit ADR 006](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md),
 for someone who already has an account:
@@ -22,7 +29,7 @@ for someone who already has an account:
    as `ldp:inbox`. This is where a collective's answer lands.
 4. **Join**: `org:memberOf` in their profile, then an `as:Join` to the
    collective's inbox. The state is read from both sides every time.
-5. **Share**: creates the collective's folder (`output2hyperscope/`) on their
+5. **Share**: creates the collective's folder (`output2/hyperscope/`) on their
    pod, grants the collective's agent Read on it, then sends an `as:Announce`.
 
 What is still to come, in order, is in [`docs/slices.md`](docs/slices.md).

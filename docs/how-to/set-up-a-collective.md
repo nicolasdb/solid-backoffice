@@ -25,7 +25,9 @@ files and `.acl` documents on its pod.
    ```
 
    Upload it as `text/turtle`; a server may refuse an `.acl` sent as plain
-   text.
+   text. If your tools cannot write an `.acl` by hand, making `config.ttl`
+   public also works: it holds nothing secret. It only lets anonymous
+   visitors read it too.
 4. **Create `membres.ttl`** at the pod root, with only `foaf:member` lines
    ([example](../examples/hyperscope-membres.ttl)). Give each member Read on
    it as you accept them.

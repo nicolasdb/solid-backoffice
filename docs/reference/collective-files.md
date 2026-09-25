@@ -23,7 +23,7 @@ link from a profile leads to this description.
 | `hs:roster` | 1 | the roster document |
 | `ldp:inbox` | 1 | where requests and announcements go |
 | `hs:agent` | 1 | the WebID members grant Read to when sharing |
-| `hs:bundleFolder` | 1 | the folder members share through; today one name at their pod root (`output2hyperscope/`), moving to `output2/<collective>/` ([why](../explanation/sharing.md#folder)) |
+| `hs:bundleFolder` | 1 | the folder members share through, relative to their pod root: `output2/hyperscope/` ([why](../explanation/sharing.md#folder)). Plain segments only; `..` or an absolute path is refused, because this file decides where a member's app creates a folder |
 | `hs:requires` | 0–1 | **reserved**, see below |
 
 A missing or repeated property is refused, not guessed: a guessed agent is a

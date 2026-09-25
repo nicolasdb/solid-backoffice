@@ -66,3 +66,9 @@
   font-size: var(--text-h3);
   margin: 0;
 }
+
+/* "You run", "You", "You belong to": the roles read at sign-in. */
+.section-title {
+  font-size: var(--text-h2);
+  margin: var(--space-6) 0 0;
+}

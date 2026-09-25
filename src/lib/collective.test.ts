@@ -24,7 +24,7 @@ const CONFIG = `
   hs:roster <membres.ttl> ;
   ldp:inbox <inbox/> ;
   hs:agent <agents/agent#me> ;
-  hs:bundleFolder "output2hyperscope/" .
+  hs:bundleFolder "output2/hyperscope/" .
 `;
 
 describe("parseCollectiveConfig", () => {
@@ -36,7 +36,7 @@ describe("parseCollectiveConfig", () => {
       roster: "https://pod.example/hyperscope/membres.ttl",
       inbox: "https://pod.example/hyperscope/inbox/",
       agent: "https://pod.example/hyperscope/agents/agent#me",
-      bundleFolder: "output2hyperscope/",
+      bundleFolder: "output2/hyperscope/",
     });
   });
 
@@ -52,9 +52,12 @@ describe("parseCollectiveConfig", () => {
     expect(() => parseCollectiveConfig(noAgent, CONFIG_URL)).toThrow(/hs:agent/);
   });
 
-  it("refuses a bundle folder that is a path, not one folder name", () => {
-    const bad = CONFIG.replace('"output2hyperscope/"', '"../private/"');
-    expect(() => parseCollectiveConfig(bad, CONFIG_URL)).toThrow(/bundleFolder/);
+  it("accepts a folder path inside the member's pod, and nothing that climbs out of it", () => {
+    const at = (folder: string) => CONFIG.replace('"output2/hyperscope/"', `"${folder}"`);
+    expect(parseCollectiveConfig(at("output2/hyperscope/"), CONFIG_URL).bundleFolder).toBe("output2/hyperscope/");
+    for (const bad of ["../private/", "output2/../settings/", "/output2/", "output2/hyperscope", "./x/", "a//b/"]) {
+      expect(() => parseCollectiveConfig(at(bad), CONFIG_URL), bad).toThrow(/bundleFolder/);
+    }
   });
 
   it("refuses a document that declares no collective", () => {
@@ -136,7 +139,7 @@ describe("activities", () => {
   });
 
   it("builds an Announce naming the bundle and the collective", () => {
-    const bundle = "https://pod.example/alice/output2hyperscope/";
+    const bundle = "https://pod.example/alice/output2/hyperscope/";
     const t = triples(buildAnnounce(ACTOR, bundle, GROUP, AT));
     expect(t).toContainEqual(["type", NS.as + "Announce"]);
     expect(t).toContainEqual(["object", bundle]);
@@ -166,7 +169,7 @@ describe("docs/examples — the files to upload", () => {
       roster: "https://pod.nicolasdb.eu/hyperscope/membres.ttl",
       inbox: "https://pod.nicolasdb.eu/hyperscope/inbox/",
       agent: "https://pod.nicolasdb.eu/hyperscope/agents/agent#me",
-      bundleFolder: "output2hyperscope/",
+      bundleFolder: "output2/hyperscope/",
     });
   });
 });

@@ -72,7 +72,7 @@ export interface Collective {
   inbox: string;
   /** The collective's agent: the WebID a member grants Read to when publishing. */
   agent: string;
-  /** The container name a member publishes through, e.g. "output2hyperscope/". */
+  /** The folder a member shares through, relative to their pod root, e.g. "output2/hyperscope/". */
   bundleFolder: string;
 }
 
@@ -112,8 +112,8 @@ export function parseCollectiveConfig(turtle: string, configUrl: string, expecte
   };
 
   const bundleFolder = one(NS.hs + "bundleFolder", "hs:bundleFolder");
-  if (!/^[A-Za-z0-9._-]+\/$/.test(bundleFolder)) {
-    throw new Error(`${configUrl}: hs:bundleFolder must be one folder name ending in "/".`);
+  if (!isFolderPath(bundleFolder)) {
+    throw new Error(`${configUrl}: hs:bundleFolder must be a folder path like "output2/hyperscope/".`);
   }
 
   return {
@@ -125,6 +125,17 @@ export function parseCollectiveConfig(turtle: string, configUrl: string, expecte
     agent: one(NS.hs + "agent", "hs:agent"),
     bundleFolder,
   };
+}
+
+/**
+ * A relative folder path inside the member's pod, such as "output2/hyperscope/":
+ * plain segments, ending in "/". No "..", no ".", no absolute path — the config
+ * is someone else's file, and it decides where the member's app creates a folder.
+ */
+function isFolderPath(value: string): boolean {
+  if (!value.endsWith("/")) return false;
+  const segments = value.slice(0, -1).split("/");
+  return segments.every((seg) => /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/.test(seg) && seg !== "." && seg !== "..");
 }
 
 /** What a WebID profile declares, member side. */
@@ -293,4 +304,42 @@ export async function isListed(collective: Collective, webId: string): Promise<b
   if (res.status === 401 || res.status === 403 || res.status === 404) return null;
   if (!res.ok) throw new Error(`Could not read ${collective.roster} (${res.status}).`);
   return parseRoster(await res.text(), collective.roster, collective.group).includes(webId);
+}
+
+/**
+ * The collective this account runs, if any: a `config.ttl` at the root of the
+ * signed-in account's own pod (found through `pim:storage`, never guessed from
+ * the WebID). Running a collective means signing in as its account.
+ *
+ * `null` when there is no `config.ttl`. A `config.ttl` that exists but cannot
+ * be used throws: that is the collective's owner looking at their own mistake,
+ * and they need to see it.
+ */
+export async function findRunCollective(podUrl: string): Promise<Collective | null> {
+  try {
+    return await loadCollective(new URL("config.ttl", podUrl).href);
+  } catch (err) {
+    if ((err as CollectiveLoadError).status === 404) return null;
+    throw err;
+  }
+}
+
+/** Counts for the "You run" card. `null` means it could not be read. */
+export interface CollectiveSummary {
+  members: number | null;
+  inboxItems: number | null;
+}
+
+export async function summarise(collective: Collective): Promise<CollectiveSummary> {
+  const read = async (url: string) => {
+    const res = await authFetch(url, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+    return res.ok ? parse(await res.text(), url) : null;
+  };
+  const [roster, inbox] = await Promise.all([read(collective.roster), read(collective.inbox)]);
+  return {
+    members: roster ? roster.filter((q) => q.subject.value === collective.group && q.predicate.value === FOAF_MEMBER).length : null,
+    inboxItems: inbox
+      ? inbox.filter((q) => q.subject.value === collective.inbox && q.predicate.value === NS.ldp + "contains").length
+      : null,
+  };
 }

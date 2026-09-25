@@ -1,6 +1,8 @@
 /**
- * Slice A: the member's side of the handshake (solid-kit ADR 006), for someone
- * who already has an account and a pod.
+ * The home screen: the collectives you run, then your own profile steps, then
+ * the collectives you belong to — the member's side of the handshake
+ * (solid-kit ADR 006). Roles are read from the pods, never stored
+ * (docs/explanation/membership.md).
  *
  * A checklist rather than a wizard. Every step reads its state from the pods
  * each time the screen renders, so someone who comes back tomorrow, or did a
@@ -16,6 +18,9 @@ import { getAccess, isValidWebId, setAgentAccess, setAuthenticatedAccess } from 
 import {
   buildAnnounce,
   buildJoin,
+  findRunCollective,
+  summarise,
+  type CollectiveSummary,
   isListed,
   loadCollective,
   membershipState,
@@ -39,6 +44,10 @@ interface CollectiveView {
 }
 
 interface Loaded {
+  /** The collective this account runs: a config.ttl at its own pod root. */
+  run: { collective: Collective; summary: CollectiveSummary } | null;
+  /** This account's config.ttl exists but cannot be used. */
+  runError: string | null;
   profile: MemberDeclaration;
   /** `<pod>/inbox/` exists but the profile does not advertise it. */
   unadvertisedInbox: string | null;
@@ -95,7 +104,23 @@ function setInvite(address: string | null): void {
  */
 async function load(webId: string, podUrl: string): Promise<Loaded> {
   const profile = await readOwnProfile(webId);
-  const invite = pendingInvite();
+
+  let run: Loaded["run"] = null;
+  let runError: string | null = null;
+  try {
+    const own = await findRunCollective(podUrl);
+    if (own) run = { collective: own, summary: await summarise(own) };
+  } catch (err) {
+    runError = describePodError(err);
+  }
+
+  // An invitation to the collective you run is not an invitation: a
+  // collective never joins itself.
+  let invite = pendingInvite();
+  if (run && invite && (invite === run.collective.group || invite === run.collective.configUrl)) {
+    setInvite(null);
+    invite = null;
+  }
 
   let unadvertisedInbox: string | null = null;
   if (!profile.inbox) {
@@ -123,7 +148,7 @@ async function load(webId: string, podUrl: string): Promise<Loaded> {
       continue;
     }
     const collective = result.value;
-    if (seen.has(collective.group)) continue;
+    if (seen.has(collective.group) || collective.group === run?.collective.group) continue;
     seen.add(collective.group);
 
     const listed = await isListed(collective, webId);
@@ -135,7 +160,7 @@ async function load(webId: string, podUrl: string): Promise<Loaded> {
       published: await grantsRead(folderUrl, webId, collective.agent),
     });
   }
-  return { profile, unadvertisedInbox, collectives, broken, other };
+  return { run, runError, profile, unadvertisedInbox, collectives, broken, other };
 }
 
 const STATE_LABEL: Record<MembershipState, string> = {
@@ -180,7 +205,7 @@ export async function renderMembership(
     return;
   }
 
-  const { profile, unadvertisedInbox, collectives, broken, other } = data;
+  const { run, runError, profile, unadvertisedInbox, collectives, broken, other } = data;
   const rerender = () => renderMembership(app, webId, podUrl, onLogout);
 
   app.innerHTML = `
@@ -189,15 +214,21 @@ export async function renderMembership(
         <span class="meta">${esc(webId)}</span>
         <button id="logout" class="ghost">Sign out</button>
       </div>
-      <h1 data-view-title>Your membership</h1>
-      <p class="lead">
-        Everything below is written on your own pod, except the two short
-        messages sent to a collective's inbox. You can undo each step here.
-      </p>
+      <h1 data-view-title>${esc(profile.name ?? "Your collectives")}</h1>
 
+      ${run ? sectionRun(run.collective, run.summary) : ""}
+      ${runError ? `<section class="step">${renderRunError(runError)}</section>` : ""}
+
+      <h2 class="section-title">You</h2>
+      <p class="lead">
+        Everything here is written on your own pod, except the short messages
+        sent to a collective's inbox. You can undo each step.
+      </p>
       ${stepName(profile)}
       ${stepAgent(profile)}
       ${stepInbox(profile, unadvertisedInbox)}
+
+      <h2 class="section-title">You belong to</h2>
       ${collectives.map((c, i) => stepCollective(c, i, profile)).join("")}
       ${broken.map((b) => `<section class="step">${renderBroken(b)}</section>`).join("")}
       ${stepFindCollective(collectives.length === 0)}
@@ -415,6 +446,48 @@ function stepInbox(profile: MemberDeclaration, unadvertised: string | null): str
      </p>
      <p><button id="make-inbox">Create my inbox</button></p>`
   );
+}
+
+/** "You run": the collective whose account this is. Managing requests is slice B. */
+function sectionRun(collective: Collective, summary: CollectiveSummary): string {
+  const count = (n: number | null, one: string, many: string) =>
+    n === null ? `${many}: could not be read` : `${n} ${n === 1 ? one : many}`;
+  return `
+    <h2 class="section-title">You run</h2>
+    <section class="step">
+      <div class="step-head">
+        <h2>${esc(collective.name)}</h2>
+        <span class="label-mono">Collective</span>
+      </div>
+      <ul class="plain-list">
+        <li>${esc(count(summary.members, "member", "members"))}</li>
+        <li>${esc(count(summary.inboxItems, "message in the inbox", "messages in the inbox"))}</li>
+      </ul>
+      <p class="meta">
+        Accepting requests from here comes next. Until then, add a member to
+        <code>${esc(collective.roster)}</code> by hand.
+      </p>
+      <p class="meta">Invitation link: <code>${esc(inviteLink(collective))}</code></p>
+    </section>`;
+}
+
+function inviteLink(collective: Collective): string {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("collective", collective.configUrl);
+  return url.href;
+}
+
+function renderRunError(reason: string): string {
+  return renderError({
+    title: "Your collective's config.ttl cannot be used",
+    detail: reason,
+    recovery:
+      "This account has a config.ttl at its pod root, so it runs a collective, " +
+      "but the file is incomplete. Compare it with docs/reference/collective-files.md.",
+    technical: reason,
+  });
 }
 
 function stepFindCollective(first: boolean): string {

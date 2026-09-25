@@ -5,8 +5,9 @@ vi.mock("../../src/lib/auth", () => ({
   authFetch: (input: RequestInfo | URL, init?: RequestInit) => current.fetch(input, init),
 }));
 
-const { loadCollective, isListed, membershipState, readOwnProfile, sendToInbox, buildJoin } =
+const { loadCollective, isListed, membershipState, readOwnProfile, sendToInbox, buildJoin, findRunCollective, summarise } =
   await import("../../src/lib/collective");
+const { ensureContainer } = await import("../../src/lib/pod");
 const { getAccess, setAgentAccess } = await import("../../src/lib/acl");
 
 const cast = inject("cast");
@@ -75,9 +76,12 @@ describe("src/lib against the test server", () => {
     expect(body).toContain(cast.neil.webId);
   });
 
-  it("writes a grant with acl.ts that the server then enforces", async () => {
+  it("shares the way the Share button does: nested folder, grant, then the agent can read", async () => {
     await actAs("neil");
-    const folder = cast.neil.pod + "output2/hyperscope/";
+    const hs = await loadCollective(hsConfig);
+    const folder = new URL(hs.bundleFolder, cast.neil.pod).href;
+    expect(folder).toBe(cast.neil.pod + "output2/hyperscope/");
+    await ensureContainer(folder);
     const put = await current.fetch(folder + "draft.md", {
       method: "PUT", headers: { "Content-Type": "text/markdown" }, body: "draft",
     });
@@ -90,5 +94,36 @@ describe("src/lib against the test server", () => {
     expect(await status(folder + "draft.md")).toBe(200);
     await actAs("outsider");
     expect(await status(folder + "draft.md")).toBe(403);
+  });
+});
+
+/** Roles, read from the pods (docs/explanation/membership.md#roles). */
+describe("who runs what", () => {
+  it("finds the collective an account runs from config.ttl at its own pod root", async () => {
+    await actAs("hyperscope");
+    const own = await findRunCollective(cast.hyperscope.pod);
+    expect(own?.group).toBe(hsGroup);
+    const summary = await summarise(own!);
+    expect(summary.members).toBe(1);
+    expect(summary.inboxItems).toBeGreaterThanOrEqual(0);
+  });
+
+  it("finds none for a person's account", async () => {
+    await actAs("amina");
+    expect(await findRunCollective(cast.amina.pod)).toBeNull();
+  });
+
+  it("lets a collective see another collective it could join (J6)", async () => {
+    await actAs("hyperscope");
+    const net = await loadCollective(cast.network.pod + "config.ttl");
+    expect(net.name).toBe("Fablab network");
+    expect(net.group).not.toBe(hsGroup);
+  });
+
+  it("gives a member only counts they may read: the inbox stays closed", async () => {
+    await actAs("amina");
+    const summary = await summarise(await loadCollective(hsConfig));
+    expect(summary.members).toBe(1);
+    expect(summary.inboxItems).toBeNull();
   });
 });

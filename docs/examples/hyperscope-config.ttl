@@ -23,5 +23,5 @@
     hs:agent <agents/agent#me> ;
     # Reserved: what a member's profile must contain, as a SHACL shape.
     # hs:requires <member-shape.ttl> ;
-    # Created at the root of each member's pod.
-    hs:bundleFolder "output2hyperscope/" .
+    # Created inside each member's pod when they share.
+    hs:bundleFolder "output2/hyperscope/" .

@@ -44,7 +44,7 @@ function acl(target: string, owner: string, container: boolean, extra: string[])
 function config(name: string, slug: string, agent: string): string {
   return `@prefix hs: <${HS}>. @prefix foaf: <http://xmlns.com/foaf/0.1/>. @prefix ldp: <http://www.w3.org/ns/ldp#>.
 <#${slug}> a hs:Collective, foaf:Group; foaf:name "${name}"; hs:roster <membres.ttl>;
-  ldp:inbox <inbox/>; hs:agent <${agent}>; hs:bundleFolder "output2${slug}/".`;
+  ldp:inbox <inbox/>; hs:agent <${agent}>; hs:bundleFolder "output2/${slug}/".`;
 }
 
 /** A collective's pod, by the how-to: config, roster, inbox, and their ACLs. */

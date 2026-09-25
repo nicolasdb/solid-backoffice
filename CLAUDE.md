@@ -50,8 +50,9 @@ one changes, change the other. Never point it at the real provider.
   (never a rewrite) when an `.acl` holds something it cannot represent.
 - `src/lib/collective.ts` — ADR 006, member side: config, profile and roster
   parsing, the membership state table, `as:Join` / `as:Announce`.
-- `src/onboarding.ts` — slice A's screen. A checklist read from the pods on
-  every render; no progress is stored.
+- `src/onboarding.ts` — the home screen: "You run" (a `config.ttl` at the
+  signed-in pod's root, via `findRunCollective`), "You" and "You belong to".
+  Read from the pods on every render; no role or progress is stored.
 
 `docs/slices.md` has what comes next and in which order.
 

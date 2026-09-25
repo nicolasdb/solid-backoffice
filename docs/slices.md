@@ -23,7 +23,7 @@ Not in A, on purpose:
 The design review (draft 2) changed three things in A before B starts:
 account creation moves into the first journey (username, email, password;
 our provider only), the home screen splits into "You run" and "You belong
-to", and the shared folder becomes `output2/<collective>/`. Reasons:
+to" (built), and the shared folder becomes `output2/<collective>/` (built). Reasons:
 [explanation/membership.md](explanation/membership.md),
 [explanation/sharing.md](explanation/sharing.md).
 
@@ -54,6 +54,9 @@ A list of pods, stored on the user's own pod: their own, the collective's, and
 any pod where someone granted them something (the Xavier case). One file
 browser across them, with the ACL editor from `src/lib/acl.ts` on every place
 where the user holds Control. Download is the minimum for binary files.
+**Move** carries a folder's contents with it: renaming a folder in the old
+backoffice left the files behind (found live, 25 Sep 2026). Following
+(J7, [explanation/following.md](explanation/following.md)) is part of C too.
 
 ## D — Provider layer, shown only on our provider
 
@@ -80,7 +83,7 @@ not its HANDOFF.md, which is older than several features.
 | Membership, join, share | A | done; new, the old one had none |
 | "Requests" view | B | demo cards only in the old app; B makes it real |
 | File browser, new file / folder | C | |
-| Upload, rename (copy then delete), delete with a count of what is inside | C | |
+| Upload, rename (copy then delete), delete with a count of what is inside | C | rename must move a folder's contents too |
 | Editor with live preview (Markdown, JSON check, code) | C | |
 | Wipe pod contents, protected paths kept | C | keep the protected-path list |
 | Sharing: only me / anyone with the link / one WebID read or edit | C | `acl.ts` already writes all three |

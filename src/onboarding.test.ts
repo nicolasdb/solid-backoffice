@@ -15,7 +15,7 @@ const COLLECTIVE = {
   roster: "https://pod.example/hs/membres.ttl",
   inbox: "https://pod.example/hs/inbox/",
   agent: "https://pod.example/hs/agents/agent#me",
-  bundleFolder: "output2hyperscope/",
+  bundleFolder: "output2/hyperscope/",
 };
 
 let profile = { name: null as string | null, memberOf: [] as string[], delegates: [] as string[], inbox: null as string | null };
@@ -24,6 +24,7 @@ let agentGrants: { webId: string; modes: string[] }[] = [];
 let failInbox = false;
 let inboxFolderExists = false;
 let configStatus: number | null = null;
+let runs: typeof COLLECTIVE | null = null;
 
 vi.mock("./lib/auth", () => ({ authFetch: vi.fn() }));
 vi.mock("./lib/pod", () => ({
@@ -53,6 +54,8 @@ vi.mock("./lib/collective", async (importOriginal) => {
       throw Object.assign(new Error("not a collective"), { address });
     },
     isListed: async () => listed,
+    findRunCollective: async () => runs,
+    summarise: async () => ({ members: 3, inboxItems: 1 }),
     updateOwnProfile: async (_w: string, edit: (t: unknown) => unknown) => {
       calls.push(`profile ${edit.name || "edit"}`);
     },
@@ -93,6 +96,7 @@ beforeEach(() => {
   failInbox = false;
   inboxFolderExists = false;
   configStatus = null;
+  runs = null;
   sessionStorage.clear();
   invitedTo(COLLECTIVE.configUrl);
 });
@@ -132,6 +136,30 @@ describe("slice A — the member's side of the handshake", () => {
       `acl ${POD}inbox/ authenticated append`,
       "profile edit",
     ]);
+  });
+
+  it("shows the collective an account runs, and never offers it to join itself", async () => {
+    runs = COLLECTIVE;
+    const app = await render();
+    expect(app.textContent).toContain("You run");
+    expect(app.textContent).toContain("3 members");
+    expect(app.textContent).toContain("1 message in the inbox");
+    expect(app.querySelector("#join-0")).toBeNull();
+    expect(app.textContent).not.toContain("Join HyperScope");
+    // The invitation to itself is dropped, not kept for later.
+    expect(sessionStorage.getItem("solid-backoffice.invite")).toBeNull();
+  });
+
+  it("lets a collective belong to another collective", async () => {
+    runs = { ...COLLECTIVE, configUrl: "https://pod.example/net/config.ttl", group: "https://pod.example/net/config.ttl#net", name: "Network" };
+    const app = await render();
+    expect(app.textContent).toContain("You run");
+    expect(app.textContent).toContain("Join HyperScope");
+  });
+
+  it("shows nobody a \"You run\" section unless their pod holds a config.ttl", async () => {
+    const app = await render();
+    expect(app.textContent).not.toContain("You run");
   });
 
   it("will not send a join request before there is an inbox for the answer", async () => {
@@ -179,8 +207,8 @@ describe("slice A — the member's side of the handshake", () => {
     expect(app.textContent).toContain("You are a member.");
     await click(app, "#publish-0");
     expect(calls).toEqual([
-      `ensure ${POD}output2hyperscope/`,
-      `acl ${POD}output2hyperscope/ ${COLLECTIVE.agent} read`,
+      `ensure ${POD}output2/hyperscope/`,
+      `acl ${POD}output2/hyperscope/ ${COLLECTIVE.agent} read`,
       "inbox Announce",
     ]);
   });
@@ -192,7 +220,7 @@ describe("slice A — the member's side of the handshake", () => {
     const app = await render();
     expect(app.textContent).toContain("does not remove copies already made");
     await click(app, "#unpublish-0");
-    expect(calls).toEqual([`acl ${POD}output2hyperscope/ ${COLLECTIVE.agent} `]);
+    expect(calls).toEqual([`acl ${POD}output2/hyperscope/ ${COLLECTIVE.agent} `]);
   });
 
   it("treats an unreadable roster as pending, not as refused", async () => {

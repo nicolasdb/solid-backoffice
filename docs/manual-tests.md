@@ -245,11 +245,15 @@ no collective at all, only "Join a collective".
 5. **Accept by hand.** As the owner, add the test WebID to `membres.ttl`.
    Reload: the screen says "You are a member" (only if members can read
    `membres.ttl`; otherwise it stays "pending", which is a finding).
-6. **Share.** Share the folder. `output2hyperscope/.acl` grants
+6. **Share.** Share the folder. `output2/hyperscope/.acl` grants
    `agent#me` Read with `acl:default`, and an `as:Announce` is in the inbox.
    Put a file in the folder and run the pull procedure: it is picked up.
 7. **Stop sharing, then undo.** The grant disappears, then comes back.
 8. **Leave.** The state becomes "left" while the roster still lists the
    account.
+
+9. **You run.** Sign in as the collective's own account. The home screen shows
+   "You run HyperScope" with a member count and an invitation link, and never
+   "Join HyperScope", even when opened through HyperScope's own invitation.
 
 Write down anything the copy got wrong, not just what failed.
