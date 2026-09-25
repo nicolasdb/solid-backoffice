@@ -224,12 +224,8 @@ See [`ux-principles.md`](ux-principles.md) for where these come from.
 ## Slice A — member side of the handshake
 
 Run with a test account that is **not** already a member (Neil's), against the
-live HyperScope pod. Before starting, the collective's owner has:
-
-- uploaded `docs/examples/hyperscope-config.ttl` to
-  `hyperscope/config.ttl`, with Read for `acl:AuthenticatedAgent`;
-- changed `membres.ttl`'s subject to `<config.ttl#hyperscope>`;
-- checked that `hyperscope/inbox/` gives `acl:AuthenticatedAgent` Append.
+live HyperScope pod. Before starting, the collective's pod is set up as in
+[how-to/set-up-a-collective.md](how-to/set-up-a-collective.md), steps 1–6.
 
 Then open the invitation link, `/?collective=https://pod.nicolasdb.eu/hyperscope/config.ttl`,
 and sign in as the test account. Opening the app without the link must show

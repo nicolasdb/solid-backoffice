@@ -18,6 +18,15 @@ Not in A, on purpose:
   The agent's profile is written when the agent is minted, which is also
   provider layer.
 
+## Decided since A was built
+
+The design review (draft 2) changed three things in A before B starts:
+account creation moves into the first journey (username, email, password;
+our provider only), the home screen splits into "You run" and "You belong
+to", and the shared folder becomes `output2/<collective>/`. Reasons:
+[explanation/membership.md](explanation/membership.md),
+[explanation/sharing.md](explanation/sharing.md).
+
 ## B — Admin side of the handshake
 
 On the collective's pod, for its owner:

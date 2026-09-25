@@ -48,6 +48,14 @@ been run live.
 
 `docs/slices.md` has what comes next and in which order.
 
+## Documentation
+
+`docs/` follows Diátaxis (index: `docs/README.md`): tutorials, how-to,
+reference, explanation, each fact in one place. `docs/faq.md` holds only
+questions with a one-line answer and a link to the page that owns it; never
+put an answer there that exists nowhere else. Anything about the collective's
+agent, snapshots or the protocol belongs in solid-kit's ADRs, not here.
+
 ## Rules that are easy to break
 
 - **Membership grants nothing** (ADR 006 §2). Never put a group in an ACL;

@@ -1,16 +1,11 @@
 # membres.ttl — the collective's side of the handshake (solid-kit ADR 006 §2).
 #
-# The subject is the collective's IRI from config.ttl, not a local #hyperscope:
-# one IRI for the group, whichever document you reach it from.
+# Only foaf:member lines: names and agents are read from each member's own
+# profile, so they are never out of date here.
+# The subject is the collective's IRI from config.ttl.
 # Readable by members only: when you accept someone, add their WebID here AND
 # to this file's Read grants.
 
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
-@prefix acl:  <http://www.w3.org/ns/auth/acl#> .
 
 <config.ttl#hyperscope> foaf:member <https://pod.nicolasdb.eu/hyperscope_ndb/profile/card#me> .
-
-<https://pod.nicolasdb.eu/hyperscope_ndb/profile/card#me>
-    foaf:name "Nicolas" ;
-    foaf:nick "nicolas" ;
-    acl:delegates <https://pod.nicolasdb.eu/nicolas_claude/profile/card#me> .

@@ -30,18 +30,12 @@ What is still to come, in order, is in [`docs/slices.md`](docs/slices.md).
 ## Adding a collective
 
 The app has no list of collectives. A person sees the ones their profile says
-they belong to (`org:memberOf`), plus the one they were invited to or typed in.
+they belong to, plus the one they were invited to or typed in. Setting up a
+collective's pod is done by hand:
+[docs/how-to/set-up-a-collective.md](docs/how-to/set-up-a-collective.md).
 
-A collective is described by a `config.ttl` on its own pod, and its IRI
-(`config.ttl#hyperscope`) is also the group IRI members point at, so a
-profile's `org:memberOf` link leads straight to it. For HyperScope:
-
-1. upload [`docs/examples/hyperscope-config.ttl`](docs/examples/hyperscope-config.ttl)
-   as `hyperscope/config.ttl`, with Read for `acl:AuthenticatedAgent`;
-2. change the subject in `membres.ttl` to `<config.ttl#hyperscope>`, as in
-   [`docs/examples/hyperscope-membres.ttl`](docs/examples/hyperscope-membres.ttl);
-3. invite people with `https://<backoffice>/?collective=https://pod.nicolasdb.eu/hyperscope/config.ttl`,
-   or give them that address to paste.
+All documentation, arranged by kind, starts at [docs/README.md](docs/README.md);
+questions go through the [FAQ](docs/faq.md).
 
 ## Commands
 

@@ -1,8 +1,8 @@
 # config.ttl — what the backoffice needs to know about a collective.
 #
 # Upload to https://pod.nicolasdb.eu/hyperscope/config.ttl, then give it
-# Read for acl:AuthenticatedAgent: people read it BEFORE they are members,
-# to know where to send their request. Nothing in it is secret.
+# Read for acl:AuthenticatedAgent (docs/how-to/set-up-a-collective.md).
+# Field by field: docs/reference/collective-files.md.
 #
 # <#hyperscope> is the collective's IRI and also its group IRI: members write
 # `org:memberOf <https://pod.nicolasdb.eu/hyperscope/config.ttl#hyperscope>`,
@@ -21,5 +21,7 @@
     ldp:inbox <inbox/> ;
     # The WebID members grant Read to when they share. Never a group.
     hs:agent <agents/agent#me> ;
+    # Reserved: what a member's profile must contain, as a SHACL shape.
+    # hs:requires <member-shape.ttl> ;
     # Created at the root of each member's pod.
     hs:bundleFolder "output2hyperscope/" .
