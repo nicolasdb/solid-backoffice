@@ -221,76 +221,41 @@ See [`ux-principles.md`](ux-principles.md) for where these come from.
 
 ---
 
-## Slice A — member side of the handshake
+## Slices A and B — the handshake, on the live pod
 
-Run with a test account that is **not** already a member (Neil's), against the
-live HyperScope pod. Before starting, the collective's pod is set up as in
-[how-to/set-up-a-collective.md](how-to/set-up-a-collective.md), steps 1–6.
+The protocol is tested against a throwaway CSS 7 with a cast of accounts
+(`npm run test:pods`: `member.test.ts`, `admin.test.ts`, `cast.test.ts`), and
+the screens against mocks (`src/admin.test.ts`, `src/onboarding.test.ts`). Those
+cover name, agent, inbox, join, share, stop sharing, leave, accept, refuse (with
+`as:Reject` reaching an inbox), members from both sides, remove, and messages
+the app does not understand. **They do not cover a real browser sign-in, the
+live pod's own setup, the agent, or whether the copy reads well.** This pass
+covers only those. It is short on purpose: a step that a test already runs is
+not repeated here.
 
-Then open the invitation link, `/?collective=https://pod.nicolasdb.eu/hyperscope/config.ttl`,
-and sign in as the test account. Opening the app without the link must show
-no collective at all, only "Join a collective".
+Use two test accounts on the live pod: one **not** yet a member (Neil's), and
+the collective's own. Before starting, the collective's pod is set up as in
+[how-to/set-up-a-collective.md](how-to/set-up-a-collective.md), steps 1–6, and
+`membres.ttl` has its own `.acl`; if `depots/` or `principles/` exist, they
+need one too, or accepting is refused before any write.
 
-1. **Name.** Save a name. Open the profile document in a new tab: `foaf:name`
-   is there, and nothing else in the profile changed.
-2. **Agent.** Add a WebID; remove it; undo. The profile carries
-   `acl:delegates` exactly once.
-3. **Inbox.** "Ask to join" is disabled before the inbox exists. Create it,
-   or, if `inbox/` already exists but the profile does not say so, use it.
-   `inbox/.acl` has the owner block and `acl:AuthenticatedAgent` Append with
-   `acl:default`; the profile has `ldp:inbox`.
-4. **Join.** Ask to join. The profile has `org:memberOf`; a new `as:Join`
-   appears in `hyperscope/inbox/` (check as the owner). The screen says
-   "pending", not "refused", although the test account cannot read the roster.
-5. **Accept by hand.** As the owner, add the test WebID to `membres.ttl`.
-   Reload: the screen says "You are a member" (only if members can read
-   `membres.ttl`; otherwise it stays "pending", which is a finding).
-6. **Share.** Share the folder. `output2/hyperscope/.acl` grants
-   `agent#me` Read with `acl:default`, and an `as:Announce` is in the inbox.
-   Put a file in the folder and run the pull procedure: it is picked up.
-7. **Stop sharing, then undo.** The grant disappears, then comes back.
-8. **Leave.** The state becomes "left" while the roster still lists the
-   account.
-
-9. **You run.** Sign in as the collective's own account. The home screen shows
-   "You run HyperScope" with a member count and an invitation link, and never
-   "Join HyperScope", even when opened through HyperScope's own invitation.
-
-Write down anything the copy got wrong, not just what failed.
-
----
-
-## Slice B — admin side of the handshake
-
-Run as the collective's own account, against the live HyperScope pod, with a
-test account that has run Slice A up to step 4 (a pending request, an inbox).
-`membres.ttl` must have its own `.acl` (how-to, step 4); if `depots/` or
-`principles/` exist, they need one too, or accepting is refused before any
-write.
-
-1. **Requests.** The home screen shows "You run HyperScope" with a count of
-   members and requests, then one card per `as:Join`: the requester's name,
-   whether their profile declares HyperScope, their agents, whether they have
-   an inbox, and a suggested short name.
-2. **A request the profile does not back.** From a second test account with
-   no `org:memberOf`, send a join (Slice A step 4, then remove `org:memberOf`
-   by hand). Its card says the profile does not say they belong.
-3. **Accept.** Accept the first request. Check as the owner: `membres.ttl`
-   has the `foaf:member` and `foaf:nick` lines, and its comments are intact;
-   `membres.ttl.acl` grants that WebID Read; the `as:Join` is gone from
-   `inbox/`. As the test account: an `as:Accept` is in its inbox, and Slice A
-   now says "You are a member".
-4. **Refuse.** Refuse the second request: an `as:Reject` reaches its inbox
-   (if it has one), the `as:Join` is gone, the roster is unchanged.
-5. **Members.** The list shows both sides for each member. A member who
-   shared through Slice A step 6 shows "Announced …".
-6. **Left.** As the test account, Leave (Slice A step 8). As the owner, the
-   member shows as "Left".
-7. **Remove.** "Remove" asks once more before acting. After: the grant is gone
-   from `membres.ttl.acl`, the `foaf:member` line is gone but `foaf:nick`
-   stays, an `as:Remove` is in the test account's inbox, and the test account
-   gets 403 on `membres.ttl` and reads its state as "pending", never "refused".
-8. **Other messages.** POST a plain-text body to `inbox/`. It shows under
-   "Other messages", and can be deleted.
+1. **Newcomer, in a browser.** Open
+   `/?collective=https://pod.nicolasdb.eu/hyperscope/config.ttl` and sign in as
+   the test account. Go through name, inbox, join and share on the screen.
+   Read every line: is anything wrong, unclear, or blaming the person? Finished
+   steps fold to their title.
+2. **Collective, in a browser.** Sign in as the collective's account. "You run
+   HyperScope" shows the request with the requester's own declarations and a
+   suggested short name. Accept it. `membres.ttl` keeps its hand-written
+   comments, and the new lines look right to a person reading the file.
+3. **Live ACLs.** As the newcomer, reload: "You are a member". If it stays
+   "pending", the live `membres.ttl.acl` did not take the grant. That is a
+   finding about the live pod, which the throwaway server cannot show.
+4. **The agent.** With the folder shared, run the pull procedure: the file is
+   picked up. This is the collective's agent, not this app.
+5. **Refuse and remove, once each.** Refuse a second request; remove the
+   member. "Remove" asks once more. Read the wording of both.
+6. **A message it does not understand.** POST a plain-text body to
+   `hyperscope/inbox/`. It shows under "Other messages" and can be deleted.
 
 Write down anything the copy got wrong, not just what failed.
