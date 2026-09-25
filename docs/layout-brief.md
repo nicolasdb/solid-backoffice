@@ -130,14 +130,61 @@ toasts and screen-reader announcements after each write.
 - **Copy stays**: the wording has been reviewed; the layout may move it, and
   the design session should flag copy it would change rather than rewrite it.
 
+## Answers so far (25 Sep 2026)
+
+- **Landing page = the welcome screen** before sign-in or account creation.
+  Today it is a heading, one line and a field (see "Welcome" above): it
+  explains nothing to someone who has never heard of a pod.
+- **The collective's view gets its own screen**: requests, members and other
+  messages move out of the home screen. Home keeps a summary card ("You run
+  HyperScope · 2 members · 0 requests") that leads there.
+- **Home on a wide screen** and **navigation once C adds Places**: open. The
+  design session shows options side by side (for example: tabs, a side
+  rail, a home of cards that each lead to a screen), phone and desktop for
+  each, and the choice is made on the mockups.
+
+## Inspiration for explaining a pod
+
+**[solid-dash](https://dashboard.nicolasdb.eu/)** (same kit, same tokens; in
+French). Its landing page is the pattern to borrow:
+
+- a nav bar: brand, "Comment ça marche", "Voir un exemple", "Se connecter";
+- a hero on a 7 / 5 grid: an eyebrow ("Un tableau de bord qui vous
+  appartient"), a serif title ("Vos efforts vous appartiennent."), a pull
+  line ("Ce que vous en montrez aussi."), one concrete paragraph with a real
+  example; beside it, a sign-in panel ("Déjà inscrit ?", the address field,
+  a link to find a provider);
+- "Pourquoi": who benefits, and the one line that carries the idea ("Aucun
+  d'eux n'a besoin de lire votre carnet.");
+- "Comment ça marche": four numbered steps, each a short name and a
+  sentence (your data → your progress → your summary → your readers);
+- "Et ensuite": the scale, "Un résumé, puis dix, puis cent", with a diagram
+  of nested shapes (you, a pair, a group, a network);
+- a footer: "Aucun serveur entre vous et vos données — tout se passe dans
+  votre navigateur. Construit sur Solid, un standard ouvert du web."
+
+**[The Liminal Institute](https://tuuli.in/liminal_institute/)**: text first,
+generous white space, numbered sections, one strong opening claim
+("Civilizations are formed by interaction patterns."), and the ladder
+"individual → pair → group → organization → network → civilization". The
+backoffice has the same ladder: a person, a collective, a collective of
+collectives (J6).
+
+What the backoffice's welcome must add to that pattern: the invitation
+(who invites you, to what) and account creation as the primary action when
+invited, sign-in when not.
+
 ## Open questions for the design session
 
 1. The home screen on a wide screen: what sits beside what, and does "You"
    (setup, done once) deserve the same weight as the collectives (ongoing)?
-2. What "landing page" means: the welcome screen before sign-in, a public page
-   per collective (the invitation's destination), or both. This ties to E.
-3. Where navigation lives once C adds Places, without building C now.
-4. The collective's view (requests, members) as part of home, or as its own
-   screen once there are many members.
-5. How the welcome screen explains a pod in one glance to someone who has
-   never heard of Solid.
+   Show options.
+2. Where navigation lives once C adds Places, without building C now: tabs,
+   a side rail, or cards leading to screens. Show options.
+3. The collective's own screen: requests first or members first, and how it
+   holds 40 members and 10 requests.
+4. The welcome screen, invited and not invited, on the solid-dash pattern:
+   how it explains a pod in one glance to someone who has never heard of
+   Solid, with the sign-up form as heavy as it is.
+5. E: the same welcome with Maps of Making's copy. What changes besides the
+   words?

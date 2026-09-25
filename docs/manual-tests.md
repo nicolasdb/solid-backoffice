@@ -288,6 +288,17 @@ the non-member they need. Use a private window, and a username starting with
    if not, it only says to keep the passphrase safe.
 
 **Run record, 25 Sep 2026.** Done live: 2 (accept, request sent from a
-personal account), 4 (pull and confrontation). Waiting for the end-to-end
-run from a new account after J1, which rebuilds the newcomer's path: 1, 3,
-5 and 6.
+personal account), 4 (pull and confrontation).
+
+**J1 run, 25 Sep 2026** (`audit: 23 checks passed`; account `test-easy`).
+1–2: invitation screen as described; `hyperscope` refused as taken, a
+second username accepted on the same account. 3: the provider's page asks
+for the password, then consent: the `credentials: "include"` spike does not
+spare the password, so the line in `src/signup.ts` stays. 4: name and inbox
+done, "Ask to join" is the next action. 5: asked to join, shared
+`output2/hyperscope/`, accepted by the collective ("Member: both sides
+agree", the share announced). Slices A and B step 1 is done by this run.
+6: the provider's reset is disabled, SMTP is not set on the provider:
+deferred, not blocking; the sign-up line now only says to keep the
+passphrase safe. Still to run: A and B steps 3 (the newcomer's own "You are
+a member" after reload), 5 and 6.

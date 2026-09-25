@@ -18,12 +18,17 @@ on the announced `output2/hyperscope/`. The live steps that need a second,
 non-member account (newcomer's screen, refuse, remove) wait for the final
 end-to-end run from a new account, after J1 rebuilds that path.
 
-**J1 (account creation) is built** and passes against the test server
-(`test/pods/signup.test.ts`; the whole cast is now created by the app's own
-`createAccount`). Not yet run live: its manual-tests section is also the
-end-to-end run that finishes A and B's live steps.
+**J1 (account creation) is built and run live** (25 Sep 2026): a new
+account from HyperScope's invitation, a taken username retried, name and
+inbox set on the first home screen, asked to join, shared `output2/`,
+accepted by the collective. The provider still asks for the password after
+creation (the cookie spike did not spare it). Password reset needs SMTP on
+the provider, which is not set: deferred, provider configuration, not this
+repo. Still to run live from B: refuse, remove, and a message it does not
+understand (manual-tests, steps 5 and 6).
 
-Next: that live run, then the layout pass, C, D, E. In
+Next: those two steps, then the layout pass (a design session from
+[layout-brief.md](layout-brief.md)), C, D, E. In
 [journeys](journeys.md) terms: J1, J3 and J5's admin side are built; J2, J4
 and J6 work already; J7 is C, J8 is D.
 
@@ -66,7 +71,7 @@ It is a design task, drafted in Claude Design from
 [layout-brief.md](layout-brief.md) (screens, states, real content,
 constraints, open questions). The code follows the mockups.
 
-## J1 — Account creation · built, live test pending
+## J1 — Account creation · built, run live
 
 From an invitation link, the first screen offers "Create an account": name,
 username (suggested from the name, the pod's address shown under it), email,
