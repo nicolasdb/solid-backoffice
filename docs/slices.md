@@ -4,6 +4,34 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
+## Where we are (25 Sep 2026)
+
+Built and tested live: A (member side), role detection ("You run", "You
+belong to"), the `output2/<collective>/` folder, and the test server with its
+cast (`npm run test:pods`). On the live pod, HyperScope's `config.ttl` and
+`membres.ttl` match `docs/examples/`; `config.ttl` is public for now.
+
+**Next: B**, then account creation (J1), then the layout pass, C, D, E. In
+[journeys](journeys.md) terms: J3 next, then J1; J2, J4, J5 and J6 work
+already; J7 is C, J8 is D.
+
+First tasks for B, each with a pod test in `test/pods/` before the screen:
+
+1. Read `inbox/` as the collective's account: parse `as:Join` and
+   `as:Announce` (the Turtle `buildJoin`/`buildAnnounce` write), keep unknown
+   messages visible rather than dropping them.
+2. For each request, read the requester's profile (name, `org:memberOf`,
+   agents) and flag a request whose profile does not declare the membership.
+3. Accept: add `foaf:member` and `foaf:nick` to `membres.ttl` (conditional
+   write), add the WebID to the Read grants of `membres.ttl` (and later
+   `depots/`, `principles/`), send `as:Accept` to the requester's inbox.
+   Refuse: `as:Reject`. Pin the order with a test.
+4. Members list, each state read from both sides.
+
+The cast needs one more person for this: a newcomer who has declared and
+sent a request (Neil after `buildJoin`), so B's tests start from a real
+request.
+
 ## A — Member side of the handshake · built
 
 For someone who already has an account. Name, agent, inbox, join, share. The

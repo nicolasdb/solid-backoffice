@@ -11,8 +11,8 @@ answer lives.
 | Reference | facts to look up | [Collective files](reference/collective-files.md) · [Examples](examples/) |
 | Explanation | why it works this way | [Membership](explanation/membership.md) · [Sharing with a collective](explanation/sharing.md) · [Following](explanation/following.md) |
 
-Also here: [FAQ](faq.md) · [Slices](slices.md) (what gets built, in which
-order) · [UX principles](ux-principles.md) (from the kit).
+Also here: [FAQ](faq.md) · [Journeys](journeys.md) · [Slices](slices.md)
+(where we are, and what gets built next) · [UX principles](ux-principles.md) (from the kit).
 
 Anything that concerns more than this app lives in solid-kit: the
 [atlas](https://github.com/nicolasdb/solid-kit/blob/main/docs/atlas.md) and

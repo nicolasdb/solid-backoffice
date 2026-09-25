@@ -54,7 +54,8 @@ one changes, change the other. Never point it at the real provider.
   signed-in pod's root, via `findRunCollective`), "You" and "You belong to".
   Read from the pods on every render; no role or progress is stored.
 
-`docs/slices.md` has what comes next and in which order.
+**Starting a session: read `docs/slices.md` first** ("Where we are" and the
+next tasks), then `docs/journeys.md`. No plan lives anywhere else.
 
 ## Documentation
 
