@@ -71,8 +71,10 @@ backoffice is not generic enough, and that is a bug in the backoffice.
 
 ## Roster
 
-The roster (`membres.ttl`) holds only `foaf:member` lines: WebIDs, nothing
-else. Names, agents and inboxes are read from each member's own profile.
+The roster (`membres.ttl`) holds only what the collective itself decides:
+who is a member (`foaf:member`), and the short name it files their work
+under (`foaf:nick`). Names, agents and inboxes are read from each member's
+own profile.
 
 That keeps one source of truth per fact, and it is what makes changes on a
 member's side harmless:

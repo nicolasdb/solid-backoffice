@@ -54,8 +54,8 @@ Yes, later: `config.ttl` has a reserved line for the collective's
 requirements. → [Collective files](reference/collective-files.md#requirements)
 
 **What if a member renames themselves or replaces their agent?**
-Nothing to update: the roster holds only WebIDs, and everything else is read
-from the member's profile. → [Membership](explanation/membership.md#roster)
+Nothing to update: the roster holds only WebIDs and the collective's own
+short names; everything else is read from the member's profile. → [Membership](explanation/membership.md#roster)
 
 ## Sharing
 

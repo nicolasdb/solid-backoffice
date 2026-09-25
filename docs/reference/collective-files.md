@@ -46,8 +46,16 @@ pre-checked request. Reserved, not built; the parser ignores it today.
 
 Example: [`examples/hyperscope-membres.ttl`](../examples/hyperscope-membres.ttl).
 
-Only `<config.ttl#hyperscope> foaf:member <WebID>` lines. No names, no
-agents: those are read from each member's profile
+Two kinds of lines, both facts the collective owns:
+
+- `<config.ttl#hyperscope> foaf:member <WebID>`. The subject is the IRI from
+  `config.ttl`; a local `<#hyperscope>` would be `membres.ttl#hyperscope`, a
+  different IRI, and nobody would be found.
+- `<WebID> foaf:nick "nicolas"`: the short name used in `depots/` and
+  `confrontations/` paths. Set at acceptance, never changed once used.
+
+No names, no agents, no `foaf:Group` or `foaf:name` for the collective (that
+is `config.ttl`'s): those are read where they live
 ([why](../explanation/membership.md#roster)).
 
 ## inbox/
