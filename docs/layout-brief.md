@@ -147,6 +147,18 @@ toasts and screen-reader announcements after each write.
   closing diagram shows the ladder as groups of groups: you, HyperScope,
   and a network of four collectives with 3 to 5 members each.
   The copy as drawn is approved, desktop and phone.
+- **Collective's own screen: side by side** (requests left, members right).
+- **A member's view** (the collective's tab, for a member): as drawn, to try.
+  Sharing first, membership below with a quiet Leave; the roster's members
+  and the collective's agent beside them. New: members see the roster,
+  which accepting already lets them read.
+- **Two landings, one app.** Not invited: a full page that explains the
+  backoffice itself (generic copy, same sections). Invited: the same page,
+  with the collective's name and folder read from the invitation's
+  `config.ttl`. Proposed, to decide: a collective's own pitch (the hero's
+  title and line) as an optional field in `config.ttl`, falling back to
+  the generic copy, which is how E would get its landing without code.
+- **Places**: a first draft (slice C), to discuss.
 
 The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
 (a Claude Design canvas, private to its owner).
