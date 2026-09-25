@@ -281,6 +281,11 @@ the non-member they need. Use a private window, and a username starting with
    and HyperScope offers "Ask to join" as the next action. Nothing asked you
    for either.
 5. Ask to join, then run steps 1, 3, 5, 6 above with this account.
+6. **Forgot password.** The provider advertises a reset
+   (`/.account/login/password/forgot/`). Ask for one with the test
+   account's email: does a mail arrive? Write down which. If it does, the
+   line under "Create my account" in `src/signup.ts` can say how to reset;
+   if not, it only says to keep the passphrase safe.
 
 **Run record, 25 Sep 2026.** Done live: 2 (accept, request sent from a
 personal account), 4 (pull and confrontation). Waiting for the end-to-end

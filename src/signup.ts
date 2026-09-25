@@ -152,8 +152,8 @@ function signUpForm(provider: string): string {
       <div><button type="submit">Create my account</button></div>
       <p class="meta">
         Next, your provider's page asks for this email and passphrase once, to
-        sign you in. There is no way to recover it if you lose it, so keep it
-        somewhere safe.
+        sign you in. Keep it somewhere safe: resetting it depends on your
+        provider sending you an email.
       </p>
       <p class="error" id="signup-error" role="alert" hidden></p>
     </form>`;
