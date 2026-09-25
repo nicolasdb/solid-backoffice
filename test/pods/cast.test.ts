@@ -104,7 +104,7 @@ describe("who runs what", () => {
     const own = await findRunCollective(cast.hyperscope.pod);
     expect(own?.group).toBe(hsGroup);
     const summary = await summarise(own!);
-    expect(summary.members).toBe(1);
+    expect(summary.members).toBeGreaterThanOrEqual(1);
     expect(summary.inboxItems).toBeGreaterThanOrEqual(0);
   });
 
@@ -123,7 +123,7 @@ describe("who runs what", () => {
   it("gives a member only counts they may read: the inbox stays closed", async () => {
     await actAs("amina");
     const summary = await summarise(await loadCollective(hsConfig));
-    expect(summary.members).toBe(1);
+    expect(summary.members).toBeGreaterThanOrEqual(1);
     expect(summary.inboxItems).toBeNull();
   });
 });

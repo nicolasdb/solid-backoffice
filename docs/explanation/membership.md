@@ -69,6 +69,26 @@ without switching apps.
 An instance that needs more than its configuration to work means the
 backoffice is not generic enough, and that is a bug in the backoffice.
 
+## Answering requests
+
+Signed in as the collective, the home screen lists each `as:Join` next to
+what the requester's own profile says. A request whose profile does not
+declare the membership is flagged, not hidden: a claim from one side proves
+nothing, but the admin decides.
+
+Accepting is two writes, in this order: the roster line, then a Read grant
+for that one WebID on the roster (and on `depots/` and `principles/` once
+they exist). Then the answer goes to the requester's inbox and the request is
+deleted. Deleting it last means a failure halfway leaves the request on
+screen, and accepting it again finishes the job. Deleting it at all is what
+tells a refused request apart from a pending one: the roster records who is
+in, never who was turned down.
+
+Removing reverses the order: grants first, so nobody is ever off the roster
+and still able to read it; then the roster line; then `as:Remove` to their
+inbox. Their short name stays in the roster, because the collective's folders
+already use it. Nothing the collective already collected is deleted.
+
 ## Roster
 
 The roster (`membres.ttl`) holds only what the collective itself decides:

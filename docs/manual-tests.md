@@ -257,3 +257,40 @@ no collective at all, only "Join a collective".
    "Join HyperScope", even when opened through HyperScope's own invitation.
 
 Write down anything the copy got wrong, not just what failed.
+
+---
+
+## Slice B — admin side of the handshake
+
+Run as the collective's own account, against the live HyperScope pod, with a
+test account that has run Slice A up to step 4 (a pending request, an inbox).
+`membres.ttl` must have its own `.acl` (how-to, step 4); if `depots/` or
+`principles/` exist, they need one too, or accepting is refused before any
+write.
+
+1. **Requests.** The home screen shows "You run HyperScope" with a count of
+   members and requests, then one card per `as:Join`: the requester's name,
+   whether their profile declares HyperScope, their agents, whether they have
+   an inbox, and a suggested short name.
+2. **A request the profile does not back.** From a second test account with
+   no `org:memberOf`, send a join (Slice A step 4, then remove `org:memberOf`
+   by hand). Its card says the profile does not say they belong.
+3. **Accept.** Accept the first request. Check as the owner: `membres.ttl`
+   has the `foaf:member` and `foaf:nick` lines, and its comments are intact;
+   `membres.ttl.acl` grants that WebID Read; the `as:Join` is gone from
+   `inbox/`. As the test account: an `as:Accept` is in its inbox, and Slice A
+   now says "You are a member".
+4. **Refuse.** Refuse the second request: an `as:Reject` reaches its inbox
+   (if it has one), the `as:Join` is gone, the roster is unchanged.
+5. **Members.** The list shows both sides for each member. A member who
+   shared through Slice A step 6 shows "Announced …".
+6. **Left.** As the test account, Leave (Slice A step 8). As the owner, the
+   member shows as "Left".
+7. **Remove.** "Remove" asks once more before acting. After: the grant is gone
+   from `membres.ttl.acl`, the `foaf:member` line is gone but `foaf:nick`
+   stays, an `as:Remove` is in the test account's inbox, and the test account
+   gets 403 on `membres.ttl` and reads its state as "pending", never "refused".
+8. **Other messages.** POST a plain-text body to `inbox/`. It shows under
+   "Other messages", and can be deleted.
+
+Write down anything the copy got wrong, not just what failed.

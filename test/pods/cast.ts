@@ -7,14 +7,16 @@
  *   hsagent     HyperScope's agent (the WebID members grant Read to)
  *   amina       member: accepted, sharing output2/hyperscope/
  *   neil        newcomer: an account and nothing else
+ *   ines        applicant: declared HyperScope, has an inbox, sent an as:Join
  *   outsider    signed in, unrelated
  *   network     a second collective, for J6
  */
 import type { Session } from "@inrupt/solid-client-authn-node";
 import { createPerson, signIn, type Person } from "./accounts";
+import { buildJoin } from "../../src/lib/activity";
 
 const HS = "https://pod.nicolasdb.eu/hyperscope/vocab#";
-export const ROLES = ["hyperscope", "hsagent", "amina", "neil", "outsider", "network"] as const;
+export const ROLES = ["hyperscope", "hsagent", "amina", "neil", "ines", "outsider", "network"] as const;
 export type Role = (typeof ROLES)[number];
 export type Cast = Record<Role, Person>;
 
@@ -107,6 +109,16 @@ export async function createCast(base: string): Promise<Cast> {
     `acl:agent <${cast.hsagent.webId}>; acl:mode acl:Read`,
   ]));
   await amina.logout();
+
+  const ines = await as("ines");
+  await patchProfile(ines, cast.ines.webId,
+    `<${cast.ines.webId}> <http://xmlns.com/foaf/0.1/name> "Inès"; <http://www.w3.org/ns/org#memberOf> <${hsGroup}>.`);
+  await setUpInbox(ines, cast.ines);
+  const join = await ines.fetch(cast.hyperscope.pod + "inbox/", {
+    method: "POST", headers: { "Content-Type": "text/turtle" }, body: buildJoin(cast.ines.webId, hsGroup, "Inès"),
+  });
+  if (!join.ok) throw new Error(`POST join: ${join.status} ${await join.text()}`);
+  await ines.logout();
 
   return cast;
 }

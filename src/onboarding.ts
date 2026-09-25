@@ -19,8 +19,6 @@ import {
   buildAnnounce,
   buildJoin,
   findRunCollective,
-  summarise,
-  type CollectiveSummary,
   isListed,
   loadCollective,
   membershipState,
@@ -35,6 +33,8 @@ import {
 } from "./lib/collective";
 import { focusView, announce } from "./ui/a11y";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
+import { bindButton, bindForm } from "./bind";
+import { bindRun, loadRun, sectionRun, type RunView } from "./admin";
 
 interface CollectiveView {
   collective: Collective;
@@ -45,7 +45,7 @@ interface CollectiveView {
 
 interface Loaded {
   /** The collective this account runs: a config.ttl at its own pod root. */
-  run: { collective: Collective; summary: CollectiveSummary } | null;
+  run: RunView | null;
   /** This account's config.ttl exists but cannot be used. */
   runError: string | null;
   profile: MemberDeclaration;
@@ -109,7 +109,7 @@ async function load(webId: string, podUrl: string): Promise<Loaded> {
   let runError: string | null = null;
   try {
     const own = await findRunCollective(podUrl);
-    if (own) run = { collective: own, summary: await summarise(own) };
+    if (own) run = await loadRun(own, webId);
   } catch (err) {
     runError = describePodError(err);
   }
@@ -227,7 +227,7 @@ export async function renderMembership(
       </div>
       <h1 data-view-title>${esc(profile.name ?? "Your collectives")}</h1>
 
-      ${run ? sectionRun(run.collective, run.summary) : ""}
+      ${run ? sectionRun(run, inviteLine(run.collective)) : ""}
       ${runError ? `<section class="step">${renderRunError(runError)}</section>` : ""}
 
       <h2 class="section-title">You</h2>
@@ -256,6 +256,7 @@ export async function renderMembership(
     </main>`;
 
   app.querySelector("#logout")!.addEventListener("click", onLogout);
+  if (run) bindRun(app, run, rerender);
 
   bindForm(app, "#name-form", async (form) => {
     const name = (form.elements.namedItem("name") as HTMLInputElement).value.trim();
@@ -505,29 +506,6 @@ function stepInbox(profile: MemberDeclaration, unadvertised: string | null): str
   );
 }
 
-/** "You run": the collective whose account this is. Managing requests is slice B. */
-function sectionRun(collective: Collective, summary: CollectiveSummary): string {
-  const count = (n: number | null, one: string, many: string) =>
-    n === null ? `${many}: could not be read` : `${n} ${n === 1 ? one : many}`;
-  return `
-    <h2 class="section-title">You run</h2>
-    <section class="step">
-      <div class="step-head">
-        <h2>${esc(collective.name)}</h2>
-        <span class="label-mono">Collective</span>
-      </div>
-      <ul class="plain-list">
-        <li>${esc(count(summary.members, "member", "members"))}</li>
-        <li>${esc(count(summary.inboxItems, "message in the inbox", "messages in the inbox"))}</li>
-      </ul>
-      <p class="meta">
-        Accepting requests from here comes next. Until then, add a member to
-        <code>${esc(collective.roster)}</code> by hand.
-      </p>
-      ${inviteLine(collective)}
-    </section>`;
-}
-
 /**
  * An invitation link only works where the backoffice is reachable by the
  * person receiving it, so none is offered from a development server. The
@@ -630,44 +608,4 @@ function renderBroken(entry: Loaded["broken"][number]): string {
     action: { label: "Forget this address", id: `dismiss-broken-${encodeURIComponent(entry.address)}` },
     technical: entry.address,
   });
-}
-
-/* ── Wiring ────────────────────────────────────────────────────────────── */
-
-/**
- * Runs one write, then re-renders from the pods. A failure is shown in the
- * step it came from and nothing re-renders, so what was typed is not lost.
- */
-function bindButton(button: HTMLButtonElement, action: () => Promise<void>, after: () => void): void {
-  button.addEventListener("click", () => run(button, action, after));
-}
-
-function bindForm(
-  app: HTMLElement,
-  selector: string,
-  action: (form: HTMLFormElement) => Promise<void>,
-  after: () => void
-): void {
-  const form = app.querySelector<HTMLFormElement>(selector);
-  if (!form) return;
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    run(form.querySelector("button")!, () => action(form), after);
-  });
-}
-
-async function run(button: HTMLButtonElement, action: () => Promise<void>, after: () => void): Promise<void> {
-  const errorLine = button.closest(".step")?.querySelector<HTMLElement>(".step-error");
-  button.disabled = true;
-  if (errorLine) errorLine.hidden = true;
-  try {
-    await action();
-    after();
-  } catch (err) {
-    button.disabled = false;
-    if (errorLine) {
-      errorLine.textContent = describePodError(err);
-      errorLine.hidden = false;
-    }
-  }
 }

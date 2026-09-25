@@ -55,7 +55,6 @@ vi.mock("./lib/collective", async (importOriginal) => {
     },
     isListed: async () => listed,
     findRunCollective: async () => runs,
-    summarise: async () => ({ members: 3, inboxItems: 1 }),
     updateOwnProfile: async (_w: string, edit: (t: unknown) => unknown) => {
       calls.push(`profile ${edit.name || "edit"}`);
     },
@@ -66,6 +65,13 @@ vi.mock("./lib/collective", async (importOriginal) => {
     },
   };
 });
+
+vi.mock("./lib/admin", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./lib/admin")>()),
+  readInbox: async () => [],
+  readMembers: async () => [],
+  readRoster: async () => ({ members: [], nicks: new Map() }),
+}));
 
 const { renderMembership, captureInvite } = await import("./onboarding");
 
@@ -142,8 +148,7 @@ describe("slice A — the member's side of the handshake", () => {
     runs = COLLECTIVE;
     const app = await render();
     expect(app.textContent).toContain("You run");
-    expect(app.textContent).toContain("3 members");
-    expect(app.textContent).toContain("1 message in the inbox");
+    expect(app.textContent).toContain("0 members · 0 requests");
     expect(app.querySelector("#join-0")).toBeNull();
     expect(app.textContent).not.toContain("Join HyperScope");
     // The invitation to itself is dropped, not kept for later.

@@ -11,26 +11,11 @@ belong to"), the `output2/<collective>/` folder, and the test server with its
 cast (`npm run test:pods`). On the live pod, HyperScope's `config.ttl` and
 `membres.ttl` match `docs/examples/`; `config.ttl` is public for now.
 
-**Next: B**, then account creation (J1), then the layout pass, C, D, E. In
-[journeys](journeys.md) terms: J3 next, then J1; J2, J4, J5 and J6 work
+**B is built and passes against the test server** (`test/pods/admin.test.ts`);
+it is not done until `manual-tests.md` "Slice B" has been run live. Then
+account creation (J1), the layout pass, C, D, E. In [journeys](journeys.md)
+terms: J3 and J5's admin side are built, J1 is next; J2, J4 and J6 work
 already; J7 is C, J8 is D.
-
-First tasks for B, each with a pod test in `test/pods/` before the screen:
-
-1. Read `inbox/` as the collective's account: parse `as:Join` and
-   `as:Announce` (the Turtle `buildJoin`/`buildAnnounce` write), keep unknown
-   messages visible rather than dropping them.
-2. For each request, read the requester's profile (name, `org:memberOf`,
-   agents) and flag a request whose profile does not declare the membership.
-3. Accept: add `foaf:member` and `foaf:nick` to `membres.ttl` (conditional
-   write), add the WebID to the Read grants of `membres.ttl` (and later
-   `depots/`, `principles/`), send `as:Accept` to the requester's inbox.
-   Refuse: `as:Reject`. Pin the order with a test.
-4. Members list, each state read from both sides.
-
-The cast needs one more person for this: a newcomer who has declared and
-sent a request (Neil after `buildJoin`), so B's tests start from a real
-request.
 
 ## A — Member side of the handshake · built
 
@@ -57,8 +42,9 @@ to" (built), and the shared folder becomes `output2/<collective>/` (built). Reas
 
 ## Test server · built
 
-`npm run test:pods`: a throwaway CSS 7 and a cast of six accounts (collective,
-its agent, member, newcomer, outsider, second collective), set up by the
+`npm run test:pods`: a throwaway CSS 7 and a cast of seven accounts (collective,
+its agent, member, newcomer, applicant with a request sent, outsider, second
+collective), set up by the
 how-to. It runs the app's `src/lib` against a real server. Next: browser
 journeys (Playwright, one window per account) as each journey is built.
 
@@ -68,7 +54,7 @@ Once the journeys are wired end to end: a desktop layout that uses the width
 (the kit's single column is right on a phone, narrow on a screen), and the
 landing page. Done steps already fold to their title (25 Sep 2026).
 
-## B — Admin side of the handshake
+## B — Admin side of the handshake · built, live test pending
 
 On the collective's pod, for its owner:
 
@@ -81,6 +67,14 @@ On the collective's pod, for its owner:
   `as:Announce` messages. Only the member's pod can confirm the grant.
 
 Accepting and granting stay two writes (ADR 006 §2), even behind one click.
+
+As built (`src/lib/admin.ts`, `src/admin.ts`): a handled `as:Join` is deleted
+from the inbox, so a refused request cannot come back as pending; the short
+name (`foaf:nick`) is suggested from the requester's name, editable, refused
+if taken, and kept when a member is removed; removal (J5, admin side) revokes
+the Read grants, then removes the `foaf:member` line, then sends `as:Remove`.
+Messages the app does not understand stay visible under "Other messages".
+Grants are refused before any write when a target has no `.acl` of its own.
 
 ## C — Places: several pods in one workspace
 

@@ -50,6 +50,11 @@ one changes, change the other. Never point it at the real provider.
   (never a rewrite) when an `.acl` holds something it cannot represent.
 - `src/lib/collective.ts` — ADR 006, member side: config, profile and roster
   parsing, the membership state table, `as:Join` / `as:Announce`.
+- `src/lib/admin.ts` — ADR 006, collective side: read the inbox, check each
+  requester's profile, accept / refuse / remove (order pinned in
+  `src/lib/admin.test.ts`), members from both sides. `src/lib/activity.ts`
+  writes every AS message; `src/lib/vocab.ts` holds the namespaces.
+- `src/admin.ts` — the "You run" part of the home screen, over `lib/admin.ts`.
 - `src/onboarding.ts` — the home screen: "You run" (a `config.ttl` at the
   signed-in pod's root, via `findRunCollective`), "You" and "You belong to".
   Read from the pods on every render; no role or progress is stored.

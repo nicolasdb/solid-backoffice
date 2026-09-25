@@ -15,7 +15,7 @@
  * - MEMBERSHIP GRANTS NOTHING. Joining writes the profile and sends a request;
  *   publishing is a separate, per-WebID ACL grant. Never a group in an ACL.
  */
-import { DataFactory, Parser, Writer, type Quad } from "n3";
+import { Parser, type Quad } from "n3";
 import {
   getSolidDataset,
   getThing,
@@ -29,23 +29,10 @@ import {
   createThing,
 } from "@inrupt/solid-client";
 import { authFetch } from "./auth";
+import { NS } from "./vocab";
 
-export const NS = {
-  foaf: "http://xmlns.com/foaf/0.1/",
-  org: "http://www.w3.org/ns/org#",
-  acl: "http://www.w3.org/ns/auth/acl#",
-  ldp: "http://www.w3.org/ns/ldp#",
-  as: "https://www.w3.org/ns/activitystreams#",
-  xsd: "http://www.w3.org/2001/XMLSchema#",
-  rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-  /**
-   * PROVISIONAL. The same namespace the pull procedure's provenance.ttl uses.
-   * It lives on the HyperScope pod although the pattern is generic; moving it
-   * is an open question in ADR 006, and every term that uses it is here, so the
-   * move is one line.
-   */
-  hs: "https://pod.nicolasdb.eu/hyperscope/vocab#",
-} as const;
+export { NS };
+export { buildJoin, buildAnnounce } from "./activity";
 
 const FOAF_NAME = NS.foaf + "name";
 const FOAF_MEMBER = NS.foaf + "member";
@@ -179,51 +166,6 @@ export function profileDocOf(webId: string): string {
   const url = new URL(webId);
   url.hash = "";
   return url.href;
-}
-
-function activity(type: "Join" | "Announce", fields: {
-  actor: string;
-  object: string;
-  target?: string;
-  summary?: string;
-  published?: Date;
-}): string {
-  const { namedNode, literal, quad } = DataFactory;
-  const self = namedNode("");
-  const writer = new Writer({ prefixes: { as: NS.as, xsd: NS.xsd } });
-  writer.addQuad(quad(self, namedNode(NS.rdf + "type"), namedNode(NS.as + type)));
-  writer.addQuad(quad(self, namedNode(NS.as + "actor"), namedNode(fields.actor)));
-  writer.addQuad(quad(self, namedNode(NS.as + "object"), namedNode(fields.object)));
-  if (fields.target) writer.addQuad(quad(self, namedNode(NS.as + "target"), namedNode(fields.target)));
-  if (fields.summary) writer.addQuad(quad(self, namedNode(NS.as + "summary"), literal(fields.summary)));
-  writer.addQuad(
-    quad(
-      self,
-      namedNode(NS.as + "published"),
-      literal((fields.published ?? new Date()).toISOString(), namedNode(NS.xsd + "dateTime"))
-    )
-  );
-  let out = "";
-  writer.end((err, result) => {
-    if (err) throw err;
-    out = result;
-  });
-  return out;
-}
-
-/** "I ask to join": the member's side of the handshake, sent to the collective's inbox. */
-export function buildJoin(actor: string, group: string, name: string | null, published?: Date): string {
-  return activity("Join", {
-    actor,
-    object: group,
-    summary: name ? `${name} asks to join.` : undefined,
-    published,
-  });
-}
-
-/** "This is published": the bundle URI, which the collective's agent now follows. */
-export function buildAnnounce(actor: string, bundle: string, group: string, published?: Date): string {
-  return activity("Announce", { actor, object: bundle, target: group, published });
 }
 
 /** POSTs an activity to an inbox. Returns the created notification's URL. */

@@ -52,7 +52,9 @@ Two kinds of lines, both facts the collective owns:
   `config.ttl`; a local `<#hyperscope>` would be `membres.ttl#hyperscope`, a
   different IRI, and nobody would be found.
 - `<WebID> foaf:nick "nicolas"`: the short name used in `depots/` and
-  `confrontations/` paths. Set at acceptance, never changed once used.
+  `confrontations/` paths. Set at acceptance, never changed once used, and
+  kept when the member is removed, so their earlier work stays filed under
+  it and a returning member gets it back.
 
 No names, no agents, no `foaf:Group` or `foaf:name` for the collective (that
 is `config.ttl`'s): those are read where they live
@@ -62,3 +64,17 @@ is `config.ttl`'s): those are read where they live
 
 A container. Anyone signed in may Append (send a request); only the
 collective reads it.
+
+Once the backoffice has answered an `as:Join` (accepted or refused), it
+deletes it; the answer goes to the requester's own inbox. `as:Announce` and
+anything it does not understand stay until deleted by hand.
+
+The answers the collective sends, all Turtle, all with `as:actor` (the
+collective's account WebID), `as:target` (the collective's IRI) and
+`as:published`:
+
+| Message | `as:object` |
+|---|---|
+| `as:Accept` | the `as:Join` it answers |
+| `as:Reject` | the `as:Join` it answers |
+| `as:Remove` | the member's WebID |
