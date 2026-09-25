@@ -110,7 +110,7 @@ function bindSignIn(app: HTMLElement, options: WelcomeOptions): void {
 
 /* ── Create an account ─────────────────────────────────────────────────── */
 
-const FIELDS = ["name", "username", "email", "password"] as const;
+const FIELDS = ["name", "username", "email", "password", "confirm"] as const;
 type Field = (typeof FIELDS)[number];
 
 const FIELD_OF: Record<string, Field | null> = {
@@ -140,12 +140,19 @@ function signUpForm(provider: string): string {
                 autocapitalize="none" spellcheck="false" required />`,
         `<p class="meta">Your pod's address: <code id="pod-address">${esc(podAddress(provider, "…"))}</code></p>`)}
       ${field("email", "Email", `<input id="email" name="email" type="email" autocomplete="email" required />`)}
-      ${field("password", "Password",
-        `<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required />`)}
+      ${field("password", `Set a passphrase <span class="meta">— a regular password still works</span>`,
+        `<input id="password" name="password" type="password" autocomplete="new-password"
+                placeholder="four random words you'll remember" required />`,
+        `<p class="meta">A passphrase, like <code>correct-horse-battery-staple</code>, is easier to
+           remember and far harder to guess than a short password. Length beats symbols.
+           At least 8 characters.</p>`)}
+      ${field("confirm", "Type it again",
+        `<input id="confirm" name="confirm" type="password" autocomplete="new-password" required />`)}
       <div><button type="submit">Create my account</button></div>
       <p class="meta">
-        Next, your provider's page asks for this email and password once, to
-        sign you in.
+        Next, your provider's page asks for this email and passphrase once, to
+        sign you in. There is no way to recover it if you lose it, so keep it
+        somewhere safe.
       </p>
       <p class="error" id="signup-error" role="alert" hidden></p>
     </form>`;
@@ -179,12 +186,14 @@ function bindSignUp(app: HTMLElement, provider: string): void {
     event.preventDefault();
     const values = Object.fromEntries(FIELDS.map((f) => [f, input(f).value.trim()])) as Record<Field, string>;
     values.password = input("password").value;
+    values.confirm = input("confirm").value;
     const locked = input("email").readOnly;
     const problems: Record<Field, string | null> = {
       name: values.name ? null : "Write the name people know you by.",
       username: usernameProblem(values.username),
       email: locked ? null : emailProblem(values.email),
       password: locked ? null : passwordProblem(values.password),
+      confirm: locked || values.confirm === values.password ? null : "The two do not match.",
     };
     FIELDS.forEach((f) => say(f, problems[f]));
     say("signup", null);
@@ -232,7 +241,8 @@ function bindSignUp(app: HTMLElement, provider: string): void {
       if (err.code === "username-taken") {
         input("email").readOnly = true;
         input("password").readOnly = true;
-        say("signup", "Your email and password are saved. Choose another username to finish.");
+        input("confirm").readOnly = true;
+        say("signup", "Your email and passphrase are saved. Choose another username to finish.");
       }
     }
   });

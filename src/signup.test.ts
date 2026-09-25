@@ -45,6 +45,7 @@ function fill(app: HTMLElement): void {
   type(app, "name", "Zoé Durand");
   type(app, "email", "zoe@example.org");
   type(app, "password", "long-enough");
+  type(app, "confirm", "long-enough");
 }
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -114,7 +115,18 @@ describe("before sign-in", () => {
     expect(app.querySelector("#password-error")!.textContent).toMatch(/at least 8/);
   });
 
-  it("shows a taken username on its field, and keeps the saved email and password", async () => {
+  it("refuses two passphrases that differ, without calling the provider", async () => {
+    setInvite("https://pod.example/hs/config.ttl");
+    const app = render();
+    fill(app);
+    type(app, "confirm", "long-enough-x");
+    app.querySelector<HTMLFormElement>("#signup-form")!.requestSubmit();
+    await tick();
+    expect(calls).toEqual([]);
+    expect(app.querySelector("#confirm-error")!.textContent).toMatch(/do not match/);
+  });
+
+  it("shows a taken username on its field, and keeps the saved email and passphrase", async () => {
     setInvite("https://pod.example/hs/config.ttl");
     refuse = { code: "username-taken", message: "This username is taken. Choose another one.", nothingCreated: false };
     const app = render();
@@ -123,7 +135,7 @@ describe("before sign-in", () => {
     await tick();
     expect(app.querySelector("#username-error")!.textContent).toContain("taken");
     expect(app.querySelector<HTMLInputElement>("#email")!.readOnly).toBe(true);
-    expect(app.textContent).toContain("Your email and password are saved.");
+    expect(app.textContent).toContain("Your email and passphrase are saved.");
     expect(calls).not.toContain(`login ${PROVIDER}`);
   });
 });

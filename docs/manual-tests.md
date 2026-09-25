@@ -275,7 +275,7 @@ the non-member they need. Use a private window, and a username starting with
 3. The provider's page asks you to sign in. **Spike:** does it ask for the
    password, or only for consent? The app sends `credentials: "include"` when
    creating the account, in case CSS sets its sign-in cookie. Write down which.
-   If only consent, drop the "asks for this email and password once" line
+   If only consent, drop the "asks for this email and passphrase once" line
    from `src/signup.ts`.
 4. Back on the home screen: your name is the heading, "Your inbox" is done,
    and HyperScope offers "Ask to join" as the next action. Nothing asked you
