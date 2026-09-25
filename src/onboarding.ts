@@ -163,13 +163,24 @@ async function load(webId: string, podUrl: string): Promise<Loaded> {
   return { run, runError, profile, unadvertisedInbox, collectives, broken, other };
 }
 
-const STATE_LABEL: Record<MembershipState, string> = {
-  member: "You are a member.",
-  pending: "Request sent. Waiting for the collective to accept it.",
-  left: "The collective still lists you, but your profile no longer says you belong.",
-  none: "Not a member.",
-  unknown: "Not a member.",
-};
+/**
+ * "left" (listed, not declared) also covers a roster edited by hand before the
+ * person ever asked. The copy must fit both, so it says what is true now
+ * rather than guessing a history.
+ */
+function stateLabel(state: MembershipState, name: string): string {
+  switch (state) {
+    case "member": return "You are a member.";
+    case "pending": return "Request sent. Waiting for the collective to accept it.";
+    case "left": return `${name} lists you as a member, but your profile does not say so. Confirm it to complete the membership.`;
+    default: return "Not a member.";
+  }
+}
+
+/** Member or request sent: the person has declared it on their side. */
+function declared(state: MembershipState): boolean {
+  return state === "member" || state === "pending";
+}
 
 /** Whether the folder's own ACL grants the agent Read. Missing folder: no. */
 async function grantsRead(folderUrl: string, webId: string, agent: string): Promise<boolean> {
@@ -229,8 +240,11 @@ export async function renderMembership(
       ${stepInbox(profile, unadvertisedInbox)}
 
       <h2 class="section-title">You belong to</h2>
-      ${collectives.length === 0 && broken.length === 0 ? `<p class="lead">No collective yet.</p>` : ""}
-      ${collectives.map((c, i) => stepCollective(c, i, profile)).join("")}
+      ${collectives.some((c) => declared(c.state)) ? "" : `<p class="lead">No collective yet.</p>`}
+      ${collectives.map((c, i) => (declared(c.state) ? stepCollective(c, i, profile) : "")).join("")}
+
+      ${collectives.some((c) => !declared(c.state)) ? `<h2 class="section-title">Not joined yet</h2>` : ""}
+      ${collectives.map((c, i) => (declared(c.state) ? "" : stepCollective(c, i, profile))).join("")}
       ${broken.map((b) => `<section class="step">${renderBroken(b)}</section>`).join("")}
       ${stepFindCollective(collectives.length === 0)}
       ${
@@ -321,7 +335,11 @@ export async function renderMembership(
         // request as pending and offers to send it again. The other order
         // would leave the collective holding a request the profile denies.
         await updateOwnProfile(webId, profileEdits.join(collective.group));
-        await sendToInbox(collective.inbox, buildJoin(webId, collective.group, profile.name));
+        // Already listed: declaring completes the handshake, and a request
+        // would ask the collective for something it has already done.
+        if (view.state !== "left") {
+          await sendToInbox(collective.inbox, buildJoin(webId, collective.group, profile.name));
+        }
         // The profile now carries the link; the invitation has done its job.
         setInvite(null);
         announce(`Request sent to ${collective.name}.`);
@@ -374,8 +392,23 @@ export async function renderMembership(
 
 /* ── Steps ─────────────────────────────────────────────────────────────── */
 
+/**
+ * A finished step folds to its title: still one click away, no longer in the
+ * way. `<details>` keeps that keyboard- and screen-reader-accessible for free.
+ */
 function step(title: string, done: boolean, body: string, optional = false): string {
   const status = done ? "Done" : optional ? "Optional" : "To do";
+  if (done) {
+    return `
+    <details class="step is-done">
+      <summary class="step-head">
+        <h2>${esc(title)}</h2>
+        <span class="label-mono">${status}</span>
+      </summary>
+      ${body}
+      <p class="step-error error" role="alert" hidden></p>
+    </details>`;
+  }
   return `
     <section class="step${done ? " is-done" : ""}">
       <div class="step-head">
@@ -491,16 +524,24 @@ function sectionRun(collective: Collective, summary: CollectiveSummary): string 
         Accepting requests from here comes next. Until then, add a member to
         <code>${esc(collective.roster)}</code> by hand.
       </p>
-      <p class="meta">Invitation link: <code>${esc(inviteLink(collective))}</code></p>
+      ${inviteLine(collective)}
     </section>`;
 }
 
-function inviteLink(collective: Collective): string {
+/**
+ * An invitation link only works where the backoffice is reachable by the
+ * person receiving it, so none is offered from a development server. The
+ * collective's address always works: it can be pasted into any backoffice.
+ */
+function inviteLine(collective: Collective): string {
+  const address = `<p class="meta">Address to give people: <code>${esc(collective.configUrl)}</code></p>`;
+  const { hostname } = window.location;
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") return address;
   const url = new URL(window.location.href);
   url.search = "";
   url.hash = "";
   url.searchParams.set("collective", collective.configUrl);
-  return url.href;
+  return `${address}<p class="meta">Invitation link: <code>${esc(url.href)}</code></p>`;
 }
 
 function renderRunError(reason: string): string {
@@ -536,19 +577,20 @@ function stepFindCollective(first: boolean): string {
 
 function stepCollective(view: CollectiveView, i: number, profile: MemberDeclaration): string {
   const { collective, state, folderUrl, published } = view;
-  const declared = state === "member" || state === "pending";
+  const isDeclared = declared(state);
+  const joinLabel = state === "left" ? "Confirm membership" : "Ask to join";
 
   const joinBody = `
-    <p class="lead">${esc(STATE_LABEL[state])}</p>
-    ${!profile.inbox && !declared ? `<p class="meta">Create your inbox first, so the answer has somewhere to land.</p>` : ""}
+    <p class="lead">${esc(stateLabel(state, collective.name))}</p>
+    ${!profile.inbox && !isDeclared ? `<p class="meta">Create your inbox first, so the answer has somewhere to land.</p>` : ""}
     <p>
-      ${!declared ? `<button id="join-${i}"${profile.inbox ? "" : " disabled"}>Ask to join</button>
+      ${!isDeclared ? `<button id="join-${i}"${profile.inbox ? "" : " disabled"}>${joinLabel}</button>
                      <button class="ghost" data-dismiss="${esc(view.collective.configUrl)}">Not now</button>` : ""}
       ${state === "pending" ? `<button id="resend-${i}" class="ghost">Send the request again</button>` : ""}
-      ${declared ? `<button id="leave-${i}" class="ghost">Leave</button>` : ""}
+      ${isDeclared ? `<button id="leave-${i}" class="ghost">Leave</button>` : ""}
     </p>`;
 
-  const publishBody = declared
+  const publishBody = isDeclared
     ? `
       <p class="lead">
         Your folder <code>${esc(collective.bundleFolder)}</code> is how you share

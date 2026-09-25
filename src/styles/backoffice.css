@@ -72,3 +72,15 @@
   font-size: var(--text-h2);
   margin: var(--space-6) 0 0;
 }
+
+/* A finished step folds to its title (see step() in src/onboarding.ts). */
+details.step > summary {
+  cursor: pointer;
+  list-style: none;
+}
+details.step > summary::-webkit-details-marker {
+  display: none;
+}
+details.step:not([open]) {
+  gap: 0;
+}

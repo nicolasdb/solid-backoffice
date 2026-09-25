@@ -176,6 +176,39 @@ describe("slice A — the member's side of the handshake", () => {
     expect(app.textContent).not.toContain("You run");
   });
 
+  it("confirms a membership the collective already listed, without asking again", async () => {
+    profile.inbox = POD + "inbox/";
+    listed = true;
+    const app = await render();
+    expect(app.textContent).toContain("Not joined yet");
+    expect(app.textContent).toContain("HyperScope lists you as a member");
+    expect(app.querySelector("#join-0")!.textContent).toBe("Confirm membership");
+    await click(app, "#join-0");
+    expect(calls).toEqual(["profile edit"]);
+  });
+
+  it("files a collective you only looked up under Not joined yet", async () => {
+    const app = await render();
+    const belong = [...app.querySelectorAll("h2.section-title")].map((h) => h.textContent);
+    expect(belong).toEqual(["You", "You belong to", "Not joined yet"]);
+    expect(app.textContent).toContain("No collective yet.");
+  });
+
+  it("folds finished steps to their title", async () => {
+    profile.inbox = POD + "inbox/";
+    const app = await render();
+    const inbox = [...app.querySelectorAll("details.step")].find((d) => d.textContent!.includes("Your inbox"));
+    expect(inbox).toBeTruthy();
+    expect(inbox!.hasAttribute("open")).toBe(false);
+  });
+
+  it("offers no invitation link from a development server, only the address", async () => {
+    runs = COLLECTIVE;
+    const app = await render();
+    expect(app.textContent).toContain(COLLECTIVE.configUrl);
+    expect(app.textContent).not.toContain("Invitation link");
+  });
+
   it("will not send a join request before there is an inbox for the answer", async () => {
     const app = await render();
     expect(app.querySelector<HTMLButtonElement>("#join-0")!.disabled).toBe(true);

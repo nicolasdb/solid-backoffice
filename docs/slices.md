@@ -34,6 +34,12 @@ its agent, member, newcomer, outsider, second collective), set up by the
 how-to. It runs the app's `src/lib` against a real server. Next: browser
 journeys (Playwright, one window per account) as each journey is built.
 
+## Layout pass · after B and account creation
+
+Once the journeys are wired end to end: a desktop layout that uses the width
+(the kit's single column is right on a phone, narrow on a screen), and the
+landing page. Done steps already fold to their title (25 Sep 2026).
+
 ## B — Admin side of the handshake
 
 On the collective's pod, for its owner:
