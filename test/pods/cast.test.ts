@@ -29,8 +29,8 @@ describe("the cast, set up by the how-to", () => {
     expect(await status(cast.hyperscope.pod + "inbox/")).toBe(403);
   });
 
-  it("keeps config.ttl from anonymous visitors", async () => {
-    expect((await fetch(hsConfig)).status).toBe(401);
+  it("lets anonymous visitors read config.ttl, for the welcome screen", async () => {
+    expect((await fetch(hsConfig)).status).toBe(200);
   });
 
   it("lets the collective's agent read what a member shares, and nobody else", async () => {

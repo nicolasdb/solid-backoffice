@@ -56,7 +56,7 @@ async function setUpCollective(
   const p = owner.pod;
   await put(s, p + "config.ttl", config(name, slug, agent));
   await put(s, p + "config.ttl.acl", acl("config.ttl", owner.webId, false, [
-    "acl:agentClass acl:AuthenticatedAgent; acl:mode acl:Read",
+    "acl:agentClass <http://xmlns.com/foaf/0.1/Agent>; acl:mode acl:Read",
   ]));
   const lines = Object.entries(members).flatMap(([webId, nick]) => [
     `<config.ttl#${slug}> <http://xmlns.com/foaf/0.1/member> <${webId}>.`,

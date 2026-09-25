@@ -9,7 +9,7 @@ who accepts them, then everyone's daily work.
 Built and tested live: A (member side), role detection ("You run", "You
 belong to"), the `output2/<collective>/` folder, and the test server with its
 cast (`npm run test:pods`). On the live pod, HyperScope's `config.ttl` and
-`membres.ttl` match `docs/examples/`; `config.ttl` is public for now.
+`membres.ttl` match `docs/examples/`; `config.ttl` is public, as the how-to now says.
 
 **B is built** and passes against the test server (`test/pods/admin.test.ts`,
 `member.test.ts`). Live on 25 Sep 2026: a request from a personal account,

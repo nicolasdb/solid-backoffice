@@ -7,27 +7,28 @@ files and `.acl` documents on its pod.
 1. **Create the account** for the collective on the provider, like a person's.
 2. **Upload `config.ttl`** at the pod root, adapted from
    [`examples/hyperscope-config.ttl`](../examples/hyperscope-config.ttl).
-3. **Let anyone signed in read it.** Upload `config.ttl.acl` next to it
+3. **Make it public.** Upload `config.ttl.acl` next to it
    (replace the owner WebID):
 
    ```turtle
-   @prefix acl: <http://www.w3.org/ns/auth/acl#> .
+   @prefix acl:  <http://www.w3.org/ns/auth/acl#> .
+   @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 
    <#owner> a acl:Authorization ;
        acl:agent <https://pod.nicolasdb.eu/hyperscope/profile/card#me> ;
        acl:accessTo <config.ttl> ;
        acl:mode acl:Read, acl:Write, acl:Control .
 
-   <#applicants> a acl:Authorization ;
-       acl:agentClass acl:AuthenticatedAgent ;
+   <#public> a acl:Authorization ;
+       acl:agentClass foaf:Agent ;
        acl:accessTo <config.ttl> ;
        acl:mode acl:Read .
    ```
 
    Upload it as `text/turtle`; a server may refuse an `.acl` sent as plain
-   text. If your tools cannot write an `.acl` by hand, making `config.ttl`
-   public also works: it holds nothing secret. It only lets anonymous
-   visitors read it too.
+   text. Public, because the invitation's welcome screen reads it before
+   anyone signs in ([why](../reference/collective-files.md#configttl)). It
+   holds nothing secret.
 4. **Create `membres.ttl`** at the pod root, with only `foaf:member` lines
    ([example](../examples/hyperscope-membres.ttl)). Give each member Read on
    it as you accept them.

@@ -155,10 +155,19 @@ toasts and screen-reader announcements after each write.
 - **Two landings, one app.** Not invited: a full page that explains the
   backoffice itself (generic copy, same sections). Invited: the same page,
   with the collective's name and folder read from the invitation's
-  `config.ttl`. Proposed, to decide: a collective's own pitch (the hero's
-  title and line) as an optional field in `config.ttl`, falling back to
-  the generic copy, which is how E would get its landing without code.
-- **Places**: a first draft (slice C), to discuss.
+  `config.ttl`. Decided: a collective's own title and paragraph come from
+  optional `schema:slogan` and `schema:description` in `config.ttl`
+  ([reference](reference/collective-files.md#welcome-copy)), falling back
+  to the generic copy. That is how E gets its landing without code. They
+  show before sign-in only when `config.ttl` is public.
+- **Places** (slice C, first draft): places on the left (your pod, what you
+  follow), the file browser in the middle, the selected item's panel on the
+  right; on the phone, a place picker, the list, and a sheet per item.
+  Asked for since: a **last modified** column (the container listing's
+  `dct:modified`), and **Restore from parent** in the permissions: whether
+  an item has rules of its own or follows its parent folder, and a way to
+  drop its own `.acl` so it follows the parent again (asked once more; the
+  pod root has no parent, so never there).
 
 The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
 (a Claude Design canvas, private to its owner).
