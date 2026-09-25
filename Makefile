@@ -16,7 +16,7 @@ REMOTE_PATH := /home/nicolas/$(APP)
 DEPLOY_PATHS := dist docker-compose.yml deploy
 
 .DEFAULT_GOAL := help
-.PHONY: help dev build check test verify audit clean vps-diff vps-push vps-deploy vps-logs vps-restart vps-ssh
+.PHONY: help dev stop build check test verify audit clean vps-diff vps-push vps-deploy vps-logs vps-restart vps-ssh
 
 help: ## Show this help
 	@echo "$(APP)"
@@ -31,6 +31,13 @@ help: ## Show this help
 
 dev: ## Vite dev server (add --host to reach it from a phone on the LAN)
 	npm run dev
+
+# Matches this repo's own vite binary, so other projects' dev servers survive.
+# `[v]ite` keeps the pattern from matching this very command line; the path
+# starts at the repo's folder name because /home and /var/home are the same
+# place on this machine and the processes may show either.
+stop: ## Kill this repo's Vite dev servers left running in the background
+	@pkill -f "/$(APP)/node_modules/.bin/[v]ite" && echo "Stopped." || echo "No dev server running."
 
 build: ## Typecheck + production build into dist/
 	npm run build
