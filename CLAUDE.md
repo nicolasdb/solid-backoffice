@@ -55,6 +55,14 @@ one changes, change the other. Never point it at the real provider.
   `src/lib/admin.test.ts`), members from both sides. `src/lib/activity.ts`
   writes every AS message; `src/lib/vocab.ts` holds the namespaces.
 - `src/admin.ts` — the "You run" part of the home screen, over `lib/admin.ts`.
+- `src/lib/css-account.ts` — **provider-specific**: account, password login
+  and pod through the CSS account API (J1). Shown only when
+  `SIGNUP_PROVIDER` is set. `test/pods/` creates its whole cast with it.
+- `src/signup.ts` — the screen before sign-in: sign in, or create an account
+  (invitation → create first). `src/invite.ts` carries the invitation and the
+  new account's name across the provider's sign-in page;
+  `src/lib/newcomer.ts` writes that name and the inbox on the first home
+  screen.
 - `src/onboarding.ts` — the home screen: "You run" (a `config.ttl` at the
   signed-in pod's root, via `findRunCollective`), "You" and "You belong to".
   Read from the pods on every render; no role or progress is stored.

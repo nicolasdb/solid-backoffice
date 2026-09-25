@@ -18,9 +18,14 @@ on the announced `output2/hyperscope/`. The live steps that need a second,
 non-member account (newcomer's screen, refuse, remove) wait for the final
 end-to-end run from a new account, after J1 rebuilds that path.
 
-Next: account creation (J1), then the layout pass, C, D, E. In
-[journeys](journeys.md) terms: J3 and J5's admin side are built, J1 is next;
-J2, J4 and J6 work already; J7 is C, J8 is D.
+**J1 (account creation) is built** and passes against the test server
+(`test/pods/signup.test.ts`; the whole cast is now created by the app's own
+`createAccount`). Not yet run live: its manual-tests section is also the
+end-to-end run that finishes A and B's live steps.
+
+Next: that live run, then the layout pass, C, D, E. In
+[journeys](journeys.md) terms: J1, J3 and J5's admin side are built; J2, J4
+and J6 work already; J7 is C, J8 is D.
 
 ## A — Member side of the handshake · built
 
@@ -29,9 +34,7 @@ first live test is Neil's (see `manual-tests.md`, "Slice A").
 
 Not in A, on purpose:
 
-- **Creating an account.** That is the CSS account API, which belongs to the
-  provider layer below. Until then, new people register on the provider's own
-  page and come back here.
+- **Creating an account.** Built later, as J1 (below).
 - **The agent's profile pointing back at its human.** ADR 006 wants both sides.
   The agent's profile is written when the agent is minted, which is also
   provider layer.
@@ -58,6 +61,24 @@ journeys (Playwright, one window per account) as each journey is built.
 Once the journeys are wired end to end: a desktop layout that uses the width
 (the kit's single column is right on a phone, narrow on a screen), and the
 landing page. Done steps already fold to their title (25 Sep 2026).
+
+## J1 — Account creation · built, live test pending
+
+From an invitation link, the first screen offers "Create an account": name,
+username (suggested from the name, the pod's address shown under it), email,
+password. The CSS account API creates the account, its password login, then
+the pod (`src/lib/css-account.ts`, provider-specific; `SIGNUP_PROVIDER` in
+`src/config.ts`, null hides it). The provider's own page then signs the
+person in, and the first home screen writes their name and inbox
+(`src/lib/newcomer.ts`) from a record left in sessionStorage. Asking to join
+stays one click.
+
+As built: an empty username never reaches the provider (CSS would give away
+the server root); a taken username or a used email is retried on the same
+account, so a retry never leaves a second, half-built account. There is no
+availability check before creating: on our provider an unused pod address
+answers 401, like a private one. CSS 7 cannot delete an account through the
+API, so a test account stays.
 
 ## B — Admin side of the handshake · built, live test pending
 
@@ -97,7 +118,8 @@ Suggesting agents: the "Your agent" step already offers a collective
 account its own `hs:agent`; D adds the WebIDs linked to the account on our
 provider, so nobody types an agent's WebID by hand.
 
-The CSS account API: create an account and a pod, mint a WebID for an agent
+The CSS account API beyond sign-up (J1 creates the account and the first
+pod): more pods on the same account, mint a WebID for an agent
 (with the back-link to its human), mint and revoke connectors. Then the
 Epic 9 access-log viewer. Hidden when the signed-in WebID comes from another
 provider, because none of it is Solid protocol.
@@ -126,7 +148,7 @@ not its HANDOFF.md, which is older than several features.
 | Sharing: only me / anyone with the link / one WebID read or edit | C | `acl.ts` already writes all three |
 | Raw WAC view ("Show the technical rules") | C | |
 | People & apps (who has access, from ACLs visited) | C | no pod-wide index exists; same limit |
-| Create an account and pod (email, password) | D | keep the guard: CSS treats an empty pod name as "claim the root" |
+| Create an account and pod (email, password) | J1 | done; guard kept: CSS treats an empty pod name as "claim the root" |
 | More pods on the same account | D | |
 | Agent WebIDs, linked by ownership proof; unlink | D | |
 | App tokens (client credentials): list, create, revoke | D | |

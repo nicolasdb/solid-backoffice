@@ -1,9 +1,11 @@
 /**
- * Creating people on the throwaway server, through the CSS account API — the
- * same API account creation will use in the backoffice (journey J1), so this
- * file is also the first working record of how that API behaves.
+ * Creating people on the throwaway server. The account and the pod are made by
+ * the app's own `createAccount` (src/lib/css-account.ts, journey J1), so every
+ * cast member is also a run of the sign-up code; only the app token, which a
+ * person signing in through a browser never needs, is added here.
  */
 import { Session } from "@inrupt/solid-client-authn-node";
+import { createAccount } from "../../src/lib/css-account";
 
 export interface Person {
   name: string;
@@ -18,39 +20,38 @@ async function json(res: Response, what: string): Promise<any> {
   return res.json();
 }
 
-/** Account, password login, pod (named like the username), and an app token. */
+export const credentialsOf = (name: string) => ({ email: `${name}@test.invalid`, password: `${name}-password` });
+
+/** Account, password login and pod through the app, then an app token for the tests. */
 export async function createPerson(base: string, name: string): Promise<Person> {
-  const index = await json(await fetch(base + ".account/"), "account index");
+  const { email, password } = credentialsOf(name);
+  const { webId, pod } = await createAccount(base, { username: name, email, password });
+  return { name, webId, pod, ...(await appToken(base, name, webId)) };
+}
+
+/** Logs in to the account with its password, as CSS's own page does, and mints a client credential. */
+export async function appToken(base: string, name: string, webId: string): Promise<{ clientId: string; clientSecret: string }> {
+  const index = (await json(await fetch(base + ".account/"), "account index")).controls;
   const { authorization } = await json(
-    await fetch(index.controls.account.create, { method: "POST" }),
-    "create account"
+    await fetch(index.password.login, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentialsOf(name)),
+    }),
+    `login for ${name}`
   );
   // A GET with a JSON content type and no body makes CSS 7 answer 500.
   const token = { Authorization: `CSS-Account-Token ${authorization}` };
-  const auth = { ...token, "Content-Type": "application/json" };
   const controls = (await json(await fetch(base + ".account/", { headers: token }), "account controls")).controls;
-
-  await json(
-    await fetch(controls.password.create, {
-      method: "POST",
-      headers: auth,
-      body: JSON.stringify({ email: `${name}@test.invalid`, password: `${name}-password` }),
-    }),
-    `password for ${name}`
-  );
-  const { pod, webId } = await json(
-    await fetch(controls.account.pod, { method: "POST", headers: auth, body: JSON.stringify({ name }) }),
-    `pod for ${name}`
-  );
   const { id, secret } = await json(
     await fetch(controls.account.clientCredentials, {
       method: "POST",
-      headers: auth,
+      headers: { ...token, "Content-Type": "application/json" },
       body: JSON.stringify({ name: `${name}-tests`, webId }),
     }),
     `app token for ${name}`
   );
-  return { name, webId, pod, clientId: id, clientSecret: secret };
+  return { clientId: id, clientSecret: secret };
 }
 
 /** A signed-in fetch for one person, like the backoffice's after login. */

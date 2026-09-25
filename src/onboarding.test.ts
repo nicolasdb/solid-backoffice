@@ -73,7 +73,8 @@ vi.mock("./lib/admin", async (importOriginal) => ({
   readRoster: async () => ({ members: [], nicks: new Map() }),
 }));
 
-const { renderMembership, captureInvite } = await import("./onboarding");
+const { renderMembership } = await import("./onboarding");
+const { captureInvite } = await import("./invite");
 
 /** Arrive through an invitation link, as a newcomer would. */
 function invitedTo(address: string): void {
@@ -281,5 +282,29 @@ describe("slice A — the member's side of the handshake", () => {
     const app = await render();
     expect(app.textContent).toContain("Waiting for the collective to accept it.");
     expect(app.querySelector("#resend-0")).not.toBeNull();
+  });
+});
+
+describe("J1 — a new account comes back from the provider", () => {
+  const newcomer = (webId: string) =>
+    sessionStorage.setItem("solid-backoffice.newcomer", JSON.stringify({ webId, name: "Neil Armstrong" }));
+
+  it("gets its inbox (in the button's order) and its name, once", async () => {
+    profile.name = null;
+    newcomer(WEBID);
+    const app = await render();
+    expect(calls).toEqual([`ensure ${POD}inbox/`, `acl ${POD}inbox/ authenticated append`, "profile edit", "profile edit"]);
+    expect(sessionStorage.getItem("solid-backoffice.newcomer")).toBeNull();
+    expect(app.querySelector("#join-0")).not.toBeNull();
+    calls.length = 0;
+    await render();
+    expect(calls).toEqual([]);
+  });
+
+  it("writes nothing for a record left by another account", async () => {
+    newcomer("https://pod.example/someone-else/profile/card#me");
+    await render();
+    expect(calls).toEqual([]);
+    expect(sessionStorage.getItem("solid-backoffice.newcomer")).not.toBeNull();
   });
 });

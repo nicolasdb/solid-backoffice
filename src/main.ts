@@ -11,12 +11,14 @@
 import "./styles/core.css";
 import "./styles/theme.css";
 import "./styles/patterns.css";
-import { completeLogin, loginWithIdentifier, logout } from "./lib/auth";
+import { completeLogin, logout } from "./lib/auth";
 import { describePodError, getPrimaryPodUrl, isAuthError } from "./lib/pod";
-import { APP_NAME, DEFAULT_IDENTIFIER } from "./config";
+import { SIGNUP_PROVIDER } from "./config";
 import { focusView } from "./ui/a11y";
 import { renderError, renderPending } from "./ui/patterns";
-import { captureInvite, renderMembership } from "./onboarding";
+import { renderMembership } from "./onboarding";
+import { captureInvite } from "./invite";
+import { renderWelcome } from "./signup";
 import "./styles/backoffice.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -53,41 +55,9 @@ async function main(): Promise<void> {
   }
 }
 
+/** Sign in, or create an account on our provider: src/signup.ts. */
 function renderLoginView(message?: string): void {
-  app.innerHTML = `
-    <main class="screen stack">
-      <h1>${esc(APP_NAME)}</h1>
-      <p class="lead">
-        Sign in with your pod's address, or with your WebID if you don't know
-        which provider hosts it — it will be discovered from your profile.
-      </p>
-      <form id="login-form" class="stack">
-        <div class="field">
-          <label for="identifier">Pod or WebID</label>
-          <input id="identifier" name="identifier" type="url"
-                 value="${esc(DEFAULT_IDENTIFIER)}" required />
-        </div>
-        <div><button type="submit">Sign in</button></div>
-      </form>
-      ${message ? `<p class="error">${esc(message)}</p>` : ""}
-    </main>
-  `;
-
-  const form = document.querySelector<HTMLFormElement>("#login-form")!;
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const input = document.querySelector<HTMLInputElement>("#identifier")!;
-    const button = form.querySelector("button")!;
-    button.disabled = true;
-    button.textContent = "Redirecting…";
-    try {
-      await loginWithIdentifier(input.value.trim());
-    } catch (err) {
-      renderLoginView(err instanceof Error ? err.message : String(err));
-    }
-  });
-
-  focusView(app);
+  renderWelcome(app, { provider: SIGNUP_PROVIDER, message });
 }
 
 function renderLoadingView(webId: string): void {

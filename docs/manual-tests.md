@@ -260,6 +260,28 @@ need one too, or accepting is refused before any write.
 
 Write down anything the copy got wrong, not just what failed.
 
+### J1 — a new account from an invitation (the end-to-end run)
+
+This is also where steps 1, 3, 5 and 6 above get run: the new account is
+the non-member they need. Use a private window, and a username starting with
+`test-`: CSS 7 cannot delete an account through its API, so it stays.
+
+1. Open `/?collective=https://pod.nicolasdb.eu/hyperscope/config.ttl`. The
+   first screen says you are invited and offers "Create an account"; "I
+   already have a Solid account" is one click away.
+2. Type a name: the username follows it, and the pod's address under it
+   changes. Create the account. Try a taken username once (`hyperscope`):
+   the error sits on the username field, and the retry keeps the email.
+3. The provider's page asks you to sign in. **Spike:** does it ask for the
+   password, or only for consent? The app sends `credentials: "include"` when
+   creating the account, in case CSS sets its sign-in cookie. Write down which.
+   If only consent, drop the "asks for this email and password once" line
+   from `src/signup.ts`.
+4. Back on the home screen: your name is the heading, "Your inbox" is done,
+   and HyperScope offers "Ask to join" as the next action. Nothing asked you
+   for either.
+5. Ask to join, then run steps 1, 3, 5, 6 above with this account.
+
 **Run record, 25 Sep 2026.** Done live: 2 (accept, request sent from a
 personal account), 4 (pull and confrontation). Waiting for the end-to-end
 run from a new account after J1, which rebuilds the newcomer's path: 1, 3,

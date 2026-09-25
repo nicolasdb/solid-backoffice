@@ -26,6 +26,13 @@ export const SESSION_ID = "solid-backoffice";
  */
 export const DEFAULT_IDENTIFIER = "https://pod.nicolasdb.eu/";
 
+/**
+ * Where "Create an account" makes new accounts, or null to offer sign-in only.
+ * It uses the Community Solid Server account API, which is not Solid protocol:
+ * an instance whose people live on another provider sets this to null.
+ */
+export const SIGNUP_PROVIDER: string | null = "https://pod.nicolasdb.eu/";
+
 // No list of collectives lives here. Which collectives someone sees comes from
 // their own profile (`org:memberOf`), an invitation link (`?collective=`), or
 // an address they paste — see src/onboarding.ts. An app that assumes a

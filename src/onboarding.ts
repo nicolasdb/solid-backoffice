@@ -14,7 +14,8 @@
  * seen from the member's side.
  */
 import { ensureContainer, describePodError, exists, isAuthError } from "./lib/pod";
-import { getAccess, isValidWebId, setAgentAccess, setAuthenticatedAccess } from "./lib/acl";
+import { getAccess, isValidWebId, setAgentAccess } from "./lib/acl";
+import { createInbox, setUpNewcomer } from "./lib/newcomer";
 import {
   buildAnnounce,
   buildJoin,
@@ -35,6 +36,7 @@ import { focusView, announce } from "./ui/a11y";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
 import { bindButton, bindForm } from "./bind";
 import { bindRun, loadRun, sectionRun, type RunView } from "./admin";
+import { pendingInvite, setInvite, takeNewcomer } from "./invite";
 
 interface CollectiveView {
   collective: Collective;
@@ -56,43 +58,6 @@ interface Loaded {
   broken: { address: string; status?: number; reason: string }[];
   /** `org:memberOf` values that are not collectives this app manages. */
   other: string[];
-}
-
-/* ── Invitations ───────────────────────────────────────────────────────── */
-
-/**
- * An invitation is a link: `…/?collective=<address>`. The address survives the
- * sign-in round trip in sessionStorage, because the kit strips the query
- * string from the OIDC redirect. Call before anything else on startup.
- */
-const INVITE_KEY = "solid-backoffice.invite";
-
-export function captureInvite(): void {
-  const address = new URL(window.location.href).searchParams.get("collective");
-  if (!address) return;
-  try {
-    sessionStorage.setItem(INVITE_KEY, address);
-  } catch {
-    // Storage blocked: the invitation is lost after sign-in, and the person
-    // can still paste the address into the form. Not worth failing over.
-  }
-}
-
-function pendingInvite(): string | null {
-  try {
-    return sessionStorage.getItem(INVITE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function setInvite(address: string | null): void {
-  try {
-    if (address) sessionStorage.setItem(INVITE_KEY, address);
-    else sessionStorage.removeItem(INVITE_KEY);
-  } catch {
-    /* see captureInvite */
-  }
 }
 
 /* ── Loading ───────────────────────────────────────────────────────────── */
@@ -199,6 +164,17 @@ export async function renderMembership(
   podUrl: string,
   onLogout: () => void
 ): Promise<void> {
+  const newcomer = takeNewcomer(webId);
+  if (newcomer) {
+    app.innerHTML = `<main class="screen stack">${renderPending("Setting up your name and your inbox…")}</main>`;
+    try {
+      await setUpNewcomer(webId, podUrl, newcomer.name);
+    } catch (err) {
+      // The steps below read the pods, so whatever was not done shows as to do.
+      toast(`Your account is ready, but setting it up stopped: ${describePodError(err)} The steps below finish it.`);
+    }
+  }
+
   app.innerHTML = `<main class="screen stack">${renderPending("Reading your profile and your collectives…")}</main>`;
 
   let data: Loaded;
@@ -293,12 +269,7 @@ export async function renderMembership(
   const inboxButton = app.querySelector<HTMLButtonElement>("#make-inbox");
   if (inboxButton) {
     bindButton(inboxButton, async () => {
-      const inbox = unadvertisedInbox ?? new URL("inbox/", podUrl).href;
-      // Order matters: the profile advertises the inbox LAST, so it never
-      // points at an inbox that does not exist or that nobody may post to.
-      await ensureContainer(inbox);
-      await setAuthenticatedAccess(inbox, webId, ["append"]);
-      await updateOwnProfile(webId, profileEdits.setInbox(inbox));
+      await createInbox(webId, unadvertisedInbox ?? new URL("inbox/", podUrl).href);
       announce("Inbox ready.");
     }, rerender);
   }

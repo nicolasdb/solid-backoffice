@@ -33,9 +33,15 @@ Everything that depends on it is hidden for WebIDs from other providers.
 ## Newcomers
 
 Most newcomers have no Solid account and already know the collective that
-invited them. So the invitation offers "Create an account" first:
-username, email, password, like any sign-up. On our provider the pod and the
-WebID take the username; the address is shown under the field, in small.
+invited them. So the invitation offers "Create an account" first: name,
+username, email, password, like any sign-up. The username is suggested from
+the name; the pod and the WebID take it, and the address is shown under the
+field, in small.
+
+After the provider's page has signed them in, the backoffice writes their
+name and creates their inbox without asking: both are needed before any
+request, and neither grants anything. Asking to join stays a click, because
+it is the person saying yes to one collective.
 
 Someone with a Solid account elsewhere chooses "I already have a Solid
 account" and signs in with their provider. Our provider is the default at
