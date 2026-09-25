@@ -146,6 +146,7 @@ toasts and screen-reader announcements after each write.
 - **Landing**: the solid-dash pattern, drawn invited and not invited. The
   closing diagram shows the ladder as groups of groups: you, HyperScope,
   and a network of four collectives with 3 to 5 members each.
+  The copy as drawn is approved, desktop and phone.
 
 The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
 (a Claude Design canvas, private to its owner).
