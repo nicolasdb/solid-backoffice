@@ -259,3 +259,8 @@ need one too, or accepting is refused before any write.
    `hyperscope/inbox/`. It shows under "Other messages" and can be deleted.
 
 Write down anything the copy got wrong, not just what failed.
+
+**Run record, 25 Sep 2026.** Done live: 2 (accept, request sent from a
+personal account), 4 (pull and confrontation). Waiting for the end-to-end
+run from a new account after J1, which rebuilds the newcomer's path: 1, 3,
+5 and 6.

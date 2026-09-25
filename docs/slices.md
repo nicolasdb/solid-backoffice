@@ -11,11 +11,16 @@ belong to"), the `output2/<collective>/` folder, and the test server with its
 cast (`npm run test:pods`). On the live pod, HyperScope's `config.ttl` and
 `membres.ttl` match `docs/examples/`; `config.ttl` is public for now.
 
-**B is built and passes against the test server** (`test/pods/admin.test.ts`);
-it is not done until `manual-tests.md` "Slice B" has been run live. Then
-account creation (J1), the layout pass, C, D, E. In [journeys](journeys.md)
-terms: J3 and J5's admin side are built, J1 is next; J2, J4 and J6 work
-already; J7 is C, J8 is D.
+**B is built** and passes against the test server (`test/pods/admin.test.ts`,
+`member.test.ts`). Live on 25 Sep 2026: a request from a personal account,
+accepted by the collective's account, then the agent's pull and confrontation
+on the announced `output2/hyperscope/`. The live steps that need a second,
+non-member account (newcomer's screen, refuse, remove) wait for the final
+end-to-end run from a new account, after J1 rebuilds that path.
+
+Next: account creation (J1), then the layout pass, C, D, E. In
+[journeys](journeys.md) terms: J3 and J5's admin side are built, J1 is next;
+J2, J4 and J6 work already; J7 is C, J8 is D.
 
 ## A — Member side of the handshake · built
 
