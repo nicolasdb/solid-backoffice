@@ -150,6 +150,20 @@ describe("slice A — the member's side of the handshake", () => {
     expect(sessionStorage.getItem("solid-backoffice.invite")).toBeNull();
   });
 
+  it("suggests a collective account's own agent, from its config.ttl", async () => {
+    runs = COLLECTIVE;
+    const app = await render();
+    expect(app.querySelector(`[data-add-agent="${COLLECTIVE.agent}"]`)).not.toBeNull();
+    await click(app, `[data-add-agent="${COLLECTIVE.agent}"]`);
+    expect(calls).toEqual(["profile edit"]);
+  });
+
+  it("says plainly when you belong to no collective", async () => {
+    sessionStorage.clear();
+    const app = await render();
+    expect(app.textContent).toContain("No collective yet.");
+  });
+
   it("lets a collective belong to another collective", async () => {
     runs = { ...COLLECTIVE, configUrl: "https://pod.example/net/config.ttl", group: "https://pod.example/net/config.ttl#net", name: "Network" };
     const app = await render();

@@ -60,6 +60,10 @@ backoffice left the files behind (found live, 25 Sep 2026). Following
 
 ## D — Provider layer, shown only on our provider
 
+Suggesting agents: the "Your agent" step already offers a collective
+account its own `hs:agent`; D adds the WebIDs linked to the account on our
+provider, so nobody types an agent's WebID by hand.
+
 The CSS account API: create an account and a pod, mint a WebID for an agent
 (with the back-link to its human), mint and revoke connectors. Then the
 Epic 9 access-log viewer. Hidden when the signed-in WebID comes from another

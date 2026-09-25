@@ -225,10 +225,11 @@ export async function renderMembership(
         sent to a collective's inbox. You can undo each step.
       </p>
       ${stepName(profile)}
-      ${stepAgent(profile)}
+      ${stepAgent(profile, run?.collective ?? null)}
       ${stepInbox(profile, unadvertisedInbox)}
 
       <h2 class="section-title">You belong to</h2>
+      ${collectives.length === 0 && broken.length === 0 ? `<p class="lead">No collective yet.</p>` : ""}
       ${collectives.map((c, i) => stepCollective(c, i, profile)).join("")}
       ${broken.map((b) => `<section class="step">${renderBroken(b)}</section>`).join("")}
       ${stepFindCollective(collectives.length === 0)}
@@ -256,6 +257,13 @@ export async function renderMembership(
     await updateOwnProfile(webId, profileEdits.addDelegate(agent));
     announce("Agent declared.");
   }, rerender);
+
+  app.querySelectorAll<HTMLButtonElement>("[data-add-agent]").forEach((button) =>
+    bindButton(button, async () => {
+      await updateOwnProfile(webId, profileEdits.addDelegate(button.dataset.addAgent!));
+      announce("Agent declared.");
+    }, rerender)
+  );
 
   app.querySelectorAll<HTMLButtonElement>("[data-remove-agent]").forEach((button) =>
     bindButton(button, async () => {
@@ -392,7 +400,22 @@ function stepName(profile: MemberDeclaration): string {
   );
 }
 
-function stepAgent(profile: MemberDeclaration): string {
+/**
+ * Agents the pods already name, offered with one click. Today: a collective
+ * account's own agent (`hs:agent` in its config.ttl). WebIDs linked to the
+ * account on our provider come with the provider layer (slice D).
+ */
+function agentSuggestions(profile: MemberDeclaration, run: Collective | null): string[] {
+  return run && !profile.delegates.includes(run.agent) ? [run.agent] : [];
+}
+
+function stepAgent(profile: MemberDeclaration, run: Collective | null): string {
+  const suggested = agentSuggestions(profile, run)
+    .map(
+      (agent) => `<li><code>${esc(agent)}</code>
+        <button class="ghost" data-add-agent="${esc(agent)}">Add</button></li>`
+    )
+    .join("");
   const list = profile.delegates
     .map(
       (agent) => `<li><code>${esc(agent)}</code>
@@ -407,6 +430,7 @@ function stepAgent(profile: MemberDeclaration): string {
        credited to you. This gives it no access to anything.
      </p>
      ${list ? `<ul class="plain-list">${list}</ul>` : ""}
+     ${suggested ? `<p class="meta">Named in your collective's config.ttl:</p><ul class="plain-list">${suggested}</ul>` : ""}
      <form id="agent-form" class="field">
        <label for="agent">Your agent's WebID</label>
        <input id="agent" name="agent" type="url" placeholder="https://…/profile/card#me" required />
