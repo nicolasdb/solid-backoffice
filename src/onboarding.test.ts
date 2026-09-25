@@ -75,6 +75,7 @@ vi.mock("./lib/admin", async (importOriginal) => ({
 
 const { renderMembership } = await import("./onboarding");
 const { captureInvite } = await import("./invite");
+const tab = (c: { configUrl: string }) => `#/c/${encodeURIComponent(c.configUrl)}`;
 
 /** Arrive through an invitation link, as a newcomer would. */
 function invitedTo(address: string): void {
@@ -83,7 +84,10 @@ function invitedTo(address: string): void {
   window.history.replaceState(null, "", "/");
 }
 
-async function render(): Promise<HTMLElement> {
+/** Render the tab the hash names: home by default, `tab(COLLECTIVE)` for a collective's own. */
+async function render(hash = "#/"): Promise<HTMLElement> {
+  // replaceState, not location.hash: no hashchange, so no second render racing the test.
+  window.history.replaceState(null, "", `/${hash}`);
   const app = document.createElement("div");
   document.body.replaceChildren(app);
   await renderMembership(app, WEBID, POD, () => {});
@@ -196,7 +200,7 @@ describe("slice A — the member's side of the handshake", () => {
   it("files a collective you only looked up under Not joined yet", async () => {
     const app = await render();
     const belong = [...app.querySelectorAll("h2.section-title")].map((h) => h.textContent);
-    expect(belong).toEqual(["You", "You belong to", "Not joined yet"]);
+    expect(belong).toEqual(["You belong to", "Not joined yet", "You"]);
     expect(app.textContent).toContain("No collective yet.");
   });
 
@@ -256,7 +260,7 @@ describe("slice A — the member's side of the handshake", () => {
     profile.inbox = POD + "inbox/";
     profile.memberOf = [COLLECTIVE.group];
     listed = true;
-    const app = await render();
+    const app = await render(tab(COLLECTIVE));
     expect(app.textContent).toContain("You are a member.");
     await click(app, "#publish-0");
     expect(calls).toEqual([
@@ -270,7 +274,7 @@ describe("slice A — the member's side of the handshake", () => {
     profile.memberOf = [COLLECTIVE.group];
     listed = true;
     agentGrants = [{ webId: COLLECTIVE.agent, modes: ["read"] }];
-    const app = await render();
+    const app = await render(tab(COLLECTIVE));
     expect(app.textContent).toContain("does not remove copies already made");
     await click(app, "#unpublish-0");
     expect(calls).toEqual([`acl ${POD}output2/hyperscope/ ${COLLECTIVE.agent} `]);
@@ -279,9 +283,49 @@ describe("slice A — the member's side of the handshake", () => {
   it("treats an unreadable roster as pending, not as refused", async () => {
     profile.memberOf = [COLLECTIVE.group];
     listed = null;
-    const app = await render();
+    const app = await render(tab(COLLECTIVE));
     expect(app.textContent).toContain("Waiting for the collective to accept it.");
     expect(app.querySelector("#resend-0")).not.toBeNull();
+  });
+});
+
+describe("layout A — tabs", () => {
+  const tabLabels = (app: HTMLElement) => [...app.querySelectorAll(".tab")].map((t) => t.querySelector(".tab-label")!.textContent);
+
+  it("gives a collective a tab only once you have asked to join it", async () => {
+    let app = await render();
+    expect(tabLabels(app)).toEqual(["Home", "Places"]);
+    profile.memberOf = [COLLECTIVE.group];
+    app = await render();
+    expect(tabLabels(app)).toEqual(["Home", "HyperScope", "Places"]);
+  });
+
+  it("keeps sharing and leaving on the collective's tab, joining on home", async () => {
+    profile.inbox = POD + "inbox/";
+    profile.memberOf = [COLLECTIVE.group];
+    listed = true;
+    const home = await render();
+    expect(home.querySelector("#publish-0")).toBeNull();
+    expect(home.querySelector(`a[href="${tab(COLLECTIVE)}"]`)).not.toBeNull();
+    const member = await render(tab(COLLECTIVE));
+    expect(member.querySelector("[data-view-title]")!.textContent).toBe("HyperScope");
+    expect(member.querySelector("#publish-0")).not.toBeNull();
+    expect(member.querySelector("#leave-0")).not.toBeNull();
+  });
+
+  it("goes home when the tab's collective is not one you belong to", async () => {
+    const app = await render(tab(COLLECTIVE));
+    expect(window.location.hash).toBe("#/");
+    expect(app.querySelector("#join-0")).not.toBeNull();
+  });
+
+  it("opens the collective you run on its own tab, with its requests", async () => {
+    runs = COLLECTIVE;
+    const home = await render();
+    expect(tabLabels(home)).toEqual(["Home", "HyperScope", "Places"]);
+    const own = await render(tab(COLLECTIVE));
+    expect(own.textContent).toContain("You run");
+    expect(own.textContent).toContain("Members");
   });
 });
 

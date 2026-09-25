@@ -25,7 +25,8 @@
   gap: var(--space-2);
 }
 
-.step-head h2 {
+.step-head h2,
+.step-head h3 {
   font-size: var(--text-h3);
   margin: 0;
 }
@@ -83,4 +84,259 @@ details.step > summary::-webkit-details-marker {
 }
 details.step:not([open]) {
   gap: 0;
+}
+
+/* ══ Layout A: the shell, its tabs, and the wide screens (docs/layout-brief.md) ══
+   Candidates to carry back to solid-kit once they have settled: .screen-wide,
+   the tab bar that moves to the bottom on a phone. */
+
+:root {
+  /* The landing's serif. Georgia until the self-hosted face lands (layout L3). */
+  --font-display: Georgia, "Times New Roman", serif;
+}
+
+.app-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-8) var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-mark::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab:hover { color: var(--text-primary); }
+.tab.is-current { background: var(--accent-soft); color: var(--text-primary); }
+.tab.is-soon { color: var(--text-tertiary); cursor: default; }
+.tab-icon { display: none; }
+
+.tab-badge,
+.soon {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.tab-badge { color: var(--warn); background: var(--warn-soft); border: var(--border-width) solid var(--warn-line); }
+.soon { color: var(--text-tertiary); border: var(--border-width) dashed var(--border); }
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.account-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 16rem;
+}
+
+.avatar {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
+  border: var(--border-width) solid var(--accent-line);
+  color: var(--accent);
+  font-size: var(--text-meta);
+  font-weight: 600;
+}
+
+button.small {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-small);
+}
+
+.screen-wide {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-8) calc(var(--space-12) + env(safe-area-inset-bottom));
+}
+
+/* Home: collectives in the wide column, "You" beside them from 64rem. */
+.home-grid,
+.member-grid {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.home-aside .section-title:first-child { margin-top: 0; }
+
+@media (min-width: 64rem) {
+  .home-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .home-aside { position: sticky; top: var(--space-6); }
+  .member-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+}
+
+/* A collective's tab: its name large, what you are to it small above. */
+.view-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-6);
+  margin-bottom: var(--space-6);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.view-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.25rem, 5vw, 3rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-tertiary);
+}
+
+.eyebrow::before {
+  content: "";
+  width: 40px;
+  height: var(--border-width);
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.pill {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: var(--border-width) solid var(--border);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.pill.is-ok { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.pill.is-wait { color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft); }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.step.is-quiet {
+  background: var(--surface);
+  border-color: var(--border-subtle);
+}
+
+/* Phone: the tabs move to a bar at the bottom, within thumb reach. */
+@media (max-width: 40rem) {
+  .app-top { padding-inline: var(--space-4); }
+  .account-name { display: none; }
+
+  .tabs {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 10;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 0;
+    padding: var(--space-1) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
+    background: var(--surface-elevated);
+    border-top: var(--border-width) solid var(--border);
+  }
+
+  .tab {
+    flex-direction: column;
+    gap: 2px;
+    min-height: 48px;
+    justify-content: center;
+    padding: var(--space-1);
+    font-size: var(--text-micro);
+    position: relative;
+  }
+
+  .tab.is-current { background: none; color: var(--text-primary); }
+  .tab.is-current .tab-icon { stroke: var(--accent); }
+  .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .tab .soon, .tab-badge { position: absolute; top: 0; right: var(--space-1); }
+
+  .tab-icon {
+    display: block;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+  }
+
+  .screen-wide {
+    padding: var(--space-6) var(--space-4) calc(88px + env(safe-area-inset-bottom));
+  }
 }

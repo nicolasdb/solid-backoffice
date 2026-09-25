@@ -63,9 +63,13 @@ one changes, change the other. Never point it at the real provider.
   new account's name across the provider's sign-in page;
   `src/lib/newcomer.ts` writes that name and the inbox on the first home
   screen.
-- `src/onboarding.ts` — the home screen: "You run" (a `config.ttl` at the
-  signed-in pod's root, via `findRunCollective`), "You" and "You belong to".
-  Read from the pods on every render; no role or progress is stored.
+- `src/onboarding.ts` — signed in: reads the pods (`load`: the collective
+  you run via `findRunCollective`, your profile, your collectives) on every
+  render, then shows the tab the hash names (`src/router.ts`) inside
+  `src/shell.ts` (layout A: tabs on top, a bottom bar on a phone). Tabs:
+  `src/home.ts` (your collectives, joining, "You"), `src/member.ts` (a
+  collective you belong to: sharing, leaving), `src/admin.ts` (the one you
+  run). No role, progress or tab state is stored.
 
 **Starting a session: read `docs/slices.md` first** ("Where we are" and the
 next tasks), then `docs/journeys.md`. No plan lives anywhere else.

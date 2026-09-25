@@ -182,12 +182,17 @@ function renderOther(message: InboxMessage, i: number): string {
     </li>`;
 }
 
-export function sectionRun(view: RunView, inviteLine: string): string {
-  const { collective, owner, requests, members, others } = view;
-  const summary = [
+/** "2 members · 1 request", or what could not be read. */
+export function runSummary(view: RunView): string {
+  const { requests, members } = view;
+  return [
     view.membersError ? "members: could not be read" : `${members.length} ${members.length === 1 ? "member" : "members"}`,
     view.inboxError ? "inbox: could not be read" : `${requests.length} ${requests.length === 1 ? "request" : "requests"}`,
-  ];
+  ].join(" · ");
+}
+
+export function sectionRun(view: RunView, inviteLine: string): string {
+  const { collective, owner, requests, members, others } = view;
   return `
     <h2 class="section-title">You run</h2>
     <section class="step">
@@ -195,7 +200,7 @@ export function sectionRun(view: RunView, inviteLine: string): string {
         <h2>${esc(collective.name)}</h2>
         <span class="label-mono">Collective</span>
       </div>
-      <p class="meta">${esc(summary.join(" · "))}</p>
+      <p class="meta">${esc(runSummary(view))}</p>
       ${inviteLine}
     </section>
 

@@ -260,6 +260,19 @@ need one too, or accepting is refused before any write.
 
 Write down anything the copy got wrong, not just what failed.
 
+### Layout pass — layout A, on a desktop and a real phone
+
+Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
+
+1. **L1, tabs.** As `nicolasdb`: Home, HyperScope and Places (shown as
+   coming, not clickable). HyperScope's tab has the folder and Leave;
+   Home has no Share button. The back button returns to the previous tab;
+   a reload keeps it. As `hyperscope-HQ`: HyperScope's tab is the
+   collective you run. On a phone with a notch, the tabs sit at the bottom,
+   clear of the gesture bar; nothing hides under it when scrolled to the
+   end. Tab through with the keyboard: every tab is reachable, Places is
+   skipped. Both themes.
+
 ### J1 — a new account from an invitation (the end-to-end run)
 
 This is also where steps 1, 3, 5 and 6 above get run: the new account is

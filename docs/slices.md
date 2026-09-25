@@ -67,6 +67,9 @@ Once the journeys are wired end to end: a desktop layout that uses the width
 (the kit's single column is right on a phone, narrow on a screen), and the
 landing page. Done steps already fold to their title (25 Sep 2026).
 
+**L1 built** (shell, tabs, home, a member's tab); L2 (the collective's own
+screen), L3 (the landing), L4 (members and agent on a member's tab) next.
+
 It is a design task, drafted in Claude Design from
 [layout-brief.md](layout-brief.md) (screens, states, real content,
 constraints, open questions). The code follows the mockups.
