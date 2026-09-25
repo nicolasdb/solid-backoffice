@@ -6,6 +6,10 @@ each container is
 it is not repeated here. Setting them up:
 [how-to](../how-to/set-up-a-collective.md).
 
+The collective's agent reads the same files, following solid-kit's
+[procedures](https://github.com/nicolasdb/solid-kit/blob/main/docs/procedures/README.md)
+(pull, confrontation). A change to a file's shape here means checking them.
+
 All three sit at the collective's pod root.
 
 ## config.ttl
