@@ -138,10 +138,17 @@ toasts and screen-reader announcements after each write.
 - **The collective's view gets its own screen**: requests, members and other
   messages move out of the home screen. Home keeps a summary card ("You run
   HyperScope · 2 members · 0 requests") that leads there.
-- **Home on a wide screen** and **navigation once C adds Places**: open. The
-  design session shows options side by side (for example: tabs, a side
-  rail, a home of cards that each lead to a screen), phone and desktop for
-  each, and the choice is made on the mockups.
+- **Home and navigation: option A, tabs** (chosen on the mockups, 25 Sep
+  2026). Desktop: tabs at the top (Home, one per collective you run, Places
+  once C exists), your collectives in the wide column and a compact "You"
+  checklist beside them. Phone: the same tabs as a bottom bar. The other
+  two options (a side rail; a home of cards) are kept on the canvas.
+- **Landing**: the solid-dash pattern, drawn invited and not invited. The
+  closing diagram shows the ladder as groups of groups: you, HyperScope,
+  and a network of four collectives with 3 to 5 members each.
+
+The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
+(a Claude Design canvas, private to its owner).
 
 ## Inspiration for explaining a pod
 
