@@ -11,9 +11,12 @@
     "test:watch": "vitest",
     "audit": "node scripts/audit.mjs",
     "verify": "npm run check && npm test && npm run audit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:pods": "vitest run -c vitest.pods.config.ts"
   },
   "devDependencies": {
+    "@inrupt/solid-client-authn-node": "^3.1.1",
+    "@solid/community-server": "^7.2.0",
     "@types/n3": "^1.26.4",
     "jsdom": "^30.0.1",
     "typescript": "~6.0.2",

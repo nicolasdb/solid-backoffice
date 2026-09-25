@@ -43,6 +43,7 @@ questions go through the [FAQ](docs/faq.md).
 npm install
 npm run dev      # the app at /
 npm run verify   # typecheck + tests + design audit
+npm run test:pods  # the app's code against a throwaway Solid server and test accounts
 make             # deploy targets
 ```
 

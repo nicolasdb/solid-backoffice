@@ -27,6 +27,13 @@ to", and the shared folder becomes `output2/<collective>/`. Reasons:
 [explanation/membership.md](explanation/membership.md),
 [explanation/sharing.md](explanation/sharing.md).
 
+## Test server · built
+
+`npm run test:pods`: a throwaway CSS 7 and a cast of six accounts (collective,
+its agent, member, newcomer, outsider, second collective), set up by the
+how-to. It runs the app's `src/lib` against a real server. Next: browser
+journeys (Playwright, one window per account) as each journey is built.
+
 ## B — Admin side of the handshake
 
 On the collective's pod, for its owner:

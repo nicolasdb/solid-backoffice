@@ -24,12 +24,19 @@ npm install
 npm run dev      # the app at /
 npm run verify   # typecheck + tests + audit
 npm test
+npm run test:pods  # throwaway CSS 7 in memory + a cast of accounts (test/pods/)
 make             # deploy targets
 ```
 
 `npm run verify` never covers sign-in or a write to a real pod. Those are in
 `docs/manual-tests.md`, and a slice is not done until its section there has
 been run live.
+
+`npm run test:pods` starts Community Solid Server 7 on localhost, creates the
+cast in `test/pods/cast.ts` through the CSS account API, and runs `src/lib`
+unchanged against it (only `authFetch` is swapped for a cast member's
+signed-in fetch). The cast follows `docs/how-to/set-up-a-collective.md`; when
+one changes, change the other. Never point it at the real provider.
 
 ## Architecture
 
