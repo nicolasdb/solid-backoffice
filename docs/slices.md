@@ -62,6 +62,10 @@ Once the journeys are wired end to end: a desktop layout that uses the width
 (the kit's single column is right on a phone, narrow on a screen), and the
 landing page. Done steps already fold to their title (25 Sep 2026).
 
+It is a design task, drafted in Claude Design from
+[layout-brief.md](layout-brief.md) (screens, states, real content,
+constraints, open questions). The code follows the mockups.
+
 ## J1 — Account creation · built, live test pending
 
 From an invitation link, the first screen offers "Create an account": name,

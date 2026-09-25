@@ -12,7 +12,8 @@ answer lives.
 | Explanation | why it works this way | [Membership](explanation/membership.md) · [Sharing with a collective](explanation/sharing.md) · [Following](explanation/following.md) |
 
 Also here: [FAQ](faq.md) · [Journeys](journeys.md) · [Slices](slices.md)
-(where we are, and what gets built next) · [UX principles](ux-principles.md) (from the kit).
+(where we are, and what gets built next) · [UX principles](ux-principles.md) (from the kit) ·
+[Layout brief](layout-brief.md) (input to the design session).
 
 Anything that concerns more than this app lives in solid-kit: the
 [atlas](https://github.com/nicolasdb/solid-kit/blob/main/docs/atlas.md) and
