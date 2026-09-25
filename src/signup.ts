@@ -148,6 +148,7 @@ function signUpForm(provider: string): string {
            At least 8 characters.</p>`)}
       ${field("confirm", "Type it again",
         `<input id="confirm" name="confirm" type="password" autocomplete="new-password" required />`)}
+      <div><button id="reveal" class="ghost" type="button" aria-pressed="false">Show passphrase</button></div>
       <div><button type="submit">Create my account</button></div>
       <p class="meta">
         Next, your provider's page asks for this email and passphrase once, to
@@ -174,6 +175,15 @@ function bindSignUp(app: HTMLElement, provider: string): void {
   input("username").addEventListener("input", () => {
     usernameEdited = true;
     showAddress();
+  });
+
+  // Typed twice and unseen is how a typo becomes a lockout: let the person look.
+  const reveal = form.querySelector<HTMLButtonElement>("#reveal")!;
+  reveal.addEventListener("click", () => {
+    const show = reveal.getAttribute("aria-pressed") !== "true";
+    input("password").type = input("confirm").type = show ? "text" : "password";
+    reveal.setAttribute("aria-pressed", String(show));
+    reveal.textContent = show ? "Hide passphrase" : "Show passphrase";
   });
 
   const say = (id: Field | "signup", text: string | null) => {

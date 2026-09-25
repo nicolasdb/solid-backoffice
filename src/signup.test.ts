@@ -126,6 +126,18 @@ describe("before sign-in", () => {
     expect(app.querySelector("#confirm-error")!.textContent).toMatch(/do not match/);
   });
 
+  it("can show and hide the passphrase, both fields together", () => {
+    setInvite("https://pod.example/hs/config.ttl");
+    const app = render();
+    const types = () => ["password", "confirm"].map((id) => app.querySelector<HTMLInputElement>(`#${id}`)!.type);
+    expect(types()).toEqual(["password", "password"]);
+    app.querySelector<HTMLButtonElement>("#reveal")!.click();
+    expect(types()).toEqual(["text", "text"]);
+    expect(app.querySelector("#reveal")!.textContent).toBe("Hide passphrase");
+    app.querySelector<HTMLButtonElement>("#reveal")!.click();
+    expect(types()).toEqual(["password", "password"]);
+  });
+
   it("shows a taken username on its field, and keeps the saved email and passphrase", async () => {
     setInvite("https://pod.example/hs/config.ttl");
     refuse = { code: "username-taken", message: "This username is taken. Choose another one.", nothingCreated: false };
