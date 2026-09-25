@@ -51,3 +51,30 @@ provider, because none of it is Solid protocol.
 The same app with a second `config.ttl` and its own entry page. If that needs
 more than a config line and copy, the backoffice is not generic enough yet, and
 that is the finding.
+
+## Replacing the old backoffice
+
+`pocpod0/backoffice/` stays live until everything below is covered or
+dropped on purpose. Inventory taken from its code (`index.html`, `pod-api.js`),
+not its HANDOFF.md, which is older than several features.
+
+| Old feature | Where it goes | Note |
+|---|---|---|
+| Sign in with a pod or issuer | kit | done |
+| Membership, join, share | A | done; new, the old one had none |
+| "Requests" view | B | demo cards only in the old app; B makes it real |
+| File browser, new file / folder | C | |
+| Upload, rename (copy then delete), delete with a count of what is inside | C | |
+| Editor with live preview (Markdown, JSON check, code) | C | |
+| Wipe pod contents, protected paths kept | C | keep the protected-path list |
+| Sharing: only me / anyone with the link / one WebID read or edit | C | `acl.ts` already writes all three |
+| Raw WAC view ("Show the technical rules") | C | |
+| People & apps (who has access, from ACLs visited) | C | no pod-wide index exists; same limit |
+| Create an account and pod (email, password) | D | keep the guard: CSS treats an empty pod name as "claim the root" |
+| More pods on the same account | D | |
+| Agent WebIDs, linked by ownership proof; unlink | D | |
+| App tokens (client credentials): list, create, revoke | D | |
+| Claude connector: mint, list, revoke (`/onboard/*` on the provider) | D | the secret never reaches the browser; keep it so |
+| 10-chapter learning onboarding for newcomers | open | decide: port with D's account creation, or drop |
+| Demo pod (explore without an account) | open | ADR 005: per app; decide if the backoffice needs one |
+| Readable-font toggle, alternate themes | open | the kit has light/dark only |
