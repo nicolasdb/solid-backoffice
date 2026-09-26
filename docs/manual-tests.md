@@ -414,10 +414,13 @@ the provider, a real browser, a phone, both themes.
 4. Open a Markdown file: it shows full width as a page (Preview), with no
    side list. Open a JSON file (indented), an image, and a file with no
    preview: Download saves it with its name.
-5. `···` on a row: a menu under it with its name, who can access it in one
-   sentence and where the rules come from ("Its own rules" / "Same as
-   projects/"), then Rename, Move, and Delete set apart. Escape closes it
-   and focus returns to `···`. On a phone (≤ 40rem): the pod picker
+5. `···` on a row: a menu under it (above it on the last rows) with its
+   name, Rename, Move and Delete, then who can access it as chips (a name
+   each, what they can do on hover; ✎ can edit). Hovering "Who can access
+   it ⓘ" says where the rules come from ("Its own rules" / "Same as
+   projects/"). While the rules are read, nothing in the menu moves. Move's
+   list of folders reads in both themes. Escape closes it and focus
+   returns to `···`. On a phone (≤ 40rem): the pod picker
    replaces the side list, rows are blocks, and the menu opens as a sheet.
 6. Both themes: nothing unreadable in the table, the menu, the drawer or a
    preview.

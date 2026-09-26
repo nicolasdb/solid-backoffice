@@ -135,6 +135,11 @@ function names(): string[] {
   return [...app.querySelectorAll("tr[data-url] .item-name")].map((c) => c.textContent!.trim());
 }
 
+/** The names on the open menu's access chips. */
+function chips(): string[] {
+  return [...app.querySelectorAll(".item-menu .access-chip")].map((c) => c.firstChild!.textContent!.trim());
+}
+
 function menuFor(url: string): void {
   app.querySelector<HTMLButtonElement>(`[data-menu="${url}"]`)!.click();
 }
@@ -206,8 +211,11 @@ describe("C1 — a folder of your pod", () => {
     expect(document.activeElement!.id).toBe("menu-title");
     await until(() => app.querySelector("#change-access:not([disabled])"));
     const menu = app.querySelector<HTMLElement>(".item-menu")!;
-    expect(menu.textContent).toContain("You and HyperScope's agent (can read).");
-    expect(menu.textContent).toContain("Its own rules.");
+    expect(chips()).toEqual(["You", "HyperScope's agent"]);
+    expect(menu.querySelector(".access-chip:nth-child(2)")!.getAttribute("title")).toBe("HyperScope's agent can read");
+    expect(menu.querySelector(".menu-sec .label-mono")!.getAttribute("title")).toMatch(/^Its own rules\./);
+    // The actions come before who can access it: reading the rules never moves them.
+    expect(menu.querySelector("[data-change=rename]")!.compareDocumentPosition(menu.querySelector(".access-chips")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(menu.querySelector(".is-apart [data-change=delete]")).toBeTruthy(); // set apart
 
     menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
@@ -220,7 +228,8 @@ describe("C1 — a folder of your pod", () => {
     await reading;
     menuFor(POD + "projects/readme.md");
     await until(() => app.querySelector("#change-access:not([disabled])"));
-    expect(app.querySelector(".item-menu")!.textContent).toMatch(/Only you\.\s*Same as My pod\./);
+    expect(chips()).toEqual(["You"]);
+    expect(app.querySelector(".item-menu .label-mono")!.getAttribute("title")).toBe("Same as My pod.");
     expect(app.querySelector(".places-side")!.textContent).toContain("…/amina/");
   });
 });
@@ -315,7 +324,7 @@ describe("C1 — a file opens in Preview", () => {
     expect(app.querySelector(".places-grid")!.classList.contains("is-wide")).toBe(true);
     menuFor(POD + "projects/public.md");
     await until(() => app.querySelector("#change-access:not([disabled])"));
-    expect(app.querySelector(".item-menu")!.textContent).toContain("You and anyone with the link (can read).");
+    expect(chips()).toEqual(["You", "Anyone with the link"]);
   });
 });
 

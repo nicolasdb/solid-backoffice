@@ -152,6 +152,22 @@ export function accessSentence(rules: Pick<AccessRules, "agents" | "public" | "a
   return `${["You", ...parts].join(", ")} and ${last}.` + also;
 }
 
+/** Who can access it, as chips: a name each, what they can do in the chip's title. */
+export function accessChips(rules: Pick<AccessRules, "agents" | "public" | "authenticated">, label: (webId: string) => string): string {
+  const chip = (text: string, title: string, edit = false) =>
+    `<li class="access-chip${edit ? " is-edit" : ""}" title="${esc(title)}">${esc(text)}${edit ? `<span aria-hidden="true"> ✎</span>` : ""}<span class="visually-hidden"> (${esc(title.replace(/^.*? (can|may) /, "$1 "))})</span></li>`;
+  const chips = [chip("You", "You can do everything")];
+  for (const a of rules.agents) {
+    const name = label(a.webId);
+    chips.push(chip(name, `${name} ${presetWords(a.modes)}`, presetOf(a.modes) === "edit"));
+  }
+  if (rules.public.includes("read")) chips.push(chip("Anyone with the link", "Anyone with the link can read"));
+  if (rules.authenticated.includes("read")) chips.push(chip("Anyone signed in", "Anyone signed in can read"));
+  if (rules.public.includes("append")) chips.push(chip("Anyone: messages", "Anyone can leave a message"));
+  else if (rules.authenticated.includes("append")) chips.push(chip("Signed in: messages", "Anyone signed in can leave a message"));
+  return `<ul class="access-chips">${chips.join("")}</ul>`;
+}
+
 /** "My pod", or a folder's name. */
 function placeName(url: string, podUrl: string): string {
   return url === podUrl ? "My pod" : nameOf(url);

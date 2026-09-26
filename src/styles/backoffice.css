@@ -967,6 +967,32 @@ button.menu-item {
 }
 button.menu-item:hover { background: var(--surface-recessed); }
 button.menu-item.is-warn { color: var(--warn); }
+/* Who can access it: a chip per person, one row tall even while it is read. */
+.access-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1); min-height: 28px; }
+.access-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  font-size: var(--text-meta);
+  cursor: default;
+}
+.access-chip.is-edit { border-color: var(--accent); }
+.access-chip.is-loading { color: var(--text-tertiary); border-style: dashed; }
+.menu-sec .label-mono[title] { cursor: help; }
+.item-menu select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}
 
 .drawer-scrim { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / 0.18); }
 .drawer {

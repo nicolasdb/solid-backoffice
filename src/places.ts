@@ -54,7 +54,7 @@ import { routeHref, type Route } from "./router";
 import { renderMarkdown } from "./ui/markdown";
 import { busy } from "./ui/typing";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
-import { accessSentence, bindAccess, labelOf, loadDraft, renderAccess, rulesOf, type Draft, type Group } from "./access-panel";
+import { accessChips, bindAccess, labelOf, loadDraft, renderAccess, rulesOf, type Draft, type Group } from "./access-panel";
 import { podLabel, webIdName } from "./ui/address";
 import { bindRules, rawDirty, renderRules, startRaw, type RawEdit } from "./raw-rules";
 
@@ -490,36 +490,28 @@ function itemOf(url: string): Item | undefined {
 function renderMenu(): string {
   if (!menu) return "";
   const url = menu.url;
-  const item = itemOf(url);
-  const isFolder = url.endsWith("/");
   const name = url === ctx!.podUrl ? "My pod" : nameOf(url);
-  const n = isFolder ? countOf(url) : null;
-  const facts = [
-    isFolder ? "Folder" : KIND_LABEL[files.get(url)?.kind ?? kindFromItem(item)] ?? "File",
-    n !== null ? `${n} item${n === 1 ? "" : "s"} inside` : "",
-    item && !isFolder ? size(item.size) : "",
-    item?.modified ? `last modified ${when(item.modified).replace(/^Today/, "today").replace(/^Yesterday/, "yesterday")}` : "",
-  ].filter(Boolean);
   const d = draft?.url === url ? draft : null;
   const label = (webId: string) => labelOf(webId, accessEnv());
+  // The chips' row keeps its height while the rules are read, and the actions sit above it: nothing moves under the pointer.
   const who = d
-    ? `<p>${esc(accessSentence(!d.own && d.parent ? d.parent.access : rulesOf(d), label))}</p><p class="meta">${esc(originLine(d))}</p>`
+    ? accessChips(!d.own && d.parent ? d.parent.access : rulesOf(d), label)
     : draftError?.url === url
       ? `<p class="error">${esc(draftError.message)}</p>`
-      : `<p class="meta">Reading its rules…</p>`;
+      : `<ul class="access-chips"><li class="access-chip is-loading">Reading…</li></ul>`;
+  const origin = d ? originLine(d) : "";
   return `
     <div class="menu-scrim" id="menu-scrim"></div>
     <div class="item-menu" role="dialog" aria-labelledby="menu-title" id="item-menu" style="--menu-top: ${menu.top}px; --menu-left: ${menu.left}px">
       <div class="menu-sec">
         <div class="menu-head"><h2 id="menu-title" tabindex="-1">${esc(name)}</h2><button class="ghost small" type="button" id="menu-close" aria-label="Close">✕</button></div>
-        <p class="meta">${esc(facts.join(" · "))}</p>
+        ${renderActions(url, changes.change, changeEnv())}
       </div>
       <div class="menu-sec">
-        <span class="label-mono">Who can access it</span>
+        <span class="label-mono"${origin ? ` title="${esc(origin)}"` : ""}>Who can access it${origin ? `<span aria-hidden="true"> ⓘ</span><span class="visually-hidden">: ${esc(origin)}</span>` : ""}</span>
         ${who}
         <button class="ghost small" type="button" id="change-access"${d ? "" : " disabled"}>Change who can access it</button>
       </div>
-      <div class="menu-sec">${renderActions(url, changes.change, changeEnv())}</div>
     </div>`;
 }
 
