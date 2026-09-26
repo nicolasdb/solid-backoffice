@@ -41,8 +41,8 @@ still `make vps-deploy`.
    `.acl` costs a HEAD before the GET, one round on every share check.
    `src/lib/read.ts` and the rules are carried back to solid-kit (ADR 007).
 4. **C · Places**, in six slices (C1 browse → C6 technical rules, below),
-   drawn on the canvas desktop and phone. Next: C1. Then People & apps,
-   D, E. In [journeys](journeys.md) terms: J1, J3 and J5's
+   drawn on the canvas desktop and phone. Next: C1. Then D (with People
+   & apps), E. In [journeys](journeys.md) terms: J1, J3 and J5's
    admin side are built; J2, J4 and J6 work already; J7 is C, J8 is D.
 
 ## A — Member side of the handshake · built
@@ -186,12 +186,6 @@ Not in C, on purpose:
   (J9 in [journeys](journeys.md)).
 - **Wipe pod contents**: dropped.
 
-## People & apps · next after C, to define
-
-Who has access to what, from the rules the app has read (the old
-backoffice's "People & apps"). No pod-wide index exists, so it can list only
-the rules visited; how to present that honestly is the first thing to settle.
-
 ## D — Provider layer, shown only on our provider
 
 Suggesting agents: the "Your agent" step already offers a collective
@@ -203,6 +197,13 @@ pod): more pods on the same account, mint a WebID for an agent
 (with the back-link to its human), mint and revoke connectors. Then the
 Epic 9 access-log viewer. Hidden when the signed-in WebID comes from another
 provider, because none of it is Solid protocol.
+
+**People & apps** joins D (decided 26 Sep 2026): who has access to what,
+from the rules the app has read (the old backoffice's view), beside the
+access log that says who actually read. Unlike the rest of D it is Solid
+protocol, so it shows on any provider. No pod-wide index exists, so it can
+list only the rules visited; how to present that honestly is the first
+thing to settle.
 
 ## E — Maps of Making landing
 
@@ -227,7 +228,7 @@ not its HANDOFF.md, which is older than several features.
 | Wipe pod contents, protected paths kept | dropped | decided 26 Sep 2026 |
 | Sharing: only me / anyone with the link / one WebID read or edit | C | `acl.ts` already writes all three |
 | Raw WAC view ("Show the technical rules") | C | |
-| People & apps (who has access, from ACLs visited) | People & apps, after C | no pod-wide index exists; same limit |
+| People & apps (who has access, from ACLs visited) | D | no pod-wide index exists; same limit; shown on any provider |
 | Create an account and pod (email, password) | J1 | done; guard kept: CSS treats an empty pod name as "claim the root" |
 | More pods on the same account | D | |
 | Agent WebIDs, linked by ownership proof; unlink | D | |
