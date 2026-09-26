@@ -672,6 +672,13 @@ ${entries}`;
     expect(app.querySelector(".places-side")!.textContent).toContain("Xavier's folder");
   });
 
+  it("with nothing followed yet, shows the form at once, with nothing to cancel", async () => {
+    pod[LIST] = { status: 404 };
+    await go({ name: "following" });
+    await until(() => app.querySelector("#follow-form"));
+    expect(app.querySelector("#follow-open, #follow-cancel, .fcard")).toBeNull();
+  });
+
   it("keeps an address only once your WebID could read it", async () => {
     await go({ name: "following" });
     app.querySelector<HTMLButtonElement>("#follow-open")!.click();

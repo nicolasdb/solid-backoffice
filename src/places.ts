@@ -929,13 +929,23 @@ function bind(): void {
 function openMenu(url: string, button: HTMLElement): void {
   const box = frame!.getBoundingClientRect();
   const at = button.getBoundingClientRect();
-  const width = 352;
+  const width = 320;
   menu = { url, top: Math.round(at.bottom - box.top + 4), left: Math.max(0, Math.round(at.right - box.left - width)) };
   drawer = null;
   if (draft?.url !== url) draft = null;
   if (changes.change?.url !== url) changes.change = null;
   raw = null;
   draw(false);
+  // Near the bottom of the screen the menu opens upward, and it never leaves the frame's left edge.
+  const el = frame?.querySelector<HTMLElement>("#item-menu");
+  if (el && getComputedStyle(el).position !== "fixed") {
+    const h = el.offsetHeight;
+    const w = el.offsetWidth || width;
+    if (at.bottom + 4 + h > window.innerHeight && at.top - 4 - h >= 0) menu.top = Math.round(at.top - box.top - 4 - h);
+    menu.left = Math.max(0, Math.round(at.right - box.left - w));
+    el.style.setProperty("--menu-top", `${menu.top}px`);
+    el.style.setProperty("--menu-left", `${menu.left}px`);
+  }
   frame?.querySelector<HTMLElement>("#menu-title")?.focus();
 }
 

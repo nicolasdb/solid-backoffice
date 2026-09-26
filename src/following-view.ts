@@ -57,7 +57,10 @@ export function renderOverview(
         ? `<p class="meta">Reading your list…</p>`
         : entries.length
           ? `<ul class="fcards">${cards}</ul>`
-          : `<div class="empty-state"><h2>Nothing followed yet</h2><p class="lead">When someone sends you the address of a folder or a file they shared with you, follow it here to find it again.</p></div>`;
+          : "";
+  // Nothing followed yet: the form is the page, no step before it.
+  const empty = entries?.length === 0 && error === null;
+  const shown = form ?? (empty ? { error: null, pending: false } : null);
 
   return `
     <section class="places-main" aria-labelledby="places-title">
@@ -66,17 +69,17 @@ export function renderOverview(
           <h1 id="places-title" data-view-title>Followed</h1>
           <p class="meta">What others shared with you. Titles and excerpts are what you saw on your last visit, kept on your pod: this page reads nothing from their pods.</p>
         </div>
-        ${form ? "" : `<button class="small" type="button" id="follow-open">Follow an address</button>`}
+        ${shown ? "" : `<button class="small" type="button" id="follow-open">Follow an address</button>`}
       </div>
       ${
-        form
+        shown
           ? `<form class="create-row" id="follow-form" novalidate>
                <div class="field"><label for="follow-address">Address someone shared with you</label>
-                 <input id="follow-address" type="url" placeholder="https://…/shared/" autocomplete="off"${form.pending ? " disabled" : ""}></div>
-               <button type="submit" class="small"${form.pending ? " disabled" : ""}>Follow</button>
-               <button type="button" class="ghost small" id="follow-cancel">Cancel</button>
-               ${form.pending ? `<p class="meta" role="status">Reading it with your WebID…</p>` : ""}
-               ${form.error ? `<p class="error" role="alert">${esc(form.error)}</p>` : ""}
+                 <input id="follow-address" type="url" placeholder="https://…/shared/" autocomplete="off"${shown.pending ? " disabled" : ""}></div>
+               <button type="submit" class="small"${shown.pending ? " disabled" : ""}>Follow</button>
+               ${empty ? "" : `<button type="button" class="ghost small" id="follow-cancel">Cancel</button>`}
+               ${shown.pending ? `<p class="meta" role="status">Reading it with your WebID…</p>` : ""}
+               ${shown.error ? `<p class="error" role="alert">${esc(shown.error)}</p>` : ""}
                <p class="meta">Nobody can list what is shared with you: someone has to send you the address. It is kept only if your WebID can read it.</p>
              </form>`
           : ""
