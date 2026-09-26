@@ -258,8 +258,11 @@ export function invitationLink(collective: Collective): string {
   const url = new URL(window.location.href);
   url.search = "";
   url.hash = "";
-  url.searchParams.set("collective", collective.configUrl);
-  return url.href;
+  // ":" and "/" are allowed as they are in a query (RFC 3986), so the address
+  // stays readable; only what would break the link (&, #, +, ?, spaces) is
+  // encoded. searchParams.get reads both forms back the same.
+  const address = encodeURIComponent(collective.configUrl).replace(/%3A/gi, ":").replace(/%2F/gi, "/");
+  return `${url.href}?collective=${address}`;
 }
 
 /** Copy icon: Bootstrap Icons "copy" (MIT). */

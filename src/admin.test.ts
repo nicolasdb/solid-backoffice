@@ -144,7 +144,7 @@ describe("You run", () => {
     const app = render();
     const head = app.querySelector(".run-head")!;
     expect(head.querySelector("h1")!.textContent).toBe("HyperScope");
-    expect(head.textContent).toContain(`?collective=${encodeURIComponent(COLLECTIVE.configUrl)}`);
+    expect(head.textContent).toContain(`?collective=${COLLECTIVE.configUrl}`);
     expect(head.textContent).toContain("1 request");
     expect(head.textContent).toContain("1 member");
   });
@@ -154,12 +154,12 @@ describe("You run", () => {
     Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t: string) => void (copied = t) }, configurable: true });
     render().querySelector<HTMLButtonElement>(".run-head [data-copy]")!.click();
     await tick();
-    expect(copied).toContain(`?collective=${encodeURIComponent(COLLECTIVE.configUrl)}`);
+    expect(copied).toContain(`?collective=${COLLECTIVE.configUrl}`);
   });
 
   it("gives the invitation link on localhost too, saying it works only on this computer", () => {
     const head = render().querySelector(".run-head")!;
-    expect(head.querySelector<HTMLElement>("[data-copy]")!.dataset.copy).toContain(`?collective=${encodeURIComponent(COLLECTIVE.configUrl)}`);
+    expect(head.querySelector<HTMLElement>("[data-copy]")!.dataset.copy).toContain(`?collective=${COLLECTIVE.configUrl}`);
     expect(head.textContent).toContain("works only on this computer");
   });
 
@@ -170,8 +170,9 @@ describe("You run", () => {
       const head = render().querySelector(".run-head")!;
       const copy = head.querySelectorAll<HTMLElement>("[data-copy]");
       expect(copy.length).toBe(1);
-      expect(copy[0].dataset.copy).toBe(`https://test.example/?collective=${encodeURIComponent(COLLECTIVE.configUrl)}`);
+      expect(copy[0].dataset.copy).toBe(`https://test.example/?collective=${COLLECTIVE.configUrl}`);
       expect(head.textContent).not.toContain("only on this computer");
+      expect(new URL(copy[0].dataset.copy!).searchParams.get("collective")).toBe(COLLECTIVE.configUrl);
     } finally {
       Object.defineProperty(window, "location", { value: real, configurable: true });
     }
