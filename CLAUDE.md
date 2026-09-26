@@ -25,8 +25,13 @@ npm run dev      # the app at /
 npm run verify   # typecheck + tests + audit
 npm test
 npm run test:pods  # throwaway CSS 7 in memory + a cast of accounts (test/pods/)
-make             # deploy targets
+make             # deploy targets (TARGET=test for test.nicolasdb.eu)
 ```
+
+CI (`.github/workflows/ci.yml`) runs `verify`, the build and `test:pods` on
+every push, and deploys the `dev` branch to test.nicolasdb.eu
+(`docs/how-to/deploy-the-test-copy.md`). `claude/*` branches are tried locally
+first; production is not deployed by CI.
 
 `npm run verify` never covers sign-in or a write to a real pod. Those are in
 `docs/manual-tests.md`, and a slice is not done until its section there has

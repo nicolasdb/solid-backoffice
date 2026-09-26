@@ -1,0 +1,84 @@
+# Checks every push; deploys the `dev` branch to test.nicolasdb.eu.
+#
+# claude/* branches are work in progress, tried locally first; `dev` is what
+# gets pushed for a check online. There is no production deploy from CI yet:
+# production is still `make vps-deploy` from a laptop.
+#
+# The deploy key (secret TEST_DEPLOY_KEY) is pinned on the server to
+#   restrict,command="rrsync -wo /home/nicolas/solid-backoffice-test/dist"
+# so it can only write into the test copy's dist/: no shell, no other folder,
+# no reading. The container bind-mounts dist/, so a new build is served without
+# a restart; compose or nginx changes still go through `make vps-deploy TARGET=test`.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - run: npm run build
+
+  pods:
+    # Throwaway CSS 7 in memory on the runner; never the real provider.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:pods
+
+  deploy-test:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    needs: [verify, pods]
+    runs-on: ubuntu-latest
+    environment:
+      name: test
+      url: https://test.nicolasdb.eu
+    concurrency:
+      group: deploy-test
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Install the deploy key
+        env:
+          DEPLOY_KEY: ${{ secrets.TEST_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.TEST_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Copy dist/ into the test copy
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          rsync -rlz --delete -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            dist/ "root@${DEPLOY_HOST}:"
+      - name: Check it is served
+        run: curl -fsS https://test.nicolasdb.eu/ | grep -q '<div id="app">'

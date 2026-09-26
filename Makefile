@@ -4,12 +4,24 @@
 # The build is produced LOCALLY and only dist/ ships to the VPS: nothing is
 # compiled there, so there is no node toolchain to maintain on the server.
 #
-# ── Per-app settings: change these four and the rest follows ─────────────────
+# ── Per-app settings: change these and the rest follows ──────────────────────
 APP         := solid-backoffice
+REMOTE      := hetzner
+
+# TARGET=test deploys a separate copy (own folder, container and domain) beside
+# production, for checks online before a release. The `dev` branch is deployed
+# there by CI (.github/workflows/ci.yml); this target is for the first install
+# and for compose or nginx changes, which CI does not push.
+TARGET ?= prod
+ifeq ($(TARGET),test)
+DOMAIN      := test.nicolasdb.eu
+CONTAINER   := $(APP)-test-web
+REMOTE_PATH := /home/nicolas/$(APP)-test
+else
 DOMAIN      := backoffice.nicolasdb.eu
 CONTAINER   := $(APP)-web
-REMOTE      := hetzner
 REMOTE_PATH := /home/nicolas/$(APP)
+endif
 
 # What constitutes a deployment: the build, the compose file and the
 # container's nginx config. Sources have no business on the VPS.
@@ -65,8 +77,8 @@ clean: ## Remove dist/
 vps-diff: ## Show what a push would change on the VPS, writing nothing
 	@rsync -avzn --delete $(DEPLOY_PATHS) $(REMOTE):$(REMOTE_PATH)/
 
-vps-push: build ## Build, then rsync dist/ + compose + nginx config to the VPS
-	@ssh $(REMOTE) "mkdir -p $(REMOTE_PATH)"
+vps-push: build ## Build, then rsync dist/ + compose + nginx config to the VPS (TARGET=test for the test copy)
+	@ssh $(REMOTE) "mkdir -p $(REMOTE_PATH) && printf 'CONTAINER=%s\nDOMAIN=%s\n' $(CONTAINER) $(DOMAIN) > $(REMOTE_PATH)/.env"
 	rsync -avz --delete $(DEPLOY_PATHS) $(REMOTE):$(REMOTE_PATH)/
 	@echo "Pushed to $(REMOTE):$(REMOTE_PATH)."
 

@@ -7,7 +7,7 @@ answer lives.
 | Kind | For | Pages |
 |---|---|---|
 | Tutorials | learning by doing | none yet: the first is a newcomer's first join, once J1 is built |
-| How-to guides | a task, for someone who knows what they want | [Set up a collective's pod](how-to/set-up-a-collective.md) · [Manual tests](manual-tests.md) |
+| How-to guides | a task, for someone who knows what they want | [Set up a collective's pod](how-to/set-up-a-collective.md) · [Deploy the test copy](how-to/deploy-the-test-copy.md) · [Manual tests](manual-tests.md) |
 | Reference | facts to look up | [Collective files](reference/collective-files.md) · [Examples](examples/) |
 | Explanation | why it works this way | [Membership](explanation/membership.md) · [Sharing with a collective](explanation/sharing.md) · [Following](explanation/following.md) |
 

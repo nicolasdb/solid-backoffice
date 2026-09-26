@@ -3,11 +3,16 @@
 # project, and only the pod is shared with it.
 #
 # Rename the service, container_name and labels for each app — the container
-# name is what the gateway vhost proxies to.
+# name is what the gateway vhost proxies to. CONTAINER and DOMAIN come from the
+# .env that `make vps-push` writes beside this file, so the test copy
+# (TARGET=test) runs beside production under its own name.
 services:
-  solid-backoffice-web:
+  # Not `solid-backoffice-web`: compose also registers the service name as an
+  # alias on the gateway network, and both copies would answer to it. The
+  # gateway proxies to container names, which differ.
+  solid-backoffice:
     image: nginx:alpine
-    container_name: solid-backoffice-web
+    container_name: ${CONTAINER:-solid-backoffice-web}
     restart: unless-stopped
 
     networks:
@@ -21,12 +26,14 @@ services:
       - ./deploy/nginx-site.conf:/etc/nginx/conf.d/default.conf:ro
 
     labels:
-      app.name: "solid-backoffice-web"
+      app.name: "${CONTAINER:-solid-backoffice-web}"
       app.description: "Backoffice: accounts, permissions, membership"
-      app.domain: "backoffice.nicolasdb.eu"
+      app.domain: "${DOMAIN:-backoffice.nicolasdb.eu}"
 
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/index.html"]
+      # 127.0.0.1, not localhost: busybox resolves localhost to ::1 first, and
+      # nginx here listens on IPv4 only, so the check failed on a healthy site.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/index.html"]
       interval: 30s
       timeout: 5s
       retries: 3
