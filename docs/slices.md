@@ -4,33 +4,38 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (25 Sep 2026)
+## Where we are (26 Sep 2026)
 
-Built and tested live: A (member side), role detection ("You run", "You
-belong to"), the `output2/<collective>/` folder, and the test server with its
-cast (`npm run test:pods`). On the live pod, HyperScope's `config.ttl` and
-`membres.ttl` match `docs/examples/`; `config.ttl` is public, as the how-to now says.
+Built and run live: A, B, J1, and the **layout pass** (L1 tabs, L2 the
+collective's own screen, L3 the landing, L4 a member's tab), on
+test.nicolasdb.eu, desktop and phone, both themes. B's last live steps
+(refuse, remove, a message it does not understand) ran with it. Password
+reset still needs SMTP on the provider: deferred, provider configuration.
 
-**B is built** and passes against the test server (`test/pods/admin.test.ts`,
-`member.test.ts`). Live on 25 Sep 2026: a request from a personal account,
-accepted by the collective's account, then the agent's pull and confrontation
-on the announced `output2/hyperscope/`. The live steps that need a second,
-non-member account (newcomer's screen, refuse, remove) wait for the final
-end-to-end run from a new account, after J1 rebuilds that path.
+After the pass, the same day: light theme by default (then dark, then same
+as the device); Home redrawn to match the canvas (section labels, one-line
+join form, a compact "You" checklist, "Edit your profile" opening it); the
+canvas itself brought in line with what is built, in light, with the
+dismissed options removed (layout-brief.md, Answers). The last Home change
+(`6691124`) is committed; check it live once `dev` is pushed.
 
-**J1 (account creation) is built and run live** (25 Sep 2026): a new
-account from HyperScope's invitation, a taken username retried, name and
-inbox set on the first home screen, asked to join, shared `output2/`,
-accepted by the collective. The provider still asks for the password after
-creation (the cookie spike did not spare it). Password reset needs SMTP on
-the provider, which is not set: deferred, provider configuration, not this
-repo. Still to run live from B: refuse, remove, and a message it does not
-understand (manual-tests, steps 5 and 6).
+**How work flows now.** Work happens on the `dev` branch; pushing `dev`
+deploys to test.nicolasdb.eu through CI (`.github/workflows/ci.yml`,
+[deploy the test copy](how-to/deploy-the-test-copy.md)). Production is
+still `make vps-deploy`.
 
-Next: those two steps, then the layout pass (a design session from
-[layout-brief.md](layout-brief.md)), C, D, E. In
-[journeys](journeys.md) terms: J1, J3 and J5's admin side are built; J2, J4
-and J6 work already; J7 is C, J8 is D.
+**Next, in order:**
+
+1. Push solid-kit `f9ad05c` (ADR 006 §5: `config.ttl` is public).
+2. Carry the general fixes back to solid-kit: the redirect URL without a
+   fragment (`redirectUrlFrom`, `src/lib/auth.ts`), focusView's ring for
+   keyboard only (`trackInputModality`, `src/ui/a11y.ts`), and, once
+   settled, `.screen-wide` and the tab bar that moves to the bottom on a
+   phone.
+3. **C · Places**: drafted on the canvas; still to draw there before any
+   code: the file editor, an opened followed address, permissions for named
+   people. Then D, E. In [journeys](journeys.md) terms: J1, J3 and J5's
+   admin side are built; J2, J4 and J6 work already; J7 is C, J8 is D.
 
 ## A — Member side of the handshake · built
 
