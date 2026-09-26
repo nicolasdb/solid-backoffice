@@ -199,11 +199,10 @@ toasts and screen-reader announcements after each write.
   the tab is renamed **Pods** (your pod, and the pods you follow). What
   is seen first is what is safe; each step down asks one more deliberate
   move. The same shape orders what gets built and polished first:
-  1. *See* (the tip, always on screen, reads only): the list, who can read
-     each item in a few words with where it comes from, preview, download,
-     following.
+  1. *See* (the tip, always on screen, reads only): the list (name, size,
+     last change), preview, download, following.
   2. *Change what is yours* (one click to open, one to confirm): new,
-     upload, edit and save, who can read it, rename, move.
+     upload, edit and save, who can access it, rename, move.
   3. *Dig* (two deliberate steps): delete, giving one item its own rules
      or restoring it, the technical rules by hand.
   Found on the first look and changed: no side panel by default (the list
@@ -212,6 +211,17 @@ toasts and screen-reader announcements after each write.
   the folder" (usual) or "give it its own rules" (exception); the
   technical rules sit at the bottom of Change, on the `.acl` where the
   rules live; Delete is set apart.
+  Second review, the same day: the tip is a file explorer, so the list
+  shows name, size (items inside for a folder) and last change, sortable,
+  with columns to hide and reorder (kept in the browser, never on the
+  pod); who can access an item is not on the list, only in `···`. One
+  access panel for folders and files: Only me, Inherit from parent,
+  Anyone with the link, named people; inheriting shows the parent's rules
+  and links to change them there, and any other choice gives the item its
+  own rules once saved. A file opens full width, its access in `···`.
+  Addresses drop the signed-in pod's base (`…/hyperscope_ndb/`), and
+  WebIDs on the same provider drop its host, so a long address is never
+  cut at its useful end. Technical rules in the panel stay raw, full URLs.
 
 The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
 (a Claude Design canvas, private to its owner).
