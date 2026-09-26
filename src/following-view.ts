@@ -161,7 +161,7 @@ export function renderFollowed(view: OpenedView, when: (d: Date | null) => strin
             <thead><tr><th scope="col">Name</th><th scope="col">What</th><th scope="col">Last modified</th></tr></thead>
             <tbody>${items
               .map(
-                (i) => `<tr><td class="item-name"><a href="${routeHref({ name: "followed", address: i.url })}">${esc(i.name)}</a></td>
+                (i) => `<tr><td><span class="item-name"><a href="${routeHref({ name: "followed", address: i.url })}">${esc(i.name)}</a></span></td>
                   <td class="meta" data-label="What">${esc(what(i))}</td><td class="meta" data-label="Last modified">${esc(when(i.modified))}</td></tr>`
               )
               .join("")}</tbody>
