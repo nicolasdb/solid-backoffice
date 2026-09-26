@@ -223,6 +223,31 @@ toasts and screen-reader announcements after each write.
   WebIDs on the same provider drop its host, so a long address is never
   cut at its useful end. Technical rules in the panel stay raw, full URLs.
 
+- **Tabs, third pass** (26 Sep 2026, after using C day to day): Pods is
+  what people sign in for; a collective is visited now and then (its
+  members, a request), and Home had become a profile page. So:
+  1. **Sign-in lands on Pods.** An invitation (`?collective=`) still
+     opens on joining that collective, the one case where something waits
+     on you; requests waiting in a collective you run only put a badge on
+     its tab.
+  2. **Two tabs: Pods, then Collectives** (People joins with D, between
+     them or after; the phone's bottom bar holds the same, three at most).
+     Collectives is one tab, not one per collective: a list first (the
+     one you run with its counts, the ones you belong to with their state,
+     joining one by its address), then one collective opened inside it,
+     with the screens already drawn (requests beside members for the one
+     you run; sharing, membership and members for one you belong to), a
+     path "Collectives / HyperScope" to go back. The "More" tab for
+     overflowing collectives goes away.
+  3. **Home goes; "You" moves under the avatar.** The avatar in the top
+     bar opens a small menu: your name, your WebID (copied with a click),
+     "Your name, agent and inbox" (the three setup steps, now a page of
+     their own), Sign out. A setup step left to do puts a dot on the
+     avatar.
+  4. **Words: the app's name stays "Backoffice"** (brand, page title);
+     everything the person reads inside it says what it is about: "Your
+     pod", "Collectives", "You".
+
 The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
 (a Claude Design canvas, private to its owner).
 
