@@ -41,8 +41,11 @@ still `make vps-deploy`.
    read is now asked once per session (C1, `aclLocation`).
    `src/lib/read.ts` and the rules are carried back to solid-kit (ADR 007).
 4. **C · Places**, in six slices (C1 browse → C6 technical rules, below),
-   drawn on the canvas desktop and phone. Next: C1. Then D (with People
-   & apps), E. In [journeys](journeys.md) terms: J1, J3 and J5's
+   drawn on the canvas desktop and phone: **all six built** on 26 Sep 2026
+   (`f6de1ff` … `683cbf5`), each with its screen tests and its pod tests.
+   Next: push `dev`, then run [manual tests](manual-tests.md) "C · Places"
+   C1–C6 live (desktop and phone, both themes). Then D (with People &
+   apps), E. In [journeys](journeys.md) terms: J1, J3 and J5's
    admin side are built; J2, J4 and J6 work already; J7 is C, J8 is D.
 
 ## A — Member side of the handshake · built
