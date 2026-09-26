@@ -214,6 +214,11 @@ invited, sign-in when not.
 
 ## Open questions for the design session
 
+All answered on 25–26 Sep 2026: see "Answers so far" above (1, 2: layout A,
+tabs; 3: side by side; 4: the landing as drawn, both versions). 5 is
+answered by `schema:slogan` / `schema:description` in the collective's
+`config.ttl`, so E needs no code for its words. Kept as asked:
+
 1. The home screen on a wide screen: what sits beside what, and does "You"
    (setup, done once) deserve the same weight as the collectives (ongoing)?
    Show options.

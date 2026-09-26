@@ -77,7 +77,7 @@ backoffice is not generic enough, and that is a bug in the backoffice.
 
 ## Answering requests
 
-Signed in as the collective, the home screen lists each `as:Join` next to
+Signed in as the collective, its own tab lists each `as:Join` next to
 what the requester's own profile says. A request whose profile does not
 declare the membership is flagged, not hidden: a claim from one side proves
 nothing, but the admin decides.

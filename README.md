@@ -11,27 +11,26 @@ commit `9ed8327`. Every divergence from the kit is a diff against that commit.
 
 ## What it does now
 
-The home screen reads your roles from the pods at each sign-in
-([docs/explanation/membership.md](docs/explanation/membership.md#roles)):
-**You run** (when your pod root holds a collective's `config.ttl`), **You**
-(your profile), and **You belong to**. A collective is never offered to join
-itself, and can join another collective.
+- **Before sign-in, a landing** that explains pods and collectives. Opened
+  from a collective's invitation link, it speaks for that collective (its
+  name, its folder, and its own title and paragraph when its `config.ttl`
+  has them) and offers to create an account on our provider first
+  ([invite people](docs/how-to/invite-people.md)).
+- **Signed in, tabs**: Home, one tab per collective you run or belong to,
+  and Places (coming). On a phone the tabs move to a bottom bar.
+- **Home**: the collectives you belong to, joining another one from its
+  invitation link, and "You": your name, inbox and agent.
+- **A collective you belong to**: share your folder with its agent (or
+  stop), your membership and how to leave, its members and its agent.
+- **The collective you run**: requests with what each requester's profile
+  says, accept or refuse, the members table, messages it does not
+  understand, and the invitation link to copy.
+- Roles and membership are read from the pods at every visit, never stored
+  ([membership](docs/explanation/membership.md#roles)). Light theme by
+  default, dark one click away.
 
-
-Slice A, the member's side of the handshake in
-[solid-kit ADR 006](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md),
-for someone who already has an account:
-
-1. **Name**: `foaf:name` in their profile.
-2. **Agent** (optional): `acl:delegates`, so what their agent writes is
-   credited to them. It grants the agent nothing.
-3. **Inbox**: `inbox/` on their pod, Append for anyone signed in, advertised
-   as `ldp:inbox`. This is where a collective's answer lands.
-4. **Join**: `org:memberOf` in their profile, then an `as:Join` to the
-   collective's inbox. The state is read from both sides every time.
-5. **Share**: creates the collective's folder (`output2/hyperscope/`) on their
-   pod, grants the collective's agent Read on it, then sends an `as:Announce`.
-
+The protocol underneath is
+[solid-kit ADR 006](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md).
 What is still to come, in order, is in [`docs/slices.md`](docs/slices.md).
 
 ## Adding a collective

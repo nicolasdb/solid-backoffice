@@ -39,15 +39,25 @@ Yes, the same way a person does, and anyone can belong to several.
 → [Membership](explanation/membership.md#networks)
 
 **Do I need a different backoffice for each collective?**
-No. One backoffice shows all of them; a custom instance only changes the
-landing page and branding. → [Membership](explanation/membership.md#instances)
+No. One backoffice shows all of them. A collective's own title and
+paragraph on its invitation's landing come from its `config.ttl`; a custom
+instance would only change branding. → [Membership](explanation/membership.md#instances)
 
 **How do I set up a collective's pod?**
 By hand, once. → [Set up a collective's pod](how-to/set-up-a-collective.md)
 
 **Who can read `config.ttl`? Can it be limited to one provider's WebIDs?**
-Anyone signed in. A provider-wide limit does not exist in WAC.
+Anyone, signed in or not: the invitation's landing reads it before sign-in.
+It holds nothing secret. A provider-wide limit does not exist in WAC.
 → [Collective files](reference/collective-files.md#configttl)
+
+**How do I invite someone?**
+Send the invitation link, copied from the collective's tab.
+→ [Invite people](how-to/invite-people.md)
+
+**Where do the words on the invited landing come from?**
+The backoffice's own, unless the collective's `config.ttl` has a
+`schema:slogan` or `schema:description`. → [Invite people](how-to/invite-people.md#the-collectives-own-welcome-words-optional)
 
 **Can a collective ask for more than a name, like an address?**
 Yes, later: `config.ttl` has a reserved line for the collective's

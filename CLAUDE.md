@@ -76,8 +76,11 @@ one changes, change the other. Never point it at the real provider.
   render, then shows the tab the hash names (`src/router.ts`) inside
   `src/shell.ts` (layout A: tabs on top, a bottom bar on a phone). Tabs:
   `src/home.ts` (your collectives, joining, "You"), `src/member.ts` (a
-  collective you belong to: sharing, leaving, its members and agent), `src/admin.ts` (the one you
-  run). No role, progress or tab state is stored.
+  collective you belong to: sharing, leaving, its members and agent),
+  `src/admin.ts` (the one you run); `src/steps.ts` holds the pieces they
+  share. No role, progress or tab state is stored.
+- `src/theme.ts` — the light / dark switch in the top bar and the landing's
+  nav: light by default, kept in localStorage, never on a pod.
 
 **Starting a session: read `docs/slices.md` first** ("Where we are" and the
 next tasks), then `docs/journeys.md`. No plan lives anywhere else.

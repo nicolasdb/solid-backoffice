@@ -6,14 +6,14 @@ answer lives.
 
 | Kind | For | Pages |
 |---|---|---|
-| Tutorials | learning by doing | none yet: the first is a newcomer's first join, once J1 is built |
+| Tutorials | learning by doing | none yet: the first will be a newcomer's first join (J1, built) |
 | How-to guides | a task, for someone who knows what they want | [Set up a collective's pod](how-to/set-up-a-collective.md) · [Invite people](how-to/invite-people.md) · [Deploy the test copy](how-to/deploy-the-test-copy.md) · [Manual tests](manual-tests.md) |
 | Reference | facts to look up | [Collective files](reference/collective-files.md) · [Examples](examples/) |
 | Explanation | why it works this way | [Membership](explanation/membership.md) · [Sharing with a collective](explanation/sharing.md) · [Following](explanation/following.md) |
 
 Also here: [FAQ](faq.md) · [Journeys](journeys.md) · [Slices](slices.md)
 (where we are, and what gets built next) · [UX principles](ux-principles.md) (from the kit) ·
-[Layout brief](layout-brief.md) (input to the design session).
+[Layout brief](layout-brief.md) (the layout decisions, and the canvas they were drawn on).
 
 Anything that concerns more than this app lives in solid-kit: the
 [atlas](https://github.com/nicolasdb/solid-kit/blob/main/docs/atlas.md) and

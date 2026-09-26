@@ -66,35 +66,27 @@ collective), set up by the
 how-to. It runs the app's `src/lib` against a real server. Next: browser
 journeys (Playwright, one window per account) as each journey is built.
 
-## Layout pass · after B and account creation
+## Layout pass · built, run live
 
-Once the journeys are wired end to end: a desktop layout that uses the width
-(the kit's single column is right on a phone, narrow on a screen), and the
-landing page. Done steps already fold to their title (25 Sep 2026).
+A desktop layout that uses the width, and a real landing, drafted in Claude
+Design from [layout-brief.md](layout-brief.md); the code follows the
+canvas. Four slices, each run live on test.nicolasdb.eu (26 Sep 2026,
+desktop and phone, both themes):
 
-**L1 built and run live** (shell, tabs, home, a member's tab; 26 Sep 2026,
-desktop and phone on test.nicolasdb.eu). **L2 built** (the collective's own
-screen: requests beside a members table, a filter, the invitation link to
-copy); live check next. **L3 built** (the landing: generic, or the invited
-collective's words from its public `config.ttl`, its own slogan and
-description when set; Newsreader self-hosted); live check next. **L4 built**
-(a member's tab lists the roster as the member reads it, "(you)" marked, and
-the collective's agent; before acceptance, "once accepted", never
-"refused"). **Layout pass done: every step of its manual-tests section run
-live, 26 Sep 2026**, desktop and phone. Found then: looking up a collective
-you already belong to re-rendered silently; it now says so.
+- **L1 · tabs**: Home, one tab per collective you run or belong to, Places
+  shown as coming; a bottom bar on a phone.
+- **L2 · the collective's own screen**: requests beside a members table
+  with a filter, other messages below, the invitation link to copy.
+- **L3 · the landing**: generic, or the invited collective's words from its
+  public `config.ttl` (its own `schema:slogan` and `schema:description`
+  when set); Newsreader self-hosted.
+- **L4 · a member's tab**: sharing, membership, the roster as the member
+  reads it ("once accepted" before that, never "refused"), the agent.
 
-**The invitation link (26 Sep 2026)** looked wrong because testing ran on
-localhost, where the tab showed the bare `config.ttl` address instead. It now
-always shows the link (`?collective=`), with a note on localhost that it works
-only on that computer.
-
-The `dev` branch deploys to test.nicolasdb.eu (`.github/workflows/ci.yml`);
-push there to try a slice on a phone.
-
-It is a design task, drafted in Claude Design from
-[layout-brief.md](layout-brief.md) (screens, states, real content,
-constraints, open questions). The code follows the mockups.
+Found during the live run and fixed: the invitation link looked like the
+bare `config.ttl` address on localhost (it now always shows the link); a
+collective you already have, looked up again, now says so. Since then:
+light theme by default, and Home redrawn to match the canvas.
 
 ## J1 — Account creation · built, run live
 
