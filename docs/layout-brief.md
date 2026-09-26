@@ -177,6 +177,23 @@ toasts and screen-reader announcements after each write.
   an item has rules of its own or follows its parent folder, and a way to
   drop its own `.acl` so it follows the parent again (asked once more; the
   pod root has no parent, so never there).
+- **Places, second pass** (26 Sep 2026), drawn desktop and phone:
+  - **A file opens in Preview**; Edit shows the source beside it (the
+    source alone on a phone). Save writes only if nobody changed the file
+    meanwhile.
+  - **Named people**: "Can read" or "Can edit" (Read + Append + Write;
+    Control is never granted from the screen). Chips "fill in from
+    HyperScope's members": each adds one WebID, never the group (ADR 006
+    §2), and a person who has left the collective is flagged as still
+    having access until removed.
+  - **Show the technical rules** is also the advanced mode: the raw `.acl`,
+    editable, for what the simple panel has no name for (Read + Append).
+    Save takes two taps, and is refused unless the Turtle parses, the
+    owner keeps Control and nobody changed the `.acl` meanwhile. Rules the
+    panel cannot show leave it read only, as today.
+  - **Followed** has an overview: titles and excerpts kept on your own pod
+    from your last visit, so the list reads nothing from other pods (each
+    read may land in their access log). Opening one reads it again.
 
 The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
 (a Claude Design canvas, private to its owner).

@@ -32,9 +32,16 @@ still `make vps-deploy`.
    keyboard only (`trackInputModality`, `src/ui/a11y.ts`), and, once
    settled, `.screen-wide` and the tab bar that moves to the bottom on a
    phone.
-3. **C · Places**: drafted on the canvas; still to draw there before any
-   code: the file editor, an opened followed address, permissions for named
-   people. Then D, E. In [journeys](journeys.md) terms: J1, J3 and J5's
+3. **L5 · speed**, before C's file browser multiplies the reads: measure
+   `load()` (test pods and live), keep the last load in memory and
+   revalidate in the background instead of reloading on every tab, run
+   independent reads in parallel, and an in-memory ETag cache
+   (`If-None-Match`, CSS 7 answers 304) beside `authFetch`. Memory only,
+   never browser storage.
+4. **C · Places**: drawn on the canvas, desktop and phone (file preview and
+   editor, following, named people, the technical rules as the advanced
+   mode; [layout-brief](layout-brief.md), "Places, second pass"). A few
+   states are still listed there on a note. Then D, E. In [journeys](journeys.md) terms: J1, J3 and J5's
    admin side are built; J2, J4 and J6 work already; J7 is C, J8 is D.
 
 ## A — Member side of the handshake · built
