@@ -1,5 +1,5 @@
 /**
- * Rename, Move and Delete in Places' panel (slice C4), over src/lib/move.ts.
+ * Rename, Move and Delete in an item's ··· menu (slice C4), over src/lib/move.ts.
  * Each asks first in place: a new name, a destination folder, or "Delete it
  * and the 12 items inside?". While it runs, the panel says which stage it is
  * at; a move copies everything before it deletes anything.
@@ -54,11 +54,14 @@ export function renderActions(url: string, change: Change | null, env: ChangeEnv
   if (reason) return `<p class="meta">${esc(reason)}</p>`;
   const name = nameOf(url).replace(/\/$/, "");
   const busy = Boolean(change?.progress);
+  // Delete sits apart from the rest: it cannot be undone (the iceberg's deep part).
   const buttons = `
-    <div class="actions">
-      <button class="ghost small" type="button" data-change="rename"${busy ? " disabled" : ""}>Rename</button>
-      <button class="ghost small" type="button" data-change="move"${busy ? " disabled" : ""}>Move</button>
-      <button class="ghost small" type="button" data-change="delete"${busy ? " disabled" : ""}>Delete</button>
+    <div class="menu-actions">
+      <button class="menu-item" type="button" data-change="rename"${busy ? " disabled" : ""}>Rename</button>
+      <button class="menu-item" type="button" data-change="move"${busy ? " disabled" : ""}>Move</button>
+    </div>
+    <div class="menu-actions is-apart">
+      <button class="menu-item is-warn" type="button" data-change="delete"${busy ? " disabled" : ""}>Delete…</button>
     </div>`;
   if (!change || change.url !== url) return buttons;
 
@@ -100,7 +103,7 @@ export function renderActions(url: string, change: Change | null, env: ChangeEnv
     <div class="panel-block notice is-warn" id="change-form">
       <p>${what}</p>
       ${error}${status}
-      <div class="actions"><button type="button" class="small" id="delete-confirm"${busy || (url.endsWith("/") && change.count === null) ? " disabled" : ""}>Delete</button>${cancel}</div>
+      <div class="actions"><button type="button" class="small warn" id="delete-confirm"${busy || (url.endsWith("/") && change.count === null) ? " disabled" : ""}>Delete</button>${cancel}</div>
     </div>`;
 }
 

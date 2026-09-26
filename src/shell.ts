@@ -4,7 +4,7 @@
  * a bar at the bottom. One `<nav>`, restyled by CSS, so there is one list of
  * links for keyboards and screen readers whatever the width.
  *
- * Tabs: Home, then one per collective you run or belong to, then Places
+ * Tabs: Home, then one per collective you run or belong to, then Pods
  * (your pod and what you follow, slice C). Past three
  * collectives, the rest go under "More", so the phone bar never holds more
  * than five items.
@@ -59,7 +59,7 @@ export function tabsFor(collectives: TabCollective[], route: Route): Tab[] {
       badge: hidden.reduce((n, c) => n + (c.badge ?? 0), 0) || undefined,
     });
   }
-  tabs.push({ label: "Places", icon: "places", href: routeHref({ name: "places", path: "" }), current: isPlaces(route) });
+  tabs.push({ label: "Pods", icon: "places", href: routeHref({ name: "places", path: "" }), current: isPlaces(route) });
   return tabs;
 }
 

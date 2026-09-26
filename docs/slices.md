@@ -44,9 +44,13 @@ still `make vps-deploy`.
    drawn on the canvas desktop and phone: **all six built** on 26 Sep 2026
    (`f6de1ff` … `683cbf5`), each with its screen tests and its pod tests.
    First live look (26 Sep 2026): the sharing panel showed every level
-   at once. Redrawn as **Pods, the iceberg** ([layout-brief](layout-brief.md));
-   next: rework the screen to match (the write logic stays), then run
-   [manual tests](manual-tests.md) "C · Places" C1–C6 live. Then D (with
+   at once. Redrawn as **Pods, the iceberg** ([layout-brief](layout-brief.md))
+   and reworked the same day: the tab is Pods; the list shows name, size
+   and last change (sortable, columns hidden or reordered in the browser);
+   `···` opens a menu, "Change who can access it" a drawer, one panel for
+   folders and files with Inherit from parent; addresses drop your
+   provider's host. The write logic is unchanged. Next: run
+   [manual tests](manual-tests.md) "C · Pods" C1–C6 live. Then D (with
    People & apps), E. In [journeys](journeys.md) terms: J1, J3 and J5's
    admin side are built; J2, J4 and J6 work already; J7 is C, J8 is D.
 
@@ -241,6 +245,11 @@ pod): more pods on the same account, mint a WebID for an agent
 (with the back-link to its human), mint and revoke connectors. Then the
 Epic 9 access-log viewer. Hidden when the signed-in WebID comes from another
 provider, because none of it is Solid protocol.
+
+Full WebIDs to copy belong here too: C shows addresses without your
+provider's host (`…/neil/profile/card#me`, `src/ui/address.ts`), which is
+enough to recognise someone but not to paste their WebID elsewhere
+(decided 26 Sep 2026).
 
 **People & apps** joins D (decided 26 Sep 2026): who has access to what,
 from the rules the app has read (the old backoffice's view), beside the

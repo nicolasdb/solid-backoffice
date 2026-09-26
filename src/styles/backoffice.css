@@ -821,10 +821,12 @@ button.link-button:hover { color: var(--text-primary); text-decoration: underlin
   #to-how { display: none; }
 }
 
-/* ── Places (slice C): places, the folder, the item ─────────────────────
-   Desktop: a side list, the list in the middle, the item's panel on the
-   right. Phone: a place picker, the list as blocks, the panel as a sheet. */
+/* ── Pods (slice C): the iceberg ─────────────────────────────────────────
+   The list is the page: pods on the left, the folder in the middle, no panel.
+   An item's ··· opens a menu under it (a sheet on a phone); "Change who can
+   access it" opens a drawer from the right (the whole screen on a phone). */
 
+.places { position: relative; }
 .places-grid {
   display: grid;
   gap: var(--space-8);
@@ -832,8 +834,8 @@ button.link-button:hover { color: var(--text-primary); text-decoration: underlin
 }
 
 @media (min-width: 64rem) {
-  .places-grid { grid-template-columns: 14rem minmax(0, 1fr) 20rem; }
-  .places-grid.is-file { grid-template-columns: 14rem minmax(0, 1fr); }
+  .places-grid { grid-template-columns: 14rem minmax(0, 1fr); }
+  .places-grid.is-wide { grid-template-columns: minmax(0, 1fr); }
 }
 
 .places-side { display: flex; flex-direction: column; gap: var(--space-6); }
@@ -913,24 +915,88 @@ table.items .item-name { display: flex; align-items: center; gap: var(--space-2)
 table.items .item-name a { color: var(--text-primary); text-decoration: none; }
 table.items .item-name a:hover { text-decoration: underline; }
 table.items .row-actions { text-align: right; }
-.item-icon { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--text-tertiary); stroke-width: 1.8; }
+table.items td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.th-sort {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  min-height: 32px;
+}
+.th-sort:hover, th[aria-sort] .th-sort { color: var(--text-primary); }
+.th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.places-list { position: relative; }
 
-.places-panel {
+.columns-menu, .item-menu {
+  position: absolute;
+  z-index: 30;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-lg);
   background: var(--surface-elevated);
-  min-width: 0;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
+}
+.columns-menu { top: 2.5rem; right: 0; width: 17rem; gap: var(--space-2); padding: var(--space-4); }
+.columns-menu ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.colpick { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 36px; font-size: var(--text-small); }
+.colpick label { display: flex; align-items: center; gap: var(--space-2); }
+.colpick-move { display: flex; gap: var(--space-1); }
+.columns-menu p { margin: 0; }
+
+.menu-scrim { position: fixed; inset: 0; z-index: 25; }
+.item-menu { top: var(--menu-top); left: var(--menu-left); width: 22rem; max-width: calc(100vw - 2rem); overflow-wrap: anywhere; }
+.menu-sec { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-bottom: var(--border-width) solid var(--border-subtle); }
+.menu-sec:last-child { border-bottom: 0; }
+.menu-sec p { margin: 0; }
+.menu-sec > button { align-self: flex-start; }
+.menu-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.menu-head h2 { margin: 0; font-size: var(--text-body); font-weight: 600; min-width: 0; }
+.menu-actions { display: flex; flex-direction: column; margin: 0 calc(-1 * var(--space-5)); }
+.menu-actions.is-apart { margin-top: var(--space-2); padding-top: var(--space-2); border-top: var(--border-width) solid var(--border-subtle); }
+button.menu-item {
+  min-height: 40px;
+  padding: 0 var(--space-5);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--text-body);
+  text-align: left;
+  justify-content: flex-start;
+}
+button.menu-item:hover { background: var(--surface-recessed); }
+button.menu-item.is-warn { color: var(--warn); }
+
+.drawer-scrim { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / 0.18); }
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 41;
+  width: min(30rem, 100vw);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  overflow-y: auto;
+  background: var(--surface-elevated);
+  border-left: var(--border-width) solid var(--border);
+  box-shadow: -12px 0 32px rgb(0 0 0 / 0.10);
   overflow-wrap: anywhere;
 }
+.drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.drawer-head h2 { margin: 0; font-size: var(--text-h3); min-width: 0; }
+.drawer .technical { margin-top: auto; padding-top: var(--space-4); border-top: var(--border-width) dashed var(--border); }
+.inherit-card { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--surface-recessed); }
+.inherit-card p { margin: 0; }
+.item-icon { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--text-tertiary); stroke-width: 1.8; }
+
 .panel-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-.panel-head h2 { margin: 0; font-size: var(--text-h3); flex: 1; min-width: 0; }
 .panel-block { display: flex; flex-direction: column; gap: var(--space-2); }
 .panel-block p { margin: 0; }
-.sheet-close { display: none; }
 
 .preview {
   border: var(--border-width) solid var(--border-subtle);
@@ -948,12 +1014,7 @@ table.items .row-actions { text-align: right; }
 .preview.image { margin: 0; text-align: center; }
 .preview.image img { max-width: 100%; height: auto; }
 
-.file-status {
-  padding: var(--space-3) var(--space-4);
-  border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-}
-.file-status p { margin: 0; }
+.file-status { margin: 0; }
 
 @media (max-width: 40rem) {
   .places-side { display: none; }
@@ -963,21 +1024,24 @@ table.items .row-actions { text-align: right; }
   table.items, table.items tbody, table.items tr, table.items td { display: block; }
   table.items tr { position: relative; padding: var(--space-3) 0; border-bottom: var(--border-width) solid var(--border-subtle); }
   table.items td { padding: 2px 0; border: none; }
-  table.items td[data-label="Rules"]:empty { display: none; }
+  table.items td:empty { display: none; }
+  table.items td[data-label] { display: inline; }
+  table.items td[data-label]:not(:empty) + td[data-label]:not(:empty)::before { content: " · "; }
   table.items .row-actions { position: absolute; top: var(--space-2); right: 0; }
 
-  .places-panel { display: none; }
-  .places-panel.is-open {
-    display: flex;
+  /* The ··· menu becomes a sheet from the bottom, over a dimmed list. */
+  .menu-scrim { background: rgb(0 0 0 / 0.18); }
+  .item-menu {
     position: fixed;
     inset: auto 0 0 0;
-    z-index: 20;
-    max-height: 80vh;
+    width: auto;
+    max-width: none;
+    max-height: 85vh;
     overflow-y: auto;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
   }
-  .sheet-close { display: inline-flex; }
+  .drawer { width: 100vw; border-left: 0; padding: var(--space-5) var(--space-4); }
   .preview { padding: var(--space-4); }
 }
 
@@ -1001,7 +1065,6 @@ table.items .row-actions { text-align: right; }
 .add-row input { flex: 1; min-width: 0; }
 .chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .is-warn { color: var(--warn); }
-.rules-block { padding: var(--space-4); border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-lg); }
 .technical summary { cursor: pointer; color: var(--accent); font-size: var(--text-small); }
 .technical pre { margin: var(--space-2) 0 0; padding: var(--space-3); background: var(--surface-recessed); border-radius: var(--radius-md); font-size: var(--text-micro); white-space: pre-wrap; overflow-wrap: anywhere; }
 .technical code { background: none; padding: 0; }

@@ -66,20 +66,19 @@ describe("L5 · what one load() costs", () => {
   });
 });
 
-const { listFolder, effectiveAccess } = await import("../../src/lib/files");
+const { listFolder } = await import("../../src/lib/files");
 
-describe("C1 · what opening a folder in Places costs", () => {
-  /** As src/places.ts reads it: the list, then every row's rules at once, one walk per folder. */
+describe("C1 · what opening a folder in Pods costs", () => {
+  /** As src/places.ts reads it: the list, then every subfolder's list at once (its count); no rules until asked. */
   async function openFolder(url: string) {
-    const amina = cast.amina;
     log.length = 0;
     t0 = performance.now();
     const items = await listFolder(url);
     const listed = performance.now() - t0;
-    const memo = new Map();
-    await Promise.all([url, ...items.map((i) => i.url)].map((u) => effectiveAccess(u, amina.webId, amina.pod, memo)));
+    await Promise.allSettled(items.filter((i) => i.isFolder).map((i) => listFolder(i.url)));
     const ms = performance.now() - t0;
     const report = {
+      log: [...log],
       requests: log.length,
       heads: log.filter((r) => r.method === "HEAD").length,
       /** Requests started before the list could be drawn: only the listing. */
@@ -87,18 +86,23 @@ describe("C1 · what opening a folder in Places costs", () => {
       rounds: Math.round(ms / LATENCY),
       timeline: log.map((r) => `${String(Math.round(r.start)).padStart(5)} → ${String(Math.round(r.end)).padStart(5)}  ${r.status} ${r.method} ${r.url.replace(inject("base"), "/")}`),
     };
-    console.log(JSON.stringify(report, null, 2));
+    console.log(JSON.stringify({ ...report, log: undefined }, null, 2));
     return report;
   }
 
-  it("draws the list after one request, then reads every row's rules at once", async () => {
+  it("draws the list after one request, then counts every subfolder at once", async () => {
     await actAs("amina");
     forgetReads();
     const first = await openFolder(cast.amina.pod);
     expect(first.beforeList).toBe(1);
 
     const again = await openFolder(cast.amina.pod);
-    expect(again.heads).toBe(0); // where each .acl lives is kept
-    expect(again.requests).toBeLessThan(first.requests);
+    // Two waves: the list, then every subfolder at once. (The in-memory
+    // server answers them one after another, so wall time is not the measure.)
+    const subfolders = first.log.slice(1);
+    expect(subfolders.length).toBeGreaterThan(1);
+    expect(Math.max(...subfolders.map((r) => r.start))).toBeLessThan(Math.min(...subfolders.map((r) => r.end)));
+    expect(again.heads).toBe(0);
+    expect(log.some((r) => r.url.endsWith(".acl"))).toBe(false); // no rules to draw a list
   });
 });

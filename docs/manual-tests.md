@@ -390,7 +390,7 @@ change from another window, typing kept, and switching accounts.
 
 ---
 
-## C · Places, on the live pod
+## C · Pods, on the live pod
 
 Written as each of C1–C6 is built; **run together once C is complete**
 (decided 26 Sep 2026). `npm run test:pods` covers the reads and writes on
@@ -399,46 +399,57 @@ the provider, a real browser, a phone, both themes.
 
 ### C1 · Browse your pod
 
-1. Open **Places**. "My pod" is current in the side list; the root's
-   folders come first, then files, each with its last modified date.
-2. "Who can read it" fills in row by row after the list appears; the list
-   never waits for it. `inbox/` reads "You · anyone signed in can leave a
-   message" with an **Own** pill; a folder without rules of its own says
-   **From parent**.
+1. Open **Pods**. "My pod" is current in the side list, named by the end
+   of its address (`…/<your pod>/`); no panel is open. The root's folders
+   come first, then files, newest change first: Name, Size (a folder's
+   count fills in as it is read), Last modified.
+2. Click each column heading: the list sorts by it, folders still first;
+   a second click turns the order around. **Columns ▾**: hide Size, show
+   Type, move it with ↑ / ↓. Reload: the columns are as you left them.
+   Show **Who can access it**: each row fills in after the list; the list
+   never waits for it.
 3. Open a folder, then go back with the browser's Back button: the folder
    seen before appears at once. On the Network tab, its listing answers
-   **304** and no `HEAD` is sent again for items already seen.
-4. Open a Markdown file: it shows as a page (Preview), not as source. Open
-   a JSON file (indented), an image, and a file with no preview: Download
-   saves it with its name.
-5. Click `···` on a row: the panel shows its name, its rules and where they
-   come from. On a phone (≤ 40rem): the place picker replaces the side
-   list, rows are blocks, and the panel opens as a sheet with Close.
-6. Both themes: nothing unreadable in the table, the panel or a preview.
+   **304**, and drawing the list sends no `.acl` request.
+4. Open a Markdown file: it shows full width as a page (Preview), with no
+   side list. Open a JSON file (indented), an image, and a file with no
+   preview: Download saves it with its name.
+5. `···` on a row: a menu under it with its name, who can access it in one
+   sentence and where the rules come from ("Its own rules" / "Same as
+   projects/"), then Rename, Move, and Delete set apart. Escape closes it
+   and focus returns to `···`. On a phone (≤ 40rem): the pod picker
+   replaces the side list, rows are blocks, and the menu opens as a sheet.
+6. Both themes: nothing unreadable in the table, the menu, the drawer or a
+   preview.
 
-### C2 · Who can read it
+### C2 · Who can access it
 
-1. Select a folder with rules of its own (`···`). The panel shows Only me /
-   Anyone with the link / Named people as they are on the pod; Save and
-   Cancel stay disabled until you change something.
+1. `···` on a folder with rules of its own, **Change who can access it**:
+   a drawer opens from the right with Only me / Inherit from parent /
+   Anyone with the link / Named people, as they are on the pod. Save and
+   Cancel stay disabled until you change something. The same drawer opens
+   for a file.
 2. Add a person by WebID, set them to **Can read**, Save. In a private
    window signed in as that person, the item opens; before, it did not.
    Switch them to **Can edit**, Save: the technical rules show Read,
-   Append, Write, and never Control for them.
+   Append, Write, and never Control for them. WebIDs on your provider show
+   without its host (`…/neil/profile/card#me`).
 3. A chip "Fill in from <collective>'s members" adds one person; the
    technical rules name their WebID, never the collective.
 4. As the collective, remove a member (B), then open an item they were
    granted on your pod: "Left <collective>. Still has access until
    removed."
-5. Pick a file that follows its folder: the panel says so. Choose Anyone
-   with the link, Save: it now has rules of its own, and opens in a
-   private window without signing in. **Restore from parent**, confirm: it
-   follows the folder again and the private window gets 401.
-6. Open the panel in two windows, save in one, then save in the other:
-   nothing is written, a message says the rules changed, and the panel
+5. Pick a file that follows its folder: **Inherit from parent** is chosen,
+   with "Same as <folder>: …" and a button to open the folder's access.
+   Choose Anyone with the link: it says the file stops following its
+   folder; Save: it opens in a private window without signing in. Choose
+   **Inherit from parent** again: it says its own rules will be removed;
+   Save: it follows the folder again and the private window gets 401.
+6. Open the drawer in two windows, save in one, then save in the other:
+   nothing is written, a message says the rules changed, and the drawer
    shows them as they are now.
-7. The pod root has no Restore from parent. "Show the technical rules"
-   opens the raw `.acl`, read only.
+7. The pod root (`···` beside the path) offers no Inherit. "Technical
+   rules" at the bottom of the drawer opens the raw `.acl`, read only.
 
 ### C3 · Write files
 
@@ -463,8 +474,9 @@ the provider, a real browser, a phone, both themes.
 
 1. Make a folder `tmp/` with two files and a subfolder that has rules of
    its own (share it with someone in C2). **Rename** `tmp/` to `tmp2/`:
-   the panel shows "Copying… Checking the copy… Removing the old place…";
-   `tmp2/` holds everything, and the subfolder still says **Own**. The
+   the menu shows "Copying… Checking the copy… Removing the old place…";
+   `tmp2/` holds everything, and the subfolder's menu still says "Its own
+   rules". The
    person it was shared with still opens it at the new address.
 2. **Move** a file to another folder: only folders you have opened are
    offered; the item, its own folder and anything inside it are not.
@@ -477,7 +489,7 @@ the provider, a real browser, a phone, both themes.
 
 ### C5 · Following
 
-1. **Places → Follow an address**, paste an address you cannot read: it is
+1. **Pods → Follow an address**, paste an address you cannot read: it is
    refused and nothing is kept. Paste one shared with you: it appears in
    the list and in the side list (the phone's place picker).
 2. With the Network tab open, go to **Followed**: the only request is
@@ -494,17 +506,17 @@ the provider, a real browser, a phone, both themes.
 
 ### C6 · Technical rules, advanced mode
 
-1. On a desktop, select a folder with rules of its own, open "Show the
-   technical rules", **Edit these rules**. Change a person's modes to
-   `acl:Read, acl:Append`: "What changes" says "<name>: can read becomes
+1. On a desktop, open the drawer of a folder with rules of its own, open
+   "Technical rules" at its bottom, **Edit these rules**. Change a
+   person's modes to `acl:Read, acl:Append`: "What changes" says "<name>: can read becomes
    read and add" (or "can edit becomes …").
 2. Tap Save once: nothing is written; the button reads "Save anyway: I
    checked these rules". Wait ten seconds: it goes back to Save. Tap twice:
-   saved; the simple panel shows that person as Custom.
+   saved; the drawer shows that person as Custom.
 3. Remove `acl:Control` from your own line, or break the Turtle: Save stays
    disabled and the check says why.
 4. Edit in two windows and save in both: the second is refused ("changed
    after this screen read them").
 5. On a phone (≤ 40rem): the rules show, read only, with no Edit.
-6. An item that follows its folder: no Edit, and the panel says to give it
-   rules of its own first.
+6. An item that follows its folder: its technical rules are its folder's,
+   with no Edit, and the drawer says to give it rules of its own first.

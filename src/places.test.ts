@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
- * Places against a pod held in memory: the real files.ts, acl.ts and read.ts
+ * Pods against a pod held in memory: the real files.ts, acl.ts and read.ts
  * run, only authFetch answers from `pod` below. What is pinned: the list
- * never waits for rules, memory draws first, nothing is redrawn under someone
- * typing, and what a file holds is shown safely.
+ * never waits, reads no rules until asked, memory draws first, nothing is
+ * redrawn under someone typing, what a file holds is shown safely, and each
+ * level of the iceberg opens only when asked (··· menu, then the drawer).
  */
 const POD = "https://pod.example/amina/";
 const WEBID = POD + "profile/card#me";
@@ -60,7 +61,7 @@ async function answer(url: string, init: RequestInit = {}): Promise<Response> {
 }
 vi.mock("./lib/auth", () => ({ authFetch: (url: string, init?: RequestInit) => answer(url, init) }));
 
-const { mountPlaces, showPlaces, forgetPlaces, whoCanRead, when } = await import("./places");
+const { mountPlaces, showPlaces, forgetPlaces, whoCanRead, when, sortItems } = await import("./places");
 const { forgetReads } = await import("./lib/read");
 
 const acl = (target: string, folder: boolean, extra = "") => `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
@@ -106,6 +107,7 @@ function row(name: string): HTMLElement {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   pod = standardPod();
   held = null;
   waiting = [];
@@ -129,32 +131,35 @@ async function mount(path = ""): Promise<void> {
   await settle();
 }
 
+function names(): string[] {
+  return [...app.querySelectorAll("tr[data-url] .item-name")].map((c) => c.textContent!.trim());
+}
+
+function menuFor(url: string): void {
+  app.querySelector<HTMLButtonElement>(`[data-menu="${url}"]`)!.click();
+}
+
 describe("C1 — a folder of your pod", () => {
-  it("shows the list before any rule has arrived, then fills each row in", async () => {
-    held = (url) => url.endsWith(".acl") || !url.endsWith("/");
+  it("shows the list at once, then each folder's count as it is read", async () => {
+    held = (url) => url === POD + "projects/drafts/";
     await mount("projects/");
     await settle();
     expect(row("readme.md")).toBeTruthy();
-    expect(row("readme.md").querySelector("[data-rules]")!.textContent).toContain("Reading");
-
+    expect(row("drafts/").querySelector("[data-count]")!.textContent).toBe("…");
     release();
-    await showPlaces({ name: "places", path: "projects/" });
-    expect(row("public.md").querySelector("[data-rules]")!.textContent).toBe("Anyone");
-    expect(row("public.md").querySelector("[data-pill]")!.textContent).toBe("Own");
-    expect(row("drafts/").querySelector("[data-rules]")!.textContent).toBe("You · HyperScope's agent");
-    expect(row("readme.md").querySelector("[data-rules]")!.textContent).toBe("Only you");
-    expect(row("readme.md").querySelector("[data-pill]")!.textContent).toBe("From parent");
+    await reading;
+    expect(row("drafts/").querySelector("[data-count]")!.textContent).toBe("0 items");
+    expect(app.querySelector("thead")!.textContent).toMatch(/Name[\s\S]*Size[\s\S]*Last modified/);
   });
 
-  it("walks up to the pod's rules once for the whole folder", async () => {
+  it("reads no rules to draw the list", async () => {
     await mount("projects/");
     await reading;
-    // The list's rows share one walk; the panel (the folder itself) makes its own.
-    expect(requests.filter((r) => r === `HEAD ${POD}`).length).toBe(1);
-    expect(requests.filter((r) => r === `GET ${POD}.acl`).length).toBeLessThanOrEqual(3);
+    expect(requests.filter((r) => r.includes(".acl") || r.startsWith("HEAD"))).toEqual([]);
+    expect(app.querySelector(".item-menu, .drawer")).toBeNull();
   });
 
-  it("draws a folder seen before at once, asks where each .acl lives only once, and revalidates", async () => {
+  it("draws a folder seen before at once, and revalidates", async () => {
     await mount("projects/");
     await reading;
     await open("");
@@ -165,7 +170,6 @@ describe("C1 — a folder of your pod", () => {
     expect(row("readme.md")).toBeTruthy(); // from memory, while the pod is asked
     release();
     await back;
-    expect(requests.some((r) => r.startsWith("HEAD"))).toBe(false);
     expect(requests).toContain(`GET ${POD}projects/`);
   });
 
@@ -195,14 +199,88 @@ describe("C1 — a folder of your pod", () => {
     expect(app.querySelector("#places-retry")).toBeTruthy();
   });
 
-  it("shows an item in the panel, and the pod root never offers a way up", async () => {
-    await mount("");
+  it("opens an item's menu only when asked: who can access it in words, then Escape gives focus back", async () => {
+    await mount("projects/");
     await reading;
-    expect(app.querySelector(".places-panel h2")!.textContent).toBe("My pod");
-    app.querySelector<HTMLButtonElement>(`[data-select="${POD}projects/"]`)!.click();
-    expect(app.querySelector(".places-panel h2")!.textContent).toBe("projects/");
-    expect(app.querySelector(".places-panel")!.classList.contains("is-open")).toBe(true);
-    expect(app.querySelector(".crumbs")!.textContent!.trim()).toBe("My pod");
+    menuFor(POD + "projects/drafts/");
+    expect(document.activeElement!.id).toBe("menu-title");
+    await until(() => app.querySelector("#change-access:not([disabled])"));
+    const menu = app.querySelector<HTMLElement>(".item-menu")!;
+    expect(menu.textContent).toContain("You and HyperScope's agent (can read).");
+    expect(menu.textContent).toContain("Its own rules.");
+    expect(menu.querySelector(".is-apart [data-change=delete]")).toBeTruthy(); // set apart
+
+    menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.querySelector(".item-menu")).toBeNull();
+    expect(document.activeElement!.getAttribute("data-menu")).toBe(POD + "projects/drafts/");
+  });
+
+  it("says an item follows its folder, and names your pod by its last part", async () => {
+    await mount("projects/");
+    await reading;
+    menuFor(POD + "projects/readme.md");
+    await until(() => app.querySelector("#change-access:not([disabled])"));
+    expect(app.querySelector(".item-menu")!.textContent).toMatch(/Only you\.\s*Same as My pod\./);
+    expect(app.querySelector(".places-side")!.textContent).toContain("…/amina/");
+  });
+});
+
+describe("C1 — columns", () => {
+  it("sorts by a column, folders first, and turns the order around on a second click", async () => {
+    pod[POD + "projects/"] = {
+      body: `@prefix ldp: <http://www.w3.org/ns/ldp#>. @prefix dc: <http://purl.org/dc/terms/>.
+<b.md> a ldp:Resource; dc:modified "2026-09-20T10:00:00Z".
+<a.md> a ldp:Resource; dc:modified "2026-09-25T10:00:00Z".
+<z/> a ldp:Container; dc:modified "2026-09-01T10:00:00Z".
+<> ldp:contains <b.md>, <a.md>, <z/>.`,
+      etag: '"s"',
+    };
+    pod[POD + "projects/z/"] = { body: listing([]), etag: '"z"' };
+    await mount("projects/");
+    await reading;
+    expect(names()).toEqual(["z/", "a.md", "b.md"]); // newest change first
+    app.querySelector<HTMLButtonElement>('[data-sort="name"]')!.click();
+    expect(names()).toEqual(["z/", "a.md", "b.md"]);
+    app.querySelector<HTMLButtonElement>('[data-sort="name"]')!.click();
+    expect(names()).toEqual(["z/", "b.md", "a.md"]);
+    expect(app.querySelector('th[aria-sort="descending"]')!.textContent).toContain("Name");
+    expect(document.activeElement!.getAttribute("data-sort")).toBe("name");
+  });
+
+  it("hides, shows and reorders columns, kept in this browser only", async () => {
+    await mount("projects/");
+    await reading;
+    app.querySelector<HTMLButtonElement>("#columns")!.click();
+    choose('[data-col="size"]', undefined, false);
+    choose('[data-col="type"]');
+    app.querySelector<HTMLButtonElement>('[data-col-up="type"]')!.click(); // before Last modified
+    const heads = [...app.querySelectorAll("thead th")].map((th) => th.textContent!.replace(/[↑↓▾]/g, "").trim());
+    expect(heads).toEqual(["Name", "Type", "Last modified", "Columns"]);
+    expect(row("readme.md").textContent).toContain("Markdown");
+    expect(JSON.parse(localStorage.getItem("backoffice.pods.columns")!).hidden).toContain("size");
+    expect(writes).toHaveLength(0);
+  });
+
+  it("reads who can access each row only when that column is shown, one walk for the folder", async () => {
+    await mount("projects/");
+    await reading;
+    app.querySelector<HTMLButtonElement>("#columns")!.click();
+    choose('[data-col="access"]');
+    await until(() => row("public.md").querySelector("[data-rules]")!.textContent === "Anyone");
+    await until(() => row("readme.md").querySelector("[data-rules]")!.textContent === "Only you");
+    expect(row("drafts/").querySelector("[data-rules]")!.textContent).toBe("You · HyperScope's agent");
+    expect(requests.filter((r) => r === `HEAD ${POD}`).length).toBe(1);
+  });
+
+  it("sorts folders by how many items they hold", () => {
+    const item = (name: string, isFolder: boolean, size: number | null) => ({ url: POD + name, name, isFolder, modified: null, size, type: null });
+    const counts: Record<string, number> = { [POD + "big/"]: 9, [POD + "small/"]: 1 };
+    const sorted = sortItems(
+      [item("small/", true, null), item("a.txt", false, 5), item("big/", true, null), item("b.txt", false, 50)],
+      { key: "size", dir: "desc" },
+      (u) => counts[u] ?? null
+    );
+    expect(sorted.map((i) => i.name)).toEqual(["big/", "small/", "b.txt", "a.txt"]);
   });
 });
 
@@ -230,11 +308,14 @@ describe("C1 — a file opens in Preview", () => {
     expect(URL.createObjectURL).toHaveBeenCalled();
   });
 
-  it("says who can read the file and closes back to its folder", async () => {
+  it("opens full width, its access in its ··· menu", async () => {
     await mount("projects/public.md");
     await reading;
-    expect(app.querySelector(".file-status")!.textContent).toMatch(/who can read it: Anyone/);
-    expect(app.querySelector<HTMLAnchorElement>(".places-head a.button-link")!.getAttribute("href")).toBe("#/p/projects/");
+    expect(app.querySelector(".places-side")).toBeNull();
+    expect(app.querySelector(".places-grid")!.classList.contains("is-wide")).toBe(true);
+    menuFor(POD + "projects/public.md");
+    await until(() => app.querySelector("#change-access:not([disabled])"));
+    expect(app.querySelector(".item-menu")!.textContent).toContain("You and anyone with the link (can read).");
   });
 });
 
@@ -262,18 +343,21 @@ async function until(check: () => unknown): Promise<void> {
   expect(check()).toBeTruthy();
 }
 
+/** The drawer for `item` (or the folder itself): ··· first, then "Change who can access it". */
 async function panelFor(folder: string, item?: string): Promise<HTMLElement> {
   await mount(folder);
   await reading;
-  if (item) app.querySelector<HTMLButtonElement>(`tr [data-select="${POD + item}"]`)!.click();
+  menuFor(POD + (item ?? folder));
+  await until(() => app.querySelector("#change-access:not([disabled])"));
+  app.querySelector<HTMLButtonElement>("#change-access")!.click();
   await until(() => app.querySelector("#access fieldset"));
-  return app.querySelector<HTMLElement>(".places-panel")!;
+  return app.querySelector<HTMLElement>(".drawer")!;
 }
 
-function choose(selector: string, value?: string): void {
+function choose(selector: string, value?: string, checked = true): void {
   const el = app.querySelector<HTMLInputElement | HTMLSelectElement>(selector)!;
   if (value !== undefined) el.value = value;
-  else (el as HTMLInputElement).checked = true;
+  else (el as HTMLInputElement).checked = checked;
   el.dispatchEvent(new Event("change"));
 }
 
@@ -283,7 +367,7 @@ async function save(): Promise<void> {
   await settle();
 }
 
-describe("C2 — who can read it", () => {
+describe("C2 — who can access it: one panel for folders and files", () => {
   it("shows a folder's named people and saves Can edit as Read + Append + Write, never Control", async () => {
     await panelFor("projects/drafts/");
     const radio = app.querySelector<HTMLInputElement>('input[value="people"]')!;
@@ -308,8 +392,10 @@ describe("C2 — who can read it", () => {
 
   it("gives an item that follows its folder rules of its own, starting from them", async () => {
     await panelFor("projects/", "projects/readme.md");
-    expect(app.querySelector("#access")!.textContent).toMatch(/follows My pod/);
+    expect(app.querySelector<HTMLInputElement>('input[value="inherit"]')!.checked).toBe(true);
+    expect(app.querySelector(".inherit-card")!.textContent).toMatch(/Same as My pod: only you\./);
     choose('input[value="link"]');
+    expect(app.querySelector("#access")!.textContent).toMatch(/stops following My pod/);
     await save();
     expect(writes[0]).toMatchObject({ method: "PUT", url: POD + "projects/readme.md.acl", ifNoneMatch: "*" });
     expect(writes[0].body).toContain("acl:agentClass foaf:Agent");
@@ -357,18 +443,25 @@ describe("C2 — who can read it", () => {
     expect(writes).toHaveLength(0);
   });
 
-  it("restores from parent after asking once more, with If-Match", async () => {
+  it("inherits from its parent again: its own rules removed, with If-Match", async () => {
     await panelFor("projects/", "projects/public.md");
-    app.querySelector<HTMLButtonElement>("#restore")!.click();
+    choose('input[value="inherit"]');
+    expect(app.querySelector("#access")!.textContent).toMatch(/Saving removes the rules of its own: it follows My pod again/);
     expect(writes).toHaveLength(0);
-    app.querySelector<HTMLButtonElement>("#restore-confirm")!.click();
-    await until(() => writes.length);
+    await save();
     expect(writes[0]).toEqual({ method: "DELETE", url: POD + "projects/public.md.acl", ifMatch: '"pacl"', ifNoneMatch: undefined, body: undefined });
   });
 
-  it("never offers to restore the pod root, and shows the technical rules read only", async () => {
+  it("opens the parent's access from an item that inherits it", async () => {
+    await panelFor("projects/", "projects/readme.md");
+    app.querySelector<HTMLButtonElement>(`[data-open-access="${POD}"]`)!.click();
+    await until(() => app.querySelector("#drawer-title")!.textContent === "Who can access My pod" && app.querySelector("#access fieldset"));
+    expect(document.activeElement!.id).toBe("drawer-title");
+  });
+
+  it("never offers to inherit on the pod root, and shows the technical rules read only", async () => {
     await panelFor("");
-    expect(app.querySelector("#restore")).toBeNull();
+    expect(app.querySelector('input[value="inherit"]')).toBeNull();
     expect(app.querySelector("#technical pre")!.textContent).toContain("acl:Authorization");
     expect(app.querySelector("#technical textarea")).toBeNull();
   });
@@ -497,7 +590,7 @@ describe("C4 — rename, move, delete", () => {
   async function select(folder: string, item: string): Promise<void> {
     await mount(folder);
     await reading;
-    app.querySelector<HTMLButtonElement>(`tr [data-select="${POD + item}"]`)!.click();
+    menuFor(POD + item);
     await until(() => app.querySelector("[data-change]"));
   }
 
@@ -536,7 +629,7 @@ describe("C4 — rename, move, delete", () => {
     await mount("");
     await reading;
     await open("projects/");
-    app.querySelector<HTMLButtonElement>(`tr [data-select="${POD}projects/drafts/"]`)!.click();
+    menuFor(`${POD}projects/drafts/`);
     await until(() => app.querySelector("[data-change]"));
     app.querySelector<HTMLButtonElement>('[data-change="move"]')!.click();
     const options = [...app.querySelectorAll<HTMLOptionElement>("#move-to option")].map((o) => o.textContent);
@@ -546,9 +639,9 @@ describe("C4 — rename, move, delete", () => {
   it("never offers to move or delete the pod itself", async () => {
     await mount("");
     await reading;
-    await until(() => app.querySelector(".places-panel p.meta"));
+    menuFor(POD);
     expect(app.querySelector("[data-change]")).toBeNull();
-    expect(app.querySelector(".places-panel")!.textContent).toMatch(/Your pod itself cannot be moved or deleted/);
+    expect(app.querySelector(".item-menu")!.textContent).toMatch(/Your pod itself cannot be moved or deleted/);
   });
 });
 

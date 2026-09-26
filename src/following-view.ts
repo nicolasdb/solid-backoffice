@@ -10,6 +10,7 @@ import type { FileContent, Item } from "./lib/files";
 import { nameOf, parentOf } from "./lib/files";
 import { routeHref } from "./router";
 import { esc } from "./ui/patterns";
+import { trimAddress } from "./ui/address";
 
 export type SortBy = "latest" | "favourites";
 
@@ -18,22 +19,15 @@ export interface FollowForm {
   pending: boolean;
 }
 
-function shortAddress(address: string): string {
-  try {
-    const url = new URL(address);
-    return url.host + url.pathname;
-  } catch {
-    return address;
-  }
-}
-
 export function renderOverview(
   entries: Followed[] | null,
   error: string | null,
   sortBy: SortBy,
   form: FollowForm | null,
-  when: (d: Date | null) => string
+  when: (d: Date | null) => string,
+  podUrl: string
 ): string {
+  const shortAddress = (address: string) => trimAddress(address, podUrl);
   const lower = (s: string) => s.replace(/^Today/, "today").replace(/^Yesterday/, "yesterday");
   const cards = (entries ?? [])
     .map((f) => {
@@ -136,7 +130,8 @@ export interface OpenedView {
   error: string | null;
 }
 
-export function renderFollowed(view: OpenedView, when: (d: Date | null) => string, preview: (file: FileContent) => string): string {
+export function renderFollowed(view: OpenedView, when: (d: Date | null) => string, preview: (file: FileContent) => string, podUrl: string): string {
+  const shortAddress = (address: string) => trimAddress(address, podUrl);
   const { address, entry } = view;
   const root = entry?.address ?? address;
   const title = entry?.title || nameOf(root).replace(/\/$/, "") || shortAddress(root);

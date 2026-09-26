@@ -1,13 +1,17 @@
 /**
- * Places (slice C): your pod as a file browser. The places on the left (your
- * pod, then what you follow), a folder's items in the middle, the selected
- * item on the right; on a phone a place picker, the list, and a sheet per
- * item (the canvas's Places boards, docs/layout-brief.md).
+ * Pods (slice C): your pod as a file explorer, and the pods you follow. Built
+ * as an iceberg (docs/layout-brief.md, "Pods, the iceberg"; the canvas's Pods
+ * boards): the list is the page (name, size, last change, sortable columns
+ * you can hide or reorder); `···` on a row opens its menu (who can access
+ * it in one sentence, rename, move, delete set apart); "Change who can access
+ * it" opens the drawer, with the technical rules at its bottom. No panel is
+ * open until you ask for one; a phone shows the menu as a sheet.
  *
  * Reads follow ADR 007 (docs/explanation/reading-pods.md): what was last seen
  * is drawn at once from memory, the pod is read behind it, and the screen is
  * redrawn only when that changes something and nobody is typing. A folder's
- * list never waits for its rules: "who can read it" fills in row by row.
+ * list never waits: each subfolder's count fills in as it is read, and an
+ * item's rules are read only when asked for (its menu, or the access column).
  *
  * Mounted by src/onboarding.ts into a frame of its own, so moving between
  * folders redraws this frame only, never the tabs or the collectives.
@@ -50,7 +54,8 @@ import { routeHref, type Route } from "./router";
 import { renderMarkdown } from "./ui/markdown";
 import { busy } from "./ui/typing";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
-import { bindAccess, labelOf, loadDraft, renderAccess, type Draft, type Group } from "./access-panel";
+import { accessSentence, bindAccess, labelOf, loadDraft, renderAccess, rulesOf, type Draft, type Group } from "./access-panel";
+import { podLabel, trimAddress } from "./ui/address";
 import { bindRules, rawDirty, renderRules, startRaw, type RawEdit } from "./raw-rules";
 
 export type { Group };
@@ -80,10 +85,15 @@ const rows = new Map<string, RowRules | "error">();
 const files = new Map<string, FileContent>();
 /** What could not be read, per address, drawn in place of the list or the file. */
 const errors = new Map<string, unknown>();
-/** The item shown in the panel (a phone shows it as a sheet). */
-let selected: string | null = null;
-let sheetOpen = false;
-/** The permissions panel's draft, for the item in the panel (C2). */
+/** Folders whose items could not be counted (not readable to you). */
+const uncounted = new Set<string>();
+/** The item whose ··· menu is open, and where (a phone shows it as a sheet). */
+let menu: { url: string; top: number; left: number } | null = null;
+/** The item whose access is open in the drawer. */
+let drawer: string | null = null;
+/** The Columns menu above the list. */
+let columnsOpen = false;
+/** The access draft, for the item in the menu or the drawer (C2). */
 let draft: Draft | null = null;
 let draftError: { url: string; message: string } | null = null;
 let groups: Group[] | null = null;
@@ -121,8 +131,10 @@ export function forgetPlaces(): void {
   errors.clear();
   rows.clear();
   files.clear();
-  selected = null;
-  sheetOpen = false;
+  uncounted.clear();
+  menu = null;
+  drawer = null;
+  columnsOpen = false;
   draft = null;
   draftError = null;
   draftLoading = null;
@@ -151,23 +163,13 @@ function releaseObjectUrls(): void {
 
 /* ── Words ─────────────────────────────────────────────────────────────── */
 
-/** A WebID shortened to host and path, the way people recognise a pod. */
-export function shortWebId(webId: string): string {
-  try {
-    const url = new URL(webId);
-    return url.host + url.pathname.replace(/profile\/card$/, "");
-  } catch {
-    return webId;
-  }
-}
-
 /** Who can read, in a few words: "Anyone", "Only you", "You · HyperScope's agent". */
 export function whoCanRead(rules: Pick<AccessRules, "agents" | "public" | "authenticated">, names: Map<string, string>): string {
   if (rules.public.includes("read")) return "Anyone";
   if (rules.authenticated.includes("read")) return "Anyone signed in";
   const readers = rules.agents.filter((a) => a.modes.includes("read"));
   const parts = ["You"];
-  if (readers.length === 1) parts.push(names.get(readers[0].webId) ?? shortWebId(readers[0].webId));
+  if (readers.length === 1) parts.push(names.get(readers[0].webId) ?? trimAddress(readers[0].webId, ctx?.podUrl ?? ""));
   else if (readers.length > 1) parts.push(`${readers.length} people`);
   if (rules.public.includes("append")) parts.push("anyone can leave a message");
   else if (rules.authenticated.includes("append")) parts.push("anyone signed in can leave a message");
@@ -194,7 +196,7 @@ export function when(date: Date | null, now = new Date()): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function size(bytes: number | null): string {
+export function size(bytes: number | null): string {
   if (bytes === null) return "";
   if (bytes < 1024) return `${bytes} bytes`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`;
@@ -202,6 +204,72 @@ function size(bytes: number | null): string {
 }
 
 const KIND_LABEL: Record<string, string> = { markdown: "Markdown", text: "Text", json: "JSON", image: "Image", other: "File" };
+
+/* ── Columns: shown, hidden, ordered, sorted ───────────────────────────── */
+
+export type Column = "size" | "modified" | "type" | "access";
+export type SortKey = "name" | "size" | "modified" | "type";
+
+const COLUMN_LABEL: Record<Column, string> = { size: "Size", modified: "Last modified", type: "Type", access: "Who can access it" };
+
+export interface ColumnPrefs {
+  order: Column[];
+  hidden: Column[];
+  sort: { key: SortKey; dir: "asc" | "desc" };
+}
+
+export const DEFAULT_COLUMNS: ColumnPrefs = {
+  order: ["size", "modified", "type", "access"],
+  hidden: ["type", "access"],
+  sort: { key: "modified", dir: "desc" },
+};
+
+/** Kept in this browser only: a way of looking, never pod content. */
+const PREFS_KEY = "backoffice.pods.columns";
+
+function readPrefs(): ColumnPrefs {
+  try {
+    const kept = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null") as ColumnPrefs | null;
+    const all = DEFAULT_COLUMNS.order;
+    if (!kept || !Array.isArray(kept.order) || !Array.isArray(kept.hidden) || !kept.sort) return structuredClone(DEFAULT_COLUMNS);
+    const order = [...kept.order.filter((c) => all.includes(c)), ...all.filter((c) => !kept.order.includes(c))];
+    return { order, hidden: kept.hidden.filter((c) => all.includes(c)), sort: kept.sort };
+  } catch {
+    return structuredClone(DEFAULT_COLUMNS);
+  }
+}
+
+function keepPrefs(): void {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* private window: the choice lasts until the page is closed */
+  }
+}
+
+let prefs: ColumnPrefs = readPrefs();
+
+function shown(): Column[] {
+  return prefs.order.filter((c) => !prefs.hidden.includes(c));
+}
+
+/** Folders first, then the chosen column; names break ties. */
+export function sortItems(items: Item[], sort: ColumnPrefs["sort"], count: (url: string) => number | null): Item[] {
+  const sign = sort.dir === "asc" ? 1 : -1;
+  const value = (i: Item): number | string => {
+    if (sort.key === "name") return i.name.toLowerCase();
+    if (sort.key === "modified") return i.modified?.getTime() ?? 0;
+    if (sort.key === "size") return (i.isFolder ? count(i.url) : i.size) ?? -1;
+    return i.isFolder ? "" : (i.type ?? "");
+  };
+  return [...items].sort((a, b) => {
+    if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+    const va = value(a);
+    const vb = value(b);
+    const c = va < vb ? -1 : va > vb ? 1 : 0;
+    return c * sign || a.name.localeCompare(b.name);
+  });
+}
 
 /* ── Addresses ─────────────────────────────────────────────────────────── */
 
@@ -247,11 +315,11 @@ export function placesFrame(): string {
 
 function renderSide(): string {
   const onPod = route.name === "places";
-  const pod = shortWebId(ctx!.podUrl);
+  const pod = podLabel(ctx!.podUrl);
   const current = route.name === "followed" ? followedFor(route.address, following ?? [])?.address : null;
   const followed = sortFollowing(following ?? [], "favourites");
   return `
-    <nav class="places-side" aria-label="Places">
+    <nav class="places-side" aria-label="Pods">
       <div class="places-group">
         <span class="label-mono">Yours</span>
         <a class="place${onPod ? " is-current" : ""}" href="${routeHref({ name: "places", path: "" })}"${onPod ? ' aria-current="page"' : ""}>
@@ -271,7 +339,7 @@ function renderSide(): string {
       <p class="meta places-note">Nobody can list what is shared with you: someone has to send you the address.</p>
     </nav>
     <label class="field place-picker">
-      <span class="label-mono">Place</span>
+      <span class="label-mono">Pod</span>
       <select id="place-picker">
         <option value="${routeHref({ name: "places", path: "" })}"${onPod ? " selected" : ""}>My pod · ${esc(pod)}</option>
         ${followed.map((f) => `<option value="${routeHref({ name: "followed", address: f.address })}"${f.address === current ? " selected" : ""}>${esc(f.title || nameOf(f.address))}</option>`).join("")}
@@ -287,27 +355,79 @@ function rulesCell(url: string): string {
   return esc(r.who);
 }
 
-function rulesPill(url: string): string {
-  const r = rows.get(url);
-  if (!r || r === "error") return "";
-  return r.own ? `<span class="pill is-ok">Own</span>` : `<span class="pill">From parent</span>`;
+/** Items inside a folder, once read; null before. */
+function countOf(url: string): number | null {
+  return listings.get(url)?.length ?? null;
+}
+
+function sizeCell(item: Item): string {
+  if (!item.isFolder) return esc(size(item.size));
+  const n = countOf(item.url);
+  if (n !== null) return `${n} item${n === 1 ? "" : "s"}`;
+  return uncounted.has(item.url) ? "" : `<span class="is-loading">…</span>`;
+}
+
+function cell(column: Column, item: Item): string {
+  switch (column) {
+    case "size":
+      return `<td class="meta num" data-label="Size" data-count="${esc(item.url)}">${sizeCell(item)}</td>`;
+    case "modified":
+      return `<td class="meta" data-label="Last modified">${esc(when(item.modified))}</td>`;
+    case "type":
+      return `<td class="meta" data-label="Type">${item.isFolder ? "Folder" : esc(KIND_LABEL[kindFromItem(item)] ?? "File")}</td>`;
+    case "access":
+      return `<td class="meta" data-label="Who can access it" data-rules="${esc(item.url)}">${rulesCell(item.url)}</td>`;
+  }
 }
 
 function renderRow(item: Item): string {
   const icon = item.isFolder
     ? `<path d="M3 7h7l2 2h9v10H3z"/>`
     : `<path d="M6 3h8l4 4v14H6z"/>`;
+  const on = menu?.url === item.url || drawer === item.url;
   return `
-    <tr data-url="${esc(item.url)}"${item.url === selected ? ' class="is-selected"' : ""}>
+    <tr data-url="${esc(item.url)}"${on ? ' class="is-selected"' : ""}>
       <td class="item-name">
         <svg class="item-icon" viewBox="0 0 24 24" aria-hidden="true">${icon}</svg>
         <a href="${hrefOf(item.url)}">${esc(item.name)}</a>
       </td>
-      <td class="meta" data-label="Who can read it" data-rules="${esc(item.url)}">${rulesCell(item.url)}</td>
-      <td data-label="Rules" data-pill="${esc(item.url)}">${rulesPill(item.url)}</td>
-      <td class="meta" data-label="Last modified">${esc(when(item.modified))}</td>
-      <td class="row-actions"><button class="ghost small" type="button" data-select="${esc(item.url)}" aria-label="Details of ${esc(item.name)}">···</button></td>
+      ${shown().map((c) => cell(c, item)).join("")}
+      <td class="row-actions"><button class="ghost small" type="button" data-menu="${esc(item.url)}" aria-haspopup="dialog" aria-label="More for ${esc(item.name)}">···</button></td>
     </tr>`;
+}
+
+function renderHead(): string {
+  const th = (key: SortKey, label: string) => {
+    const on = prefs.sort.key === key;
+    const sort = on ? ` aria-sort="${prefs.sort.dir === "asc" ? "ascending" : "descending"}"` : "";
+    return `<th scope="col"${sort}><button type="button" class="th-sort" data-sort="${key}">${esc(label)}${on ? ` <span aria-hidden="true">${prefs.sort.dir === "asc" ? "↑" : "↓"}</span>` : ""}</button></th>`;
+  };
+  return `<thead><tr>
+    ${th("name", "Name")}
+    ${shown().map((c) => (c === "access" ? `<th scope="col">${COLUMN_LABEL.access}</th>` : th(c, COLUMN_LABEL[c]))).join("")}
+    <th scope="col" class="row-actions"><button type="button" class="th-sort" id="columns" aria-haspopup="dialog" aria-expanded="${columnsOpen}">Columns ▾</button></th>
+  </tr></thead>`;
+}
+
+function renderColumns(): string {
+  if (!columnsOpen) return "";
+  const line = (c: Column, i: number) => `
+    <li class="colpick">
+      <label><input type="checkbox" data-col="${c}"${prefs.hidden.includes(c) ? "" : " checked"}> ${esc(COLUMN_LABEL[c])}</label>
+      <span class="colpick-move">
+        <button class="ghost small" type="button" data-col-up="${c}" aria-label="Move ${esc(COLUMN_LABEL[c])} left"${i === 0 ? " disabled" : ""}>↑</button>
+        <button class="ghost small" type="button" data-col-down="${c}" aria-label="Move ${esc(COLUMN_LABEL[c])} right"${i === prefs.order.length - 1 ? " disabled" : ""}>↓</button>
+      </span>
+    </li>`;
+  return `
+    <div class="columns-menu" role="dialog" aria-label="Columns" id="columns-menu">
+      <span class="label-mono">Columns</span>
+      <ul>
+        <li class="colpick"><label><input type="checkbox" checked disabled> Name</label></li>
+        ${prefs.order.map(line).join("")}
+      </ul>
+      <p class="meta">Kept in this browser, never on your pod.</p>
+    </div>`;
 }
 
 function renderFolder(url: string): string {
@@ -319,17 +439,14 @@ function renderFolder(url: string): string {
     : !items.length
       ? `<p class="meta">This folder is empty.</p>`
       : `<table class="items">
-          <thead><tr>
-            <th scope="col">Name</th><th scope="col">Who can read it</th><th scope="col">Rules</th>
-            <th scope="col">Last modified</th><th scope="col"><span class="visually-hidden">Actions</span></th>
-          </tr></thead>
-          <tbody>${items.map(renderRow).join("")}</tbody>
+          ${renderHead()}
+          <tbody>${sortItems(items, prefs.sort, countOf).map(renderRow).join("")}</tbody>
         </table>`;
   return `
     <section class="places-main" aria-labelledby="places-title">
       <h1 id="places-title" class="visually-hidden" data-view-title>${esc(url === ctx!.podUrl ? "My pod" : nameOf(url))}</h1>
       <div class="places-head">
-        ${breadcrumb(url)}
+        <div class="places-title-row">${breadcrumb(url)}<button class="ghost small" type="button" data-menu="${esc(url)}" aria-haspopup="dialog" aria-label="More for ${esc(url === ctx!.podUrl ? "My pod" : nameOf(url))}">···</button></div>
         <div class="actions">
           <button class="ghost small" type="button" id="new-folder">New folder</button>
           <button class="ghost small" type="button" id="new-file">New file</button>
@@ -339,7 +456,7 @@ function renderFolder(url: string): string {
       </div>
       ${renderCreate()}
       <p class="meta" id="upload-status" role="status" hidden></p>
-      <div id="places-list">${list}</div>
+      <div id="places-list" class="places-list">${renderColumns()}${list}</div>
     </section>`;
 }
 
@@ -358,35 +475,66 @@ function renderCreate(): string {
     </form>`;
 }
 
-/** The panel: one item, or the folder itself when nothing is selected. */
-function renderPanel(url: string, folderUrl: string): string {
-  const item = listings.get(parentOf(url) ?? "")?.find((i) => i.url === url);
-  const isFolder = url.endsWith("/");
-  const inside = isFolder ? listings.get(url) : undefined;
-  const r = rows.get(url);
-  const name = url === ctx!.podUrl ? "My pod" : nameOf(url);
-  const facts = [
-    item?.modified ? `Last modified ${when(item.modified).replace(/^Today/, "today").replace(/^Yesterday/, "yesterday")}` : "",
-    inside ? `${inside.length} item${inside.length === 1 ? "" : "s"} inside` : "",
-    item && !isFolder ? size(item.size) : "",
-  ].filter(Boolean);
+/** Where an item's rules come from, in a few words. */
+function originLine(d: Draft): string {
+  if (d.own) return d.url.endsWith("/") ? "Its own rules. They cover what is inside, unless an item has its own." : "Its own rules.";
+  const from = d.from === ctx!.podUrl ? "My pod" : nameOf(d.from);
+  return `Same as ${from}.`;
+}
 
-  const access = draft?.url === url ? draft : null;
+function itemOf(url: string): Item | undefined {
+  return listings.get(parentOf(url) ?? "")?.find((i) => i.url === url);
+}
+
+/** Level 1: an item's ··· menu. Who can access it first, then what can be done. */
+function renderMenu(): string {
+  if (!menu) return "";
+  const url = menu.url;
+  const item = itemOf(url);
+  const isFolder = url.endsWith("/");
+  const name = url === ctx!.podUrl ? "My pod" : nameOf(url);
+  const n = isFolder ? countOf(url) : null;
+  const facts = [
+    isFolder ? "Folder" : KIND_LABEL[files.get(url)?.kind ?? kindFromItem(item)] ?? "File",
+    n !== null ? `${n} item${n === 1 ? "" : "s"} inside` : "",
+    item && !isFolder ? size(item.size) : "",
+    item?.modified ? `last modified ${when(item.modified).replace(/^Today/, "today").replace(/^Yesterday/, "yesterday")}` : "",
+  ].filter(Boolean);
+  const d = draft?.url === url ? draft : null;
+  const label = (webId: string) => labelOf(webId, accessEnv());
+  const who = d
+    ? `<p>${esc(accessSentence(!d.own && d.parent ? d.parent.access : rulesOf(d), label))}</p><p class="meta">${esc(originLine(d))}</p>`
+    : draftError?.url === url
+      ? `<p class="error">${esc(draftError.message)}</p>`
+      : `<p class="meta">Reading its rules…</p>`;
   return `
-    <aside class="places-panel${sheetOpen ? " is-open" : ""}" aria-label="${esc(name)}">
-      <div class="panel-head">
-        <h2>${esc(name)}</h2>
-        <span class="pill">${isFolder ? "Folder" : esc(KIND_LABEL[kindFromItem(item)] ?? "File")}</span>
-        <button class="ghost small sheet-close" type="button" id="sheet-close">Close</button>
+    <div class="menu-scrim" id="menu-scrim"></div>
+    <div class="item-menu" role="dialog" aria-labelledby="menu-title" id="item-menu" style="--menu-top: ${menu.top}px; --menu-left: ${menu.left}px">
+      <div class="menu-sec">
+        <div class="menu-head"><h2 id="menu-title" tabindex="-1">${esc(name)}</h2><button class="ghost small" type="button" id="menu-close">Close</button></div>
+        <p class="meta">${esc(facts.join(" · "))}</p>
       </div>
-      ${facts.length ? `<p class="meta">${esc(facts.join(" · "))}</p>` : ""}
-      ${r && r !== "error" && !access?.dirty ? `<p>${esc(r.who)}</p>` : ""}
-      ${renderAccess(access, accessEnv(), access || draftError?.url !== url ? null : draftError.message)}
-      ${access ? renderRules(access, raw, rulesEnv(), technicalOpen === url) : ""}
-      ${renderActions(url, changes.change, changeEnv())}
-      <div class="actions">
-        ${isFolder ? (url !== folderUrl ? `<a class="button-link" href="${hrefOf(url)}">Open</a>` : "") : `<a class="button-link" href="${hrefOf(url)}">Open</a><button class="ghost small" type="button" id="download" data-url="${esc(url)}">Download</button>`}
+      <div class="menu-sec">
+        <span class="label-mono">Who can access it</span>
+        ${who}
+        <button class="small" type="button" id="change-access"${d ? "" : " disabled"}>Change who can access it</button>
       </div>
+      <div class="menu-sec">${renderActions(url, changes.change, changeEnv())}</div>
+    </div>`;
+}
+
+/** Level 2 and 3: who can access it, and the technical rules at the bottom. */
+function renderDrawer(): string {
+  if (!drawer) return "";
+  const url = drawer;
+  const name = url === ctx!.podUrl ? "My pod" : nameOf(url);
+  const d = draft?.url === url ? draft : null;
+  return `
+    <div class="drawer-scrim" id="drawer-scrim"></div>
+    <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" id="drawer">
+      <div class="drawer-head"><h2 id="drawer-title" tabindex="-1">Who can access ${esc(name)}</h2><button class="ghost small" type="button" id="drawer-close">Close</button></div>
+      ${renderAccess(d, accessEnv(), d || draftError?.url !== url ? null : draftError.message)}
+      ${d ? renderRules(d, raw, rulesEnv(), technicalOpen === url) : ""}
     </aside>`;
 }
 
@@ -426,7 +574,6 @@ function renderPreview(file: FileContent): string {
 
 function renderFile(url: string): string {
   const file = files.get(url);
-  const r = rows.get(url);
   const edit = editing?.url === url ? editing : null;
   const body = edit
     ? renderEditor(edit)
@@ -435,13 +582,11 @@ function renderFile(url: string): string {
       : errors.has(url)
         ? renderFailure(errors.get(url))
         : renderPending(`Reading ${nameOf(url)}…`);
-  const parent = parentOf(url) ?? ctx!.podUrl;
   const actions = edit
     ? renderEditorActions(edit)
     : `${file && canEdit(file) ? `<button class="small" type="button" id="edit">Edit</button>` : ""}
        <button class="ghost small" type="button" id="download" data-url="${esc(url)}">Download</button>
-       <button class="ghost small" type="button" data-select="${esc(url)}">Who can read it</button>
-       <a class="button-link" href="${hrefOf(parent)}">Close</a>`;
+       <button class="ghost small" type="button" data-menu="${esc(url)}" aria-haspopup="dialog" aria-label="More for ${esc(nameOf(url))}">···</button>`;
   return `
     <section class="places-main places-file" aria-labelledby="places-title">
       <h1 id="places-title" class="visually-hidden" data-view-title>${esc(nameOf(url))}</h1>
@@ -450,18 +595,17 @@ function renderFile(url: string): string {
         <div class="actions">${actions}</div>
       </div>
       <div id="places-file">${body}</div>
-      <div class="file-status" role="status">
-        <p class="meta">${file?.modified ? `Last saved ${esc(when(file.modified))} · ` : ""}who can read it: <strong>${r && r !== "error" ? esc(r.who) : "…"}</strong>${edit ? ". Save writes only if nobody changed the file since you opened it." : ""}</p>
-      </div>
+      ${
+        file?.modified || edit
+          ? `<p class="meta file-status" role="status">${file?.modified ? `Last saved ${esc(when(file.modified))}.` : ""}${edit ? " Save writes only if nobody changed the file since you opened it." : ""}</p>`
+          : ""
+      }
     </section>`;
 }
 
-/** The item in the panel: the selected one, else the folder itself; a file shows it only when asked. */
-function panelUrl(): string | null {
-  const url = herePod();
-  if (!url) return null;
-  if (url.endsWith("/")) return selected ?? url;
-  return selected === url ? url : null;
+/** The item whose rules are on screen: in the drawer, else in the menu. */
+function accessUrl(): string | null {
+  return drawer ?? menu?.url ?? null;
 }
 
 function openedView(address: string): OpenedView {
@@ -491,6 +635,7 @@ function forgetUnder(prefix: string): void {
   for (const map of [listings, rows, files, errors] as Map<string, unknown>[]) {
     for (const key of [...map.keys()]) if (key.startsWith(prefix)) map.delete(key);
   }
+  for (const key of [...uncounted]) if (key.startsWith(prefix)) uncounted.delete(key);
   if (editing?.url.startsWith(prefix)) editing = null;
 }
 
@@ -505,16 +650,15 @@ function accessEnv() {
 
 function renderPlaces(): string {
   if (route.name === "following") {
-    return `<div class="places-grid is-file">${renderSide()}${renderOverview(following ? sortFollowing(following, sortBy) : null, followingError, sortBy, followForm, when)}</div>`;
+    return `<div class="places-grid is-file">${renderSide()}${renderOverview(following ? sortFollowing(following, sortBy) : null, followingError, sortBy, followForm, when, ctx!.podUrl)}</div>`;
   }
   if (route.name === "followed") {
-    return `<div class="places-grid is-file">${renderSide()}${renderFollowed(openedView(route.address), when, renderPreview)}</div>`;
+    return `<div class="places-grid is-file">${renderSide()}${renderFollowed(openedView(route.address), when, renderPreview, ctx!.podUrl)}</div>`;
   }
   const url = herePod()!;
-  const panel = panelUrl();
-  const main = url.endsWith("/") ? renderFolder(url) : renderFile(url);
-  const side = panel ? renderPanel(panel, url.endsWith("/") ? url : parentOf(url)!) : "";
-  return `<div class="places-grid${panel ? "" : " is-file"}">${renderSide()}${main}${side}</div>`;
+  const overlays = renderMenu() + renderDrawer();
+  if (!url.endsWith("/")) return `<div class="places-grid is-wide">${renderFile(url)}</div>${overlays}`;
+  return `<div class="places-grid">${renderSide()}${renderFolder(url)}</div>${overlays}`;
 }
 
 function draw(focus: boolean): void {
@@ -535,6 +679,7 @@ function inUse(): boolean {
     Boolean(creating) ||
     Boolean(changes.change) ||
     Boolean(followForm) ||
+    Boolean(changes.change) ||
     rawDirty(raw) ||
     Boolean(raw?.armed)
   );
@@ -544,7 +689,7 @@ function inUse(): boolean {
 function redraw(): void {
   if (!frame || inUse()) return;
   const active = document.activeElement as HTMLElement | null;
-  const key = active && frame.contains(active) ? (active.dataset.select ? `[data-select="${CSS.escape(active.dataset.select)}"]` : active.id ? `#${CSS.escape(active.id)}` : null) : null;
+  const key = active && frame.contains(active) ? (active.dataset.menu ? `[data-menu="${CSS.escape(active.dataset.menu)}"]` : active.id ? `#${CSS.escape(active.id)}` : null) : null;
   draw(false);
   if (key) frame.querySelector<HTMLElement>(key)?.focus();
 }
@@ -576,10 +721,35 @@ async function readFolder(url: string, mine: number): Promise<void> {
   errors.delete(url);
   listings.set(url, items);
   if (JSON.stringify(items) !== before) redraw();
-  await readRules([url, ...items.map((i) => i.url)], mine);
+  await Promise.all([readCounts(items, mine), shown().includes("access") ? readRules(items.map((i) => i.url), mine) : null]);
 }
 
-/** Each row's rules, as they arrive; one walk up per folder, shared by its items. */
+/** Each subfolder's items, read at once: its count on the row, and its list drawn at once when opened. */
+async function readCounts(items: Item[], mine: number): Promise<void> {
+  await Promise.allSettled(
+    items
+      .filter((i) => i.isFolder)
+      .map(async (folder) => {
+        const was = countOf(folder.url);
+        try {
+          listings.set(folder.url, await listFolder(folder.url));
+          uncounted.delete(folder.url);
+        } catch {
+          uncounted.add(folder.url);
+        }
+        if (mine !== generation) return;
+        if (countOf(folder.url) !== was || was === null) patchCount(folder.url);
+      })
+  );
+}
+
+function patchCount(url: string): void {
+  const item = itemOf(url);
+  const target = frame?.querySelector<HTMLElement>(`[data-count="${CSS.escape(url)}"]`);
+  if (item && target) target.innerHTML = sizeCell(item);
+}
+
+/** Each row's rules for the access column, as they arrive; one walk up per folder, shared by its items. */
 async function readRules(urls: string[], mine: number): Promise<void> {
   const memo = new Map<string, Promise<Effective | null>>();
   await Promise.allSettled(
@@ -600,25 +770,12 @@ async function readRules(urls: string[], mine: number): Promise<void> {
 
 /** Fills one row's rules in place: never redraws the list under someone. */
 function patchRules(url: string): void {
-  if (!frame) return;
-  const cell = frame.querySelector<HTMLElement>(`[data-rules="${CSS.escape(url)}"]`);
-  if (cell) cell.innerHTML = rulesCell(url);
-  const pill = frame.querySelector<HTMLElement>(`[data-pill="${CSS.escape(url)}"]`);
-  if (pill) pill.innerHTML = rulesPill(url);
-  const current = herePod();
-  if (!current) return;
-  const inPanel = (selected ?? current) === url || current === url;
-  if (inPanel && !inUse()) {
-    const panel = frame.querySelector(".places-panel, .file-status");
-    // The rules changed under a panel nobody is editing: read its draft again.
-    if (draft?.url === url) draft = null;
-    if (panel) redraw();
-  }
+  const target = frame?.querySelector<HTMLElement>(`[data-rules="${CSS.escape(url)}"]`);
+  if (target) target.innerHTML = rulesCell(url);
 }
 
 async function readOne(url: string, mine: number): Promise<void> {
   const parent = parentOf(url) ?? ctx!.podUrl;
-  const rules = readRules([url], mine);
   try {
     const file = await readFile(url);
     if (mine !== generation) return;
@@ -643,8 +800,7 @@ async function readOne(url: string, mine: number): Promise<void> {
     errors.set(url, err);
     draw(false);
   }
-  await rules;
-  // The folder is read too, so Close lands on a list already drawn.
+  // The folder is read too, so the way back lands on a list already drawn.
   if (!listings.has(parent)) void listFolder(parent).then((items) => listings.set(parent, items)).catch(() => {});
 }
 
@@ -655,75 +811,92 @@ function bind(): void {
   frame.querySelector<HTMLSelectElement>("#place-picker")?.addEventListener("change", (e) => {
     location.hash = (e.target as HTMLSelectElement).value;
   });
-  frame.querySelectorAll<HTMLButtonElement>("[data-select]").forEach((button) =>
-    button.addEventListener("click", () => {
-      selected = button.dataset.select!;
-      sheetOpen = true;
-      if (draft?.url !== selected) draft = null;
-      if (changes.change?.url !== selected) changes.change = null;
-      if (raw?.url !== selected) raw = null;
-      draw(false);
-      frame?.querySelector<HTMLElement>(".places-panel h2")?.setAttribute("tabindex", "-1");
-      frame?.querySelector<HTMLElement>(".places-panel h2")?.focus();
-    })
+  bindColumns();
+  frame.querySelectorAll<HTMLButtonElement>("[data-menu]").forEach((button) =>
+    button.addEventListener("click", () => openMenu(button.dataset.menu!, button))
   );
-  frame.querySelector("#sheet-close")?.addEventListener("click", () => {
-    const back = selected;
-    sheetOpen = false;
-    selected = null;
-    draft = null;
+  const closeMenu = () => {
+    const back = menu?.url;
+    menu = null;
     changes.change = null;
     draw(false);
-    if (back) frame?.querySelector<HTMLElement>(`[data-select="${CSS.escape(back)}"]`)?.focus();
+    if (back) frame?.querySelector<HTMLElement>(`[data-menu="${CSS.escape(back)}"]`)?.focus();
+  };
+  frame.querySelector("#menu-close")?.addEventListener("click", closeMenu);
+  frame.querySelector("#menu-scrim")?.addEventListener("click", () => {
+    if (!changes.change?.progress) closeMenu();
   });
-  const panel = panelUrl();
-  const aside = frame.querySelector<HTMLElement>(".places-panel");
-  if (panel && aside) {
-    if (draft?.url === panel) {
-      bindAccess(aside, draft, accessEnv(), {
-        changed: () => drawKeepingFocus(),
-        saved: (message) => {
-          draft = null;
-          if (message) toast(message);
-          void showPlaces(route, false);
-        },
-      });
-    } else if (draftError?.url !== panel) {
-      void startDraft(panel, generation);
-    }
-    if (draft?.url === panel) {
-      const open = draft;
-      bindRules(aside, open, raw, ctx!.webId, {
-        changed: () => drawKeepingFocus(),
-        saved: (message) => {
-          raw = null;
-          draft = null;
-          toast(message);
-          void showPlaces(route, false);
-        },
-        toggled: (isOpen) => {
-          technicalOpen = isOpen ? panel : null;
-        },
-        edit: () => {
-          raw = startRaw(open);
-          technicalOpen = panel;
-          draw(false);
-          frame?.querySelector<HTMLTextAreaElement>("#raw-acl")?.focus();
-        },
-        cancel: () => {
-          raw = null;
-          draw(false);
-          frame?.querySelector<HTMLElement>("#raw-edit")?.focus();
-        },
-      });
-    }
-    bindActions(aside, panel, changes, changeEnv(), {
+  frame.querySelector("#item-menu")?.addEventListener("keydown", (e) => {
+    if ((e as KeyboardEvent).key === "Escape" && !changes.change?.progress) closeMenu();
+  });
+  frame.querySelector("#change-access")?.addEventListener("click", () => {
+    if (!menu) return;
+    openDrawer(menu.url);
+  });
+
+  const closeDrawer = () => {
+    const back = drawer;
+    drawer = null;
+    draft = null;
+    raw = null;
+    technicalOpen = null;
+    draw(false);
+    if (back) frame?.querySelector<HTMLElement>(`[data-menu="${CSS.escape(back)}"]`)?.focus();
+  };
+  frame.querySelector("#drawer-close")?.addEventListener("click", closeDrawer);
+  frame.querySelector("#drawer-scrim")?.addEventListener("click", closeDrawer);
+  frame.querySelector("#drawer")?.addEventListener("keydown", (e) => {
+    if ((e as KeyboardEvent).key === "Escape") closeDrawer();
+  });
+
+  const url = accessUrl();
+  if (url && draft?.url !== url && draftError?.url !== url) void startDraft(url, generation);
+  const aside = frame.querySelector<HTMLElement>("#drawer");
+  if (drawer && aside && draft?.url === drawer) {
+    const open = draft;
+    bindAccess(aside, open, accessEnv(), {
+      changed: () => drawKeepingFocus(),
+      saved: (message) => {
+        draft = null;
+        rows.clear();
+        if (message) toast(message);
+        void showPlaces(route, false);
+      },
+      open: (target) => openDrawer(target),
+    });
+    bindRules(aside, open, raw, ctx!.webId, {
+      changed: () => drawKeepingFocus(),
+      saved: (message) => {
+        raw = null;
+        draft = null;
+        rows.clear();
+        toast(message);
+        void showPlaces(route, false);
+      },
+      toggled: (isOpen) => {
+        technicalOpen = isOpen ? open.url : null;
+      },
+      edit: () => {
+        raw = startRaw(open);
+        technicalOpen = open.url;
+        draw(false);
+        frame?.querySelector<HTMLTextAreaElement>("#raw-acl")?.focus();
+      },
+      cancel: () => {
+        raw = null;
+        draw(false);
+        frame?.querySelector<HTMLElement>("#raw-edit")?.focus();
+      },
+    });
+  }
+  const itemMenu = frame.querySelector<HTMLElement>("#item-menu");
+  if (menu && itemMenu) {
+    bindActions(itemMenu, menu.url, changes, changeEnv(), {
       changed: () => drawKeepingFocus(),
       done: (from, to, message) => {
         forgetUnder(from);
         toast(message);
-        selected = null;
-        sheetOpen = false;
+        menu = null;
         draft = null;
         const here = herePod() ?? "";
         if (here.startsWith(from)) {
@@ -750,6 +923,82 @@ function bind(): void {
       download.disabled = false;
     }
   });
+}
+
+/** Opens an item's ··· menu under its button (a sheet on a phone). */
+function openMenu(url: string, button: HTMLElement): void {
+  const box = frame!.getBoundingClientRect();
+  const at = button.getBoundingClientRect();
+  const width = 352;
+  menu = { url, top: Math.round(at.bottom - box.top + 4), left: Math.max(0, Math.round(at.right - box.left - width)) };
+  drawer = null;
+  if (draft?.url !== url) draft = null;
+  if (changes.change?.url !== url) changes.change = null;
+  raw = null;
+  draw(false);
+  frame?.querySelector<HTMLElement>("#menu-title")?.focus();
+}
+
+/** Opens the access drawer for `url`: the item's own, or the parent it inherits from. */
+function openDrawer(url: string): void {
+  menu = null;
+  changes.change = null;
+  drawer = url;
+  if (draft?.url !== url) draft = null;
+  raw = null;
+  technicalOpen = null;
+  draw(false);
+  frame?.querySelector<HTMLElement>("#drawer-title")?.focus();
+}
+
+/** Sorting by a column, and the Columns menu: show, hide, reorder. */
+function bindColumns(): void {
+  if (!frame) return;
+  frame.querySelectorAll<HTMLButtonElement>("[data-sort]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const key = button.dataset.sort as SortKey;
+      prefs.sort = prefs.sort.key === key ? { key, dir: prefs.sort.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "name" || key === "type" ? "asc" : "desc" };
+      keepPrefs();
+      draw(false);
+      frame?.querySelector<HTMLElement>(`[data-sort="${key}"]`)?.focus();
+    })
+  );
+  frame.querySelector("#columns")?.addEventListener("click", () => {
+    columnsOpen = !columnsOpen;
+    draw(false);
+    frame?.querySelector<HTMLElement>(columnsOpen ? "#columns-menu input:not([disabled])" : "#columns")?.focus();
+  });
+  frame.querySelector("#columns-menu")?.addEventListener("keydown", (e) => {
+    if ((e as KeyboardEvent).key !== "Escape") return;
+    columnsOpen = false;
+    draw(false);
+    frame?.querySelector<HTMLElement>("#columns")?.focus();
+  });
+  frame.querySelectorAll<HTMLInputElement>("[data-col]").forEach((box) =>
+    box.addEventListener("change", () => {
+      const column = box.dataset.col as Column;
+      prefs.hidden = box.checked ? prefs.hidden.filter((c) => c !== column) : [...prefs.hidden, column];
+      keepPrefs();
+      draw(false);
+      frame?.querySelector<HTMLElement>(`[data-col="${column}"]`)?.focus();
+      const here = herePod();
+      const items = here ? listings.get(here) : undefined;
+      if (column === "access" && box.checked && items) void readRules(items.map((i) => i.url).filter((u) => !rows.has(u)), generation);
+    })
+  );
+  const shift = (column: Column, by: number) => {
+    const order = [...prefs.order];
+    const i = order.indexOf(column);
+    const j = i + by;
+    if (j < 0 || j >= order.length) return;
+    [order[i], order[j]] = [order[j], order[i]];
+    prefs.order = order;
+    keepPrefs();
+    draw(false);
+    frame?.querySelector<HTMLElement>(`[data-col-${by < 0 ? "up" : "down"}="${column}"]:not([disabled])`)?.focus();
+  };
+  frame.querySelectorAll<HTMLButtonElement>("[data-col-up]").forEach((b) => b.addEventListener("click", () => shift(b.dataset.colUp as Column, -1)));
+  frame.querySelectorAll<HTMLButtonElement>("[data-col-down]").forEach((b) => b.addEventListener("click", () => shift(b.dataset.colDown as Column, 1)));
 }
 
 function isPhone(): boolean {
@@ -872,7 +1121,7 @@ async function startDraft(url: string, mine: number): Promise<void> {
     const next = await loadDraft(url, ctx!.webId, ctx!.podUrl).finally(() => {
       if (draftLoading === url) draftLoading = null;
     });
-    if (mine !== generation || panelUrl() !== url) return;
+    if (mine !== generation || accessUrl() !== url) return;
     draft = next;
     draftError = null;
   } catch (err) {
@@ -890,7 +1139,7 @@ function drawKeepingFocus(): void {
   const key = active && frame.contains(active)
     ? active.id
       ? `#${CSS.escape(active.id)}`
-      : ["data-select", "data-remove", "data-add", "data-person", "data-view"].map((a) => active.getAttribute(a) !== null ? `[${a}="${CSS.escape(active.getAttribute(a)!)}"]` : "").find(Boolean) ||
+      : ["data-menu", "data-remove", "data-add", "data-person", "data-view", "data-open-access"].map((a) => active.getAttribute(a) !== null ? `[${a}="${CSS.escape(active.getAttribute(a)!)}"]` : "").find(Boolean) ||
         (active.matches('input[name="visibility"]') ? `input[name="visibility"][value="${(active as HTMLInputElement).value}"]` : null)
     : null;
   draw(false);
@@ -914,8 +1163,9 @@ export async function showPlaces(next: Route, focus = true): Promise<void> {
   const moved = JSON.stringify(next) !== JSON.stringify(route);
   route = next.name === "places" || next.name === "following" || next.name === "followed" ? next : { name: "places", path: "" };
   if (moved) {
-    selected = null;
-    sheetOpen = false;
+    menu = null;
+    drawer = null;
+    columnsOpen = false;
     draft = null;
     draftError = null;
     creating = null;

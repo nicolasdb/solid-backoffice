@@ -95,7 +95,7 @@ export function renderRules(draft: Draft, raw: RawEdit | null, env: RulesEnv, op
   const where = draft.own ? nameOf(draft.aclUrl) : `From ${nameOf(draft.from) || "My pod"}`;
   if (!raw || raw.url !== draft.url) {
     return `
-      <details class="technical" id="technical"${open ? " open" : ""}><summary>Show the technical rules</summary>
+      <details class="technical" id="technical"${open ? " open" : ""}><summary>Technical rules</summary>
         <p class="meta">${esc(where)}</p>
         <pre class="source"><code>${esc(draft.turtle)}</code></pre>
         ${

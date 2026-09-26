@@ -81,22 +81,28 @@ one changes, change the other. Never point it at the real provider.
   collective you belong to: sharing, leaving, its members and agent),
   `src/admin.ts` (the one you run); `src/steps.ts` holds the pieces they
   share. No role, progress or tab state is stored.
-- `src/places.ts` — Places (slice C): your pod as a file browser, mounted
+- `src/places.ts` — Pods (slice C, the tab once called Places): your pod
+  as a file explorer, built as an iceberg (list → `···` menu → access
+  drawer → technical rules; columns kept in localStorage), mounted
   into its own frame by `onboarding.ts` (`#/p/<path>`, `#/f`), with its
   own memory of listings, rules and files (ADR 007), forgotten at
   sign-out. `src/lib/files.ts` lists folders, reads files and finds which
   rules apply (`effectiveAccess`); `src/ui/markdown.ts` renders a pod's
   Markdown through DOMPurify, never raw. `src/access-panel.ts` is its
-  "Who can read it" panel (C2): a draft saved in one conditional write,
+  "Who can access it" panel (C2), the same for folders and files (Only me,
+  Inherit from parent, Anyone with the link, named people): a draft saved
+  in one conditional write,
   chips that fill in one WebID each. `src/editor.ts` edits text files
   (C3): Preview first, saves with `If-Match`, unsaved text in memory only.
   `src/lib/move.ts` (C4) moves, renames and deletes, contents and rules
   included: copy, check, then delete (order pinned in `move.test.ts`);
-  `src/item-actions.ts` is its part of the panel. `src/lib/following.ts`
+  `src/item-actions.ts` is its part of the `···` menu. `src/lib/following.ts`
   (C5) keeps what you follow in `settings/following.ttl`, so the list
   (`src/following-view.ts`) reads nothing from other pods.
   `src/raw-rules.ts` (C6) edits an item's own `.acl` by hand, desktop only:
   two taps, refused unless it parses and you keep Control.
+- `src/ui/address.ts` — addresses on screen without your provider's host
+  (`…/neil/profile/card#me`); full WebIDs to copy are D's.
 - `src/lib/read.ts` — display reads with an in-memory ETag cache
   (`If-None-Match`, 304 hands back the kept body); writes never use it.
   Forgotten at sign-out, with the last load.

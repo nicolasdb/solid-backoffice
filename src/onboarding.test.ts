@@ -343,10 +343,10 @@ describe("layout A — tabs", () => {
 
   it("gives a collective a tab only once you have asked to join it", async () => {
     let app = await render();
-    expect(tabLabels(app)).toEqual(["Home", "Places"]);
+    expect(tabLabels(app)).toEqual(["Home", "Pods"]);
     profile.memberOf = [COLLECTIVE.group];
     app = await render();
-    expect(tabLabels(app)).toEqual(["Home", "HyperScope", "Places"]);
+    expect(tabLabels(app)).toEqual(["Home", "HyperScope", "Pods"]);
   });
 
   it("keeps sharing and leaving on the collective's tab, joining on home", async () => {
@@ -406,7 +406,7 @@ describe("layout A — tabs", () => {
   it("opens the collective you run on its own tab, with its requests", async () => {
     runs = COLLECTIVE;
     const home = await render();
-    expect(tabLabels(home)).toEqual(["Home", "HyperScope", "Places"]);
+    expect(tabLabels(home)).toEqual(["Home", "HyperScope", "Pods"]);
     const own = await render(tab(COLLECTIVE));
     expect(own.textContent).toContain("You run");
     expect(own.textContent).toContain("Members");
@@ -502,7 +502,7 @@ describe("C1 — Places inside the shell", () => {
     listed = true;
     const app = await render("#/p/");
     expect(places).toEqual(["mount  HyperScope's agent"]);
-    expect(app.querySelector('.tab[aria-current="page"]')!.textContent).toContain("Places");
+    expect(app.querySelector('.tab[aria-current="page"]')!.textContent).toContain("Pods");
   });
 
   it("moves between folders without reading the collectives again", async () => {
