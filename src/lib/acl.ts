@@ -443,6 +443,65 @@ export async function removeOwnRules(resourceUrl: string, basedOn: string | null
   }
 }
 
+/* ── The technical rules, edited by hand (C6) ──────────────────────────── */
+
+/** What the raw editor checks before Save is allowed. */
+export interface RawCheck {
+  /** Why the text is not Turtle; null when it parses. */
+  parseError: string | null;
+  /** The owner is named with Control over the resource (and `acl:default` on a folder). */
+  ownerKeepsControl: boolean;
+  /** The rules as the simple panel reads them; null when the text does not parse. */
+  rules: AccessRules | null;
+}
+
+export function checkRawAcl(turtle: string, resourceUrl: string, aclUrl: string, ownerWebId: string): RawCheck {
+  let quads: Quad[];
+  try {
+    quads = new Parser({ baseIRI: aclUrl }).parse(turtle);
+  } catch (err) {
+    return { parseError: (err as Error).message, ownerKeepsControl: false, rules: null };
+  }
+  const isContainer = resourceUrl.endsWith("/");
+  const has = (s: string, p: string, o: string) => quads.some((q) => q.subject.value === s && q.predicate.value === ACL + p && q.object.value === o);
+  const subjects = new Set(
+    quads.filter((q) => q.predicate.value === RDF_TYPE && q.object.value === ACL + "Authorization").map((q) => q.subject.value)
+  );
+  const ownerKeepsControl = [...subjects].some(
+    (s) =>
+      has(s, "agent", ownerWebId) &&
+      has(s, "mode", ACL + "Control") &&
+      has(s, "accessTo", resourceUrl) &&
+      (!isContainer || has(s, "default", resourceUrl))
+  );
+  return { parseError: null, ownerKeepsControl, rules: parseAcl(turtle, aclUrl, resourceUrl, ownerWebId) };
+}
+
+/**
+ * Saves a hand-edited `.acl`. Refused unless it parses, the owner keeps
+ * Control, and nobody changed the rules since they were read (`basedOn`:
+ * the ETag read, null when the resource had no rules of its own).
+ */
+export async function saveRawAcl(resourceUrl: string, ownerWebId: string, turtle: string, basedOn: string | null): Promise<void> {
+  const aclUrl = await aclLocation(resourceUrl, true);
+  const check = checkRawAcl(turtle, resourceUrl, aclUrl, ownerWebId);
+  if (check.parseError) throw new Error(`These rules are not valid Turtle: ${check.parseError} Nothing was saved.`);
+  if (!check.ownerKeepsControl) {
+    throw new Error("These rules would take Control away from you: you could lock yourself out. Nothing was saved.");
+  }
+  const res = await authFetch(aclUrl, {
+    method: "PUT",
+    headers: { "Content-Type": "text/turtle", ...(basedOn ? { "If-Match": basedOn } : { "If-None-Match": "*" }) },
+    body: turtle,
+  });
+  if (res.status === 412) throw changedMeanwhile(resourceUrl);
+  if (!res.ok) {
+    const err = new Error(`Could not write ${aclUrl} (${res.status}).`) as ConditionalError;
+    err.status = res.status;
+    throw err;
+  }
+}
+
 /** Read → refuse-if-unknown → transform → conditional write, one retry on 412. */
 async function updateAccess(
   resourceUrl: string,

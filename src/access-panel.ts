@@ -131,7 +131,7 @@ function shortWebId(webId: string): string {
   }
 }
 
-function labelOf(webId: string, env: AccessEnv): string {
+export function labelOf(webId: string, env: AccessEnv): string {
   if (env.names.has(webId)) return env.names.get(webId)!;
   for (const g of env.groups ?? []) {
     const found = [...g.members, ...g.left].find((m) => m.webId === webId && m.label !== webId);
@@ -246,13 +246,7 @@ export function renderAccess(draft: Draft | null, env: AccessEnv, loadError: str
            </div>`
         : ""
     }
-    ${
-      draft.turtle !== null
-        ? `<details class="technical" id="technical"><summary>Show the technical rules</summary>
-             <p class="meta">${esc(draft.own ? nameOf(draft.aclUrl) : `From ${fromName}`)}</p>
-             <pre class="source"><code>${esc(draft.turtle)}</code></pre></details>`
-        : ""
-    }`;
+`;
 }
 
 export interface AccessHooks {

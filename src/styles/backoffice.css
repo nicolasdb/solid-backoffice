@@ -1090,3 +1090,31 @@ table.items .row-actions { text-align: right; }
   background: var(--surface-elevated);
   color: var(--text-primary);
 }
+
+/* The technical rules, edited by hand (C6): desktop only. */
+.technical.is-editing { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border: var(--border-width) solid var(--warn-line); border-radius: var(--radius-lg); }
+.technical textarea {
+  min-height: 18rem;
+  width: 100%;
+  resize: vertical;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-recessed);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  line-height: 1.6;
+}
+.technical .panel-block p { margin: 0; }
+.checks-list { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-small); }
+.check-line { color: var(--text-secondary); }
+.check-line > span[aria-hidden] { color: var(--accent); }
+.check-line.is-warn, .check-line.is-warn > span[aria-hidden] { color: var(--warn); }
+/* The second tap: outlined in the warning colour, so it reads as a decision. */
+button.warn { background: transparent; color: var(--warn); border-color: var(--warn); font-weight: 600; }
+
+@media (max-width: 40rem) {
+  .desktop-only { display: none; }
+  .technical.is-editing { display: none; }
+}

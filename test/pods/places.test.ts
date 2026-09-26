@@ -245,3 +245,36 @@ describe("following (C5)", () => {
     expect(await readFollowing(amina.pod)).toEqual([]);
   });
 });
+
+/** Slice C6: the technical rules edited by hand, for what the panel has no word for. */
+describe("the technical rules, edited by hand (C6)", () => {
+  it("gives Neil Read + Append on a folder: he can add to it, not change it", async () => {
+    const { createFolder } = await import("../../src/lib/files");
+    const { setAccess, getAccess, saveRawAcl } = aclLib;
+    const drop = await createFolder(amina.pod, "drop");
+    await setAccess(drop, amina.webId, { agents: [], public: [], authenticated: [] }, null);
+    const own = await getAccess(drop, amina.webId);
+    const text = (await (await current.fetch(own.aclUrl)).text()) +
+      `\n<#neil> a <http://www.w3.org/ns/auth/acl#Authorization>;
+        <http://www.w3.org/ns/auth/acl#agent> <${cast.neil.webId}>;
+        <http://www.w3.org/ns/auth/acl#accessTo> <./>; <http://www.w3.org/ns/auth/acl#default> <./>;
+        <http://www.w3.org/ns/auth/acl#mode> <http://www.w3.org/ns/auth/acl#Read>, <http://www.w3.org/ns/auth/acl#Append>.`;
+    await saveRawAcl(drop, amina.webId, text, own.etag);
+    expect((await getAccess(drop, amina.webId)).agents).toEqual([{ webId: cast.neil.webId, modes: ["read", "append"] }]);
+
+    await actAs("neil");
+    const posted = await current.fetch(drop, { method: "POST", headers: { "Content-Type": "text/plain" }, body: "from Neil" });
+    expect(posted.status).toBe(201);
+    expect((await current.fetch(drop, { method: "DELETE" })).status).toBe(403);
+    await actAs("amina");
+  });
+
+  it("refuses rules that would lock Amina out, and writes nothing", async () => {
+    const { getAccess, saveRawAcl } = aclLib;
+    const drop = amina.pod + "drop/";
+    const own = await getAccess(drop, amina.webId);
+    const text = await (await current.fetch(own.aclUrl)).text();
+    await expect(saveRawAcl(drop, amina.webId, text.replace(", acl:Control", ""), own.etag)).rejects.toThrow(/lock yourself out/);
+    expect((await getAccess(drop, amina.webId)).etag).toBe(own.etag);
+  });
+});

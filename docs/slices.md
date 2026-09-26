@@ -205,10 +205,15 @@ the end ([manual tests](manual-tests.md), "C · Places").
   the last one is an hour old; unfollow can be undone. Differs from the
   board on purpose: a followed folder's rows show type and size, not each
   file's first line (one read per file on their pod).
-- **C6 · Technical rules, advanced mode.** The raw `.acl` editable behind
+- **C6 · Technical rules, advanced mode** · built, live test pending. The raw `.acl` editable behind
   "Show the technical rules"; Save takes two taps and is refused unless the
   Turtle parses, the owner keeps Control, and nobody changed it meanwhile.
-  Desktop only.
+  Desktop only. As built (`src/raw-rules.ts`, `checkRawAcl` and
+  `saveRawAcl` in `acl.ts`): only rules of the item's own are editable;
+  "What changes" says it in the panel's words; the armed Save waits 8
+  seconds for its second tap, and any typing disarms it. The second tap is
+  outlined in the warning colour (the existing `--warn` tokens), not a new
+  colour.
 
 Each slice: its `src/lib` against `test/pods` (the cast gets folders and
 files), its screen against mocks, a section in `manual-tests.md`.

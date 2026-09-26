@@ -491,3 +491,20 @@ the provider, a real browser, a phone, both themes.
    from the message: it is back.
 6. In a private window as someone else, `settings/following.ttl` answers
    403 (or 401 signed out).
+
+### C6 · Technical rules, advanced mode
+
+1. On a desktop, select a folder with rules of its own, open "Show the
+   technical rules", **Edit these rules**. Change a person's modes to
+   `acl:Read, acl:Append`: "What changes" says "<name>: can read becomes
+   read and add" (or "can edit becomes …").
+2. Tap Save once: nothing is written; the button reads "Save anyway: I
+   checked these rules". Wait ten seconds: it goes back to Save. Tap twice:
+   saved; the simple panel shows that person as Custom.
+3. Remove `acl:Control` from your own line, or break the Turtle: Save stays
+   disabled and the check says why.
+4. Edit in two windows and save in both: the second is refused ("changed
+   after this screen read them").
+5. On a phone (≤ 40rem): the rules show, read only, with no Edit.
+6. An item that follows its folder: no Edit, and the panel says to give it
+   rules of its own first.

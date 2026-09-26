@@ -15,6 +15,8 @@ const {
   setPublicAccess,
   removeOwnRules,
   presetOf,
+  checkRawAcl,
+  saveRawAcl,
 } = await import("./acl");
 
 const OWNER = "https://pod.example/alice/profile/card#me";
@@ -294,5 +296,46 @@ describe("the permissions panel's writes (C2)", () => {
     mockFetch.mockReset();
     mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(412));
     await expect(removeOwnRules(FOLDER, '"old"')).rejects.toMatchObject({ code: "conflict" });
+  });
+});
+
+describe("the technical rules, edited by hand (C6)", () => {
+  beforeEach(() => mockFetch.mockReset());
+  const own = serializeAcl(FOLDER, FOLDER_ACL, OWNER, { agents: [{ webId: AGENT, modes: ["read", "append"] }], public: [], authenticated: [] });
+
+  it("accepts rules that parse and keep the owner's Control", () => {
+    const check = checkRawAcl(own, FOLDER, FOLDER_ACL, OWNER);
+    expect(check).toMatchObject({ parseError: null, ownerKeepsControl: true });
+    expect(check.rules!.agents).toEqual([{ webId: AGENT, modes: ["read", "append"] }]);
+  });
+
+  it("says why text is not Turtle", () => {
+    expect(checkRawAcl("<#a> a acl:Authorization", FOLDER, FOLDER_ACL, OWNER).parseError).toBeTruthy();
+  });
+
+  it("notices the owner losing Control, or losing it over what is inside a folder", () => {
+    expect(checkRawAcl(own.replace("acl:Read, acl:Write, acl:Control", "acl:Read, acl:Write"), FOLDER, FOLDER_ACL, OWNER).ownerKeepsControl).toBe(false);
+    const noDefault = own.replace(/<#owner>[\s\S]*?acl:mode[^.]*\./, `<#owner> a acl:Authorization; acl:agent <${OWNER}>; acl:accessTo <./>; acl:mode acl:Read, acl:Write, acl:Control.`);
+    expect(checkRawAcl(noDefault, FOLDER, FOLDER_ACL, OWNER).ownerKeepsControl).toBe(false);
+    // A file has no acl:default.
+    const file = serializeAcl(FILE, FILE_ACL, OWNER, { agents: [], public: [], authenticated: [] });
+    expect(checkRawAcl(file, FILE, FILE_ACL, OWNER).ownerKeepsControl).toBe(true);
+  });
+
+  it("saves with If-Match, and nothing that fails a check or changed meanwhile", async () => {
+    const head = () => response(200, "", { link: '<.acl>; rel="acl"' });
+    mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(205));
+    await saveRawAcl(FOLDER, OWNER, own, '"v1"');
+    expect(mockFetch.mock.calls[1][1]).toMatchObject({ method: "PUT", body: own, headers: { "If-Match": '"v1"' } });
+
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValue(head());
+    await expect(saveRawAcl(FOLDER, OWNER, "not turtle <", '"v1"')).rejects.toThrow(/not valid Turtle/);
+    await expect(saveRawAcl(FOLDER, OWNER, own.replace(", acl:Control", ""), '"v1"')).rejects.toThrow(/lock yourself out/);
+    expect(mockFetch.mock.calls.every(([, init]) => init.method === "HEAD")).toBe(true);
+
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(412));
+    await expect(saveRawAcl(FOLDER, OWNER, own, '"old"')).rejects.toMatchObject({ code: "conflict" });
   });
 });

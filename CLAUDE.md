@@ -95,6 +95,8 @@ one changes, change the other. Never point it at the real provider.
   `src/item-actions.ts` is its part of the panel. `src/lib/following.ts`
   (C5) keeps what you follow in `settings/following.ttl`, so the list
   (`src/following-view.ts`) reads nothing from other pods.
+  `src/raw-rules.ts` (C6) edits an item's own `.acl` by hand, desktop only:
+  two taps, refused unless it parses and you keep Control.
 - `src/lib/read.ts` — display reads with an in-memory ETag cache
   (`If-None-Match`, 304 hands back the kept body); writes never use it.
   Forgotten at sign-out, with the last load.

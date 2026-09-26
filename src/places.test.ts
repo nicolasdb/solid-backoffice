@@ -636,3 +636,72 @@ ${entries}`;
     await until(() => app.querySelector("#favourite")?.getAttribute("aria-pressed") === "true");
   });
 });
+
+describe("C6 — the technical rules, edited by hand", () => {
+  const ACL = POD + "projects/drafts/.acl";
+
+  async function editRaw(): Promise<HTMLTextAreaElement> {
+    await panelFor("projects/drafts/");
+    app.querySelector<HTMLButtonElement>("#raw-edit")!.click();
+    return app.querySelector<HTMLTextAreaElement>("#raw-acl")!;
+  }
+
+  async function typeRaw(text: string): Promise<void> {
+    const area = app.querySelector<HTMLTextAreaElement>("#raw-acl")!;
+    area.value = text;
+    area.dispatchEvent(new Event("input"));
+    await new Promise((r) => setTimeout(r, 350)); // the checks follow typing after a pause
+  }
+
+  it("says what changes in the panel's words, and writes only on the second tap", async () => {
+    const area = await editRaw();
+    const next = area.value.replace(/(acl:agent <https:\/\/pod\.example\/hs\/agent#me>;[\s\S]*?acl:mode) acl:Read\./, "$1 acl:Read, acl:Append.");
+    expect(next).not.toBe(area.value);
+    await typeRaw(next);
+    expect(app.querySelector(".technical")!.textContent).toContain("HyperScope's agent: can read becomes read and add.");
+
+    app.querySelector<HTMLButtonElement>("#raw-save")!.click();
+    expect(writes).toHaveLength(0);
+    expect(app.querySelector("#raw-save")!.textContent).toBe("Save anyway: I checked these rules");
+    app.querySelector<HTMLButtonElement>("#raw-save")!.click();
+    await until(() => writes.length);
+    expect(writes[0]).toMatchObject({ method: "PUT", url: ACL, ifMatch: '"dacl"', body: next });
+  });
+
+  it("typing again after the first tap asks for two taps again", async () => {
+    const area = await editRaw();
+    await typeRaw(area.value + "\n");
+    app.querySelector<HTMLButtonElement>("#raw-save")!.click();
+    await typeRaw(area.value + "\n\n");
+    expect(app.querySelector("#raw-save")!.textContent).toBe("Save");
+  });
+
+  it("will not save rules that are not Turtle, or that take your Control away", async () => {
+    const area = await editRaw();
+    const original = area.value;
+    await typeRaw(original + "\n<#broken> a");
+    expect(app.querySelector<HTMLButtonElement>("#raw-save")!.disabled).toBe(true);
+    expect(app.querySelector(".checks-list")!.textContent).toMatch(/Not valid Turtle/);
+
+    await typeRaw(original.replace("acl:Read, acl:Write, acl:Control", "acl:Read, acl:Write"));
+    expect(app.querySelector<HTMLButtonElement>("#raw-save")!.disabled).toBe(true);
+    expect(app.querySelector(".checks-list")!.textContent).toMatch(/You would lose Control/);
+  });
+
+  it("writes nothing when the rules changed after they were opened", async () => {
+    const area = await editRaw();
+    await typeRaw(area.value + "\n");
+    pod[ACL].etag = '"someone-else"';
+    app.querySelector<HTMLButtonElement>("#raw-save")!.click();
+    app.querySelector<HTMLButtonElement>("#raw-save")!.click();
+    await until(() => app.querySelector(".technical .error"));
+    expect(app.querySelector(".technical .error")!.textContent).toMatch(/changed after this screen read them/);
+    expect(pod[ACL].etag).toBe('"someone-else"');
+  });
+
+  it("offers no hand editing for rules an item only follows", async () => {
+    await panelFor("projects/", "projects/readme.md");
+    expect(app.querySelector("#raw-edit")).toBeNull();
+    expect(app.querySelector("#technical")!.textContent).toMatch(/give it rules of its own first/);
+  });
+});

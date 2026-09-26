@@ -50,7 +50,8 @@ import { routeHref, type Route } from "./router";
 import { renderMarkdown } from "./ui/markdown";
 import { busy } from "./ui/typing";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
-import { bindAccess, loadDraft, renderAccess, type Draft, type Group } from "./access-panel";
+import { bindAccess, labelOf, loadDraft, renderAccess, type Draft, type Group } from "./access-panel";
+import { bindRules, rawDirty, renderRules, startRaw, type RawEdit } from "./raw-rules";
 
 export type { Group };
 import { focusView } from "./ui/a11y";
@@ -100,6 +101,9 @@ let sortBy: SortBy = "latest";
 let followForm: FollowForm | null = null;
 /** Followed addresses as last opened: a folder's summary, or a file. */
 const opened = new Map<string, { summary?: Summary; file?: FileContent }>();
+/** The technical rules: shown for this item, and edited by hand (C6). */
+let technicalOpen: string | null = null;
+let raw: RawEdit | null = null;
 /** Rename, move or delete in progress in the panel (C4). */
 const changes: { change: Change | null } = { change: null };
 /** The item whose permissions are being read, so a redraw does not read them twice. */
@@ -126,6 +130,8 @@ export function forgetPlaces(): void {
   editWhenRead = null;
   creating = null;
   changes.change = null;
+  technicalOpen = null;
+  raw = null;
   following = null;
   followingError = null;
   followForm = null;
@@ -376,6 +382,7 @@ function renderPanel(url: string, folderUrl: string): string {
       ${facts.length ? `<p class="meta">${esc(facts.join(" · "))}</p>` : ""}
       ${r && r !== "error" && !access?.dirty ? `<p>${esc(r.who)}</p>` : ""}
       ${renderAccess(access, accessEnv(), access || draftError?.url !== url ? null : draftError.message)}
+      ${access ? renderRules(access, raw, rulesEnv(), technicalOpen === url) : ""}
       ${renderActions(url, changes.change, changeEnv())}
       <div class="actions">
         ${isFolder ? (url !== folderUrl ? `<a class="button-link" href="${hrefOf(url)}">Open</a>` : "") : `<a class="button-link" href="${hrefOf(url)}">Open</a><button class="ghost small" type="button" id="download" data-url="${esc(url)}">Download</button>`}
@@ -487,6 +494,11 @@ function forgetUnder(prefix: string): void {
   if (editing?.url.startsWith(prefix)) editing = null;
 }
 
+function rulesEnv() {
+  const env = accessEnv();
+  return { owner: ctx!.webId, label: (webId: string) => labelOf(webId, env) };
+}
+
 function accessEnv() {
   return { webId: ctx!.webId, podUrl: ctx!.podUrl, names: ctx!.names, groups };
 }
@@ -515,7 +527,17 @@ function draw(focus: boolean): void {
 
 /** Someone is typing, or has a change to the permissions not saved yet. */
 function inUse(): boolean {
-  return !frame || busy(frame) || Boolean(draft?.dirty) || isDirty(editing) || Boolean(creating) || Boolean(changes.change) || Boolean(followForm);
+  return (
+    !frame ||
+    busy(frame) ||
+    Boolean(draft?.dirty) ||
+    isDirty(editing) ||
+    Boolean(creating) ||
+    Boolean(changes.change) ||
+    Boolean(followForm) ||
+    rawDirty(raw) ||
+    Boolean(raw?.armed)
+  );
 }
 
 /** Redraws after a read, unless someone is typing; keeps focus where it was. */
@@ -639,6 +661,7 @@ function bind(): void {
       sheetOpen = true;
       if (draft?.url !== selected) draft = null;
       if (changes.change?.url !== selected) changes.change = null;
+      if (raw?.url !== selected) raw = null;
       draw(false);
       frame?.querySelector<HTMLElement>(".places-panel h2")?.setAttribute("tabindex", "-1");
       frame?.querySelector<HTMLElement>(".places-panel h2")?.focus();
@@ -667,6 +690,32 @@ function bind(): void {
       });
     } else if (draftError?.url !== panel) {
       void startDraft(panel, generation);
+    }
+    if (draft?.url === panel) {
+      const open = draft;
+      bindRules(aside, open, raw, ctx!.webId, {
+        changed: () => drawKeepingFocus(),
+        saved: (message) => {
+          raw = null;
+          draft = null;
+          toast(message);
+          void showPlaces(route, false);
+        },
+        toggled: (isOpen) => {
+          technicalOpen = isOpen ? panel : null;
+        },
+        edit: () => {
+          raw = startRaw(open);
+          technicalOpen = panel;
+          draw(false);
+          frame?.querySelector<HTMLTextAreaElement>("#raw-acl")?.focus();
+        },
+        cancel: () => {
+          raw = null;
+          draw(false);
+          frame?.querySelector<HTMLElement>("#raw-edit")?.focus();
+        },
+      });
     }
     bindActions(aside, panel, changes, changeEnv(), {
       changed: () => drawKeepingFocus(),
@@ -872,6 +921,8 @@ export async function showPlaces(next: Route, focus = true): Promise<void> {
     creating = null;
     changes.change = null;
     followForm = null;
+    raw = null;
+    technicalOpen = null;
   }
   const mine = ++generation;
   draw(focus);
