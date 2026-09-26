@@ -86,7 +86,9 @@ one changes, change the other. Never point it at the real provider.
   own memory of listings, rules and files (ADR 007), forgotten at
   sign-out. `src/lib/files.ts` lists folders, reads files and finds which
   rules apply (`effectiveAccess`); `src/ui/markdown.ts` renders a pod's
-  Markdown through DOMPurify, never raw.
+  Markdown through DOMPurify, never raw. `src/access-panel.ts` is its
+  "Who can read it" panel (C2): a draft saved in one conditional write,
+  chips that fill in one WebID each.
 - `src/lib/read.ts` — display reads with an in-memory ETag cache
   (`If-None-Match`, 304 hands back the kept body); writes never use it.
   Forgotten at sign-out, with the last load.

@@ -11,6 +11,10 @@ const {
   serializeAcl,
   getAccess,
   setAgentAccess,
+  setAccess,
+  setPublicAccess,
+  removeOwnRules,
+  presetOf,
 } = await import("./acl");
 
 const OWNER = "https://pod.example/alice/profile/card#me";
@@ -228,5 +232,67 @@ describe("getAccess / setAgentAccess against a stubbed server", () => {
       .mockResolvedValueOnce(response(205));
     await setAgentAccess(FOLDER, OWNER, AGENT, ["read"]);
     expect(mockFetch.mock.calls[5][1].headers["If-Match"]).toBe('"v2"');
+  });
+});
+
+describe("the permissions panel's writes (C2)", () => {
+  beforeEach(() => mockFetch.mockReset());
+  const head = (extra = "") => response(200, "", { link: `<.acl>; rel="acl"${extra}` });
+  const v1 = serializeAcl(FOLDER, FOLDER_ACL, OWNER, { agents: [{ webId: AGENT, modes: ["read"] }], public: [], authenticated: [] });
+
+  it("names presets, and anything else is Custom", () => {
+    expect(presetOf(["read"])).toBe("read");
+    expect(presetOf(["write", "read", "append"])).toBe("edit");
+    expect(presetOf(["read", "append"])).toBeNull();
+    expect(presetOf(["read", "write", "append", "control"])).toBeNull();
+  });
+
+  it("writes the whole state the panel shows, conditional on the ETag it read", async () => {
+    mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(200, v1, { etag: '"v1"' })).mockResolvedValueOnce(response(205));
+    await setAccess(FOLDER, OWNER, { agents: [{ webId: AGENT, modes: ["write", "read", "append"] }], public: ["read"], authenticated: [] }, '"v1"');
+    const init = mockFetch.mock.calls[2][1];
+    expect(init.headers["If-Match"]).toBe('"v1"');
+    expect(init.body).toContain("acl:mode acl:Read, acl:Append, acl:Write.");
+    expect(init.body).toContain("acl:agentClass foaf:Agent");
+    expect(init.body).not.toMatch(new RegExp(`<${AGENT}>[^.]*acl:Control`));
+  });
+
+  it("writes nothing when the rules changed after the screen read them", async () => {
+    mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(200, v1, { etag: '"v2"' }));
+    await expect(setAccess(FOLDER, OWNER, { agents: [], public: [], authenticated: [] }, '"v1"')).rejects.toMatchObject({ code: "conflict" });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives an inherited item rules of its own only if nobody did meanwhile", async () => {
+    mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(404)).mockResolvedValueOnce(response(201));
+    await setAccess(FOLDER, OWNER, { agents: [], public: ["read"], authenticated: [] }, null);
+    expect(mockFetch.mock.calls[2][1].headers["If-None-Match"]).toBe("*");
+
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(200, v1, { etag: '"v1"' }));
+    await expect(setAccess(FOLDER, OWNER, { agents: [], public: [], authenticated: [] }, null)).rejects.toMatchObject({ code: "conflict" });
+  });
+
+  it("sets public Read and keeps the named grants", async () => {
+    mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(200, v1, { etag: '"v1"' })).mockResolvedValueOnce(response(205));
+    await setPublicAccess(FOLDER, OWNER, ["read"]);
+    const body = mockFetch.mock.calls[2][1].body;
+    expect(body).toContain("acl:agentClass foaf:Agent");
+    expect(body).toContain(AGENT);
+  });
+
+  it("restores from parent with If-Match, never on a pod root", async () => {
+    mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(205));
+    await removeOwnRules(FOLDER, '"v1"');
+    expect(mockFetch.mock.calls[1]).toEqual([FOLDER_ACL, { method: "DELETE", headers: { "If-Match": '"v1"' } }]);
+
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValueOnce(head(', <http://www.w3.org/ns/pim/space#Storage>; rel="type"'));
+    await expect(removeOwnRules("https://pod.example/alice/", '"r"')).rejects.toThrow(/root/);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValueOnce(head()).mockResolvedValueOnce(response(412));
+    await expect(removeOwnRules(FOLDER, '"old"')).rejects.toMatchObject({ code: "conflict" });
   });
 });

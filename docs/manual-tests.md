@@ -415,3 +415,27 @@ the provider, a real browser, a phone, both themes.
    come from. On a phone (≤ 40rem): the place picker replaces the side
    list, rows are blocks, and the panel opens as a sheet with Close.
 6. Both themes: nothing unreadable in the table, the panel or a preview.
+
+### C2 · Who can read it
+
+1. Select a folder with rules of its own (`···`). The panel shows Only me /
+   Anyone with the link / Named people as they are on the pod; Save and
+   Cancel stay disabled until you change something.
+2. Add a person by WebID, set them to **Can read**, Save. In a private
+   window signed in as that person, the item opens; before, it did not.
+   Switch them to **Can edit**, Save: the technical rules show Read,
+   Append, Write, and never Control for them.
+3. A chip "Fill in from <collective>'s members" adds one person; the
+   technical rules name their WebID, never the collective.
+4. As the collective, remove a member (B), then open an item they were
+   granted on your pod: "Left <collective>. Still has access until
+   removed."
+5. Pick a file that follows its folder: the panel says so. Choose Anyone
+   with the link, Save: it now has rules of its own, and opens in a
+   private window without signing in. **Restore from parent**, confirm: it
+   follows the folder again and the private window gets 401.
+6. Open the panel in two windows, save in one, then save in the other:
+   nothing is written, a message says the rules changed, and the panel
+   shows them as they are now.
+7. The pod root has no Restore from parent. "Show the technical rules"
+   opens the raw `.acl`, read only.

@@ -6,7 +6,8 @@ vi.mock("../../src/lib/auth", () => ({
 }));
 
 const { listFolder, effectiveAccess, readFile } = await import("../../src/lib/files");
-const { readAccess, forgetAclLocations } = await import("../../src/lib/acl");
+const aclLib = await import("../../src/lib/acl");
+const { readAccess, forgetAclLocations } = aclLib;
 const { forgetReads } = await import("../../src/lib/read");
 
 const cast = inject("cast");
@@ -73,5 +74,56 @@ describe("browsing your pod (C1)", () => {
     await actAs("hsagent");
     expect((await readFile(projects + "drafts/idea.md")).text).toContain("# Idea");
     await expect(readFile(projects + "readme.md")).rejects.toMatchObject({ status: 403 });
+  });
+});
+
+/** Slice C2: the permissions panel's writes, as Amina, checked by who can read. */
+describe("who can read it (C2)", () => {
+  const { setAccess, setPublicAccess, removeOwnRules, getAccess } = aclLib;
+  const notes = projects + "notes.txt";
+  const neilStatus = async (url: string) => {
+    await actAs("neil");
+    const status = (await current.fetch(url)).status;
+    await actAs("amina");
+    return status;
+  };
+
+  it("gives an inherited file rules of its own for one person, then restores them from the folder", async () => {
+    expect(await neilStatus(notes)).toBe(403);
+    await setAccess(notes, amina.webId, { agents: [{ webId: cast.neil.webId, modes: ["read"] }], public: [], authenticated: [] }, null);
+    expect(await neilStatus(notes)).toBe(200);
+    expect(await neilStatus(projects + "readme.md")).toBe(403);
+
+    const own = await getAccess(notes, amina.webId);
+    await removeOwnRules(notes, own.etag);
+    expect((await getAccess(notes, amina.webId)).inherited).toBe(true);
+    expect(await neilStatus(notes)).toBe(403);
+  });
+
+  it("makes a file readable by anyone with the link, signed in or not", async () => {
+    const data = projects + "data.json";
+    expect((await fetch(data)).status).toBe(401);
+    await setPublicAccess(data, amina.webId, ["read"]);
+    expect((await fetch(data)).status).toBe(200);
+    await setPublicAccess(data, amina.webId, []);
+    expect((await fetch(data)).status).toBe(401);
+  });
+
+  it("writes nothing over rules that changed after they were read", async () => {
+    const drafts = projects + "drafts/";
+    const before = await getAccess(drafts, amina.webId);
+    await setAccess(drafts, amina.webId, { agents: before.agents, public: [], authenticated: ["append"] }, before.etag);
+    await expect(
+      setAccess(drafts, amina.webId, { agents: [], public: [], authenticated: [] }, before.etag)
+    ).rejects.toMatchObject({ code: "conflict" });
+    const after = await getAccess(drafts, amina.webId);
+    expect(after.agents).toEqual(before.agents);
+    await setAccess(drafts, amina.webId, { agents: before.agents, public: [], authenticated: [] }, after.etag);
+  });
+
+  it("never removes a pod root's rules", async () => {
+    const root = await getAccess(amina.pod, amina.webId);
+    await expect(removeOwnRules(amina.pod, root.etag)).rejects.toThrow(/root/);
+    expect((await getAccess(amina.pod, amina.webId)).inherited).toBe(false);
   });
 });

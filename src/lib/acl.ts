@@ -27,6 +27,7 @@ import { Parser, type Quad } from "n3";
 import { authFetch } from "./auth";
 import { readWithEtag, writeIfMatch, type ConditionalError } from "./conditional";
 import { readTurtle } from "./read";
+import { advertisesStorageType } from "./pod";
 
 const ACL = "http://www.w3.org/ns/auth/acl#";
 const RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
@@ -348,6 +349,98 @@ export async function setAuthenticatedAccess(
   modes: Mode[]
 ): Promise<void> {
   await updateAccess(resourceUrl, ownerWebId, (rules) => ({ ...rules, authenticated: sortModes(modes) }));
+}
+
+/** "Can read" and "Can edit" (slice C2). Control is never granted from the screen. */
+export const PRESETS = {
+  read: ["read"] as Mode[],
+  edit: ["read", "append", "write"] as Mode[],
+};
+
+/** The preset a set of modes matches, or null: shown as "Custom", changed only in the technical rules. */
+export function presetOf(modes: Mode[]): keyof typeof PRESETS | null {
+  const key = sortModes(modes).join(",");
+  if (key === PRESETS.read.join(",")) return "read";
+  if (key === PRESETS.edit.join(",")) return "edit";
+  return null;
+}
+
+/** Someone changed the rules after the screen read them: nothing is written. */
+function changedMeanwhile(url: string): ConditionalError {
+  const err = new Error(
+    `The access rules of ${url} changed after this screen read them. Nothing was saved; they are shown again as they are now.`
+  ) as ConditionalError;
+  err.code = "conflict";
+  err.status = 412;
+  return err;
+}
+
+/**
+ * Writes the whole intended state of a resource's rules (the permissions
+ * panel's Save), only if they are still what the screen showed: `basedOn` is
+ * the ETag it read, `null` when the resource had no rules of its own. An
+ * item without its own `.acl` gets one, which replaces inheritance.
+ */
+export async function setAccess(
+  resourceUrl: string,
+  ownerWebId: string,
+  next: Pick<AccessRules, "agents" | "public" | "authenticated">,
+  basedOn: string | null
+): Promise<void> {
+  for (const a of next.agents) if (!isValidWebId(a.webId)) throw new Error(`Not a valid WebID: ${a.webId}`);
+  const current = await getAccess(resourceUrl, ownerWebId);
+  if ((current.inherited ? null : current.etag) !== basedOn) throw changedMeanwhile(resourceUrl);
+  if (current.unknown.length > 0) {
+    throw new Error(
+      "These access rules include something this app does not understand yet. " +
+        "Editing them here would silently delete it, so nothing was changed."
+    );
+  }
+  const body = serializeAcl(resourceUrl, current.aclUrl, ownerWebId, {
+    agents: next.agents.map((a) => ({ webId: a.webId, modes: sortModes(a.modes) })),
+    public: sortModes(next.public),
+    authenticated: sortModes(next.authenticated),
+  });
+  try {
+    if (current.inherited) await createOnly(current.aclUrl, body);
+    else await writeIfMatch(current.aclUrl, body, current.etag);
+  } catch (err) {
+    if ((err as ConditionalError).status === 412) throw changedMeanwhile(resourceUrl);
+    throw err;
+  }
+}
+
+/** Sets the modes for anyone, signed in or not (`foaf:Agent`): "Anyone with the link". */
+export async function setPublicAccess(resourceUrl: string, ownerWebId: string, modes: Mode[]): Promise<void> {
+  await updateAccess(resourceUrl, ownerWebId, (rules) => ({ ...rules, public: sortModes(modes) }));
+}
+
+/**
+ * Restore from parent: removes the resource's own `.acl`, so the rules of the
+ * folder above apply again. Refused on a pod root (it has no parent, and
+ * without its `.acl` nobody could reach the pod), and when the rules changed
+ * since the screen read them.
+ */
+export async function removeOwnRules(resourceUrl: string, basedOn: string | null): Promise<void> {
+  const head = await authFetch(resourceUrl, { method: "HEAD" });
+  if (!head.ok) {
+    const err = new Error(`Could not reach ${resourceUrl} (${head.status}).`) as ConditionalError;
+    err.status = head.status;
+    throw err;
+  }
+  if (advertisesStorageType(head.headers.get("link"))) {
+    throw new Error("A pod's root has no folder above it: its rules cannot be removed.");
+  }
+  const aclUrl = aclUrlFromLink(head.headers.get("link"), resourceUrl);
+  if (!aclUrl) throw new Error(`${resourceUrl} advertises no access-control document.`);
+  if (!basedOn) throw changedMeanwhile(resourceUrl);
+  const res = await authFetch(aclUrl, { method: "DELETE", headers: { "If-Match": basedOn } });
+  if (res.status === 412 || res.status === 404) throw changedMeanwhile(resourceUrl);
+  if (!res.ok) {
+    const err = new Error(`Could not remove ${aclUrl} (${res.status}).`) as ConditionalError;
+    err.status = res.status;
+    throw err;
+  }
 }
 
 /** Read → refuse-if-unknown → transform → conditional write, one retry on 412. */

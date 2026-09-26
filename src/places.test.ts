@@ -20,13 +20,32 @@ const release = () => {
   waiting.splice(0).forEach((go) => go());
 };
 const requests: string[] = [];
+/** What the chips offer: HyperScope, with a member who left. */
+const NEIL = "https://pod.example/neil/profile/card#me";
+const INES = "https://pod.example/ines/profile/card#me";
+const HS = { name: "HyperScope", agent: AGENT, members: [{ webId: INES, label: "Inès" }], left: [{ webId: NEIL, label: "neil" }] };
+let groups: { name: string; agent: string; members: { webId: string; label: string }[]; left: { webId: string; label: string }[] }[] = [];
+
+/** Writes the pod received, in order, with their conditions. */
+const writes: { method: string; url: string; ifMatch?: string; ifNoneMatch?: string; body?: string }[] = [];
+let version = 0;
 
 async function answer(url: string, init: RequestInit = {}): Promise<Response> {
   const method = init.method ?? "GET";
   requests.push(`${method} ${url}`);
   if (held?.(url)) await new Promise<void>((go) => waiting.push(go));
   const doc = pod[url];
-  const headers: Record<string, string> = { Link: `<${url}.acl>; rel="acl"` };
+  const sent = (init.headers ?? {}) as Record<string, string>;
+  if (method === "PUT" || method === "DELETE") {
+    writes.push({ method, url, ifMatch: sent["If-Match"], ifNoneMatch: sent["If-None-Match"], body: init.body as string | undefined });
+    const exists = doc && !doc.status;
+    if (sent["If-Match"] && (!exists || doc.etag !== sent["If-Match"])) return new Response(null, { status: 412 });
+    if (sent["If-None-Match"] === "*" && exists) return new Response(null, { status: 412 });
+    if (method === "DELETE") delete pod[url];
+    else pod[url] = { body: String(init.body ?? ""), type: sent["Content-Type"], etag: `"w${++version}"` };
+    return new Response(null, { status: method === "DELETE" ? 205 : 201 });
+  }
+  const headers: Record<string, string> = { Link: `<${url}.acl>; rel="acl"${url === POD ? ', <http://www.w3.org/ns/pim/space#Storage>; rel="type"' : ""}` };
   if (!doc || doc.status === 404) return new Response(null, { status: 404, headers });
   if (doc.status && doc.status >= 400) return new Response(null, { status: doc.status, headers });
   if (doc.etag) headers.ETag = doc.etag;
@@ -87,6 +106,8 @@ beforeEach(() => {
   held = null;
   waiting = [];
   requests.length = 0;
+  writes.length = 0;
+  groups = [];
   forgetPlaces();
   forgetReads();
   app = document.createElement("div");
@@ -95,9 +116,12 @@ beforeEach(() => {
   URL.revokeObjectURL = vi.fn();
 });
 
+/** The mount's first reading, to wait on. */
+let reading: Promise<void> = Promise.resolve();
+
 async function mount(path = ""): Promise<void> {
   window.history.replaceState(null, "", `/#/p/${path}`);
-  mountPlaces(app, { name: "places", path }, { webId: WEBID, podUrl: POD, names: new Map([[AGENT, "HyperScope's agent"]]) });
+  reading = mountPlaces(app, { name: "places", path }, { webId: WEBID, podUrl: POD, names: new Map([[AGENT, "HyperScope's agent"]]), loadGroups: async () => groups });
   await settle();
 }
 
@@ -120,13 +144,15 @@ describe("C1 — a folder of your pod", () => {
 
   it("walks up to the pod's rules once for the whole folder", async () => {
     await mount("projects/");
-    await showPlaces({ name: "places", path: "projects/" });
-    expect(requests.filter((r) => r === `GET ${POD}.acl`).length).toBeLessThanOrEqual(2);
+    await reading;
+    // The list's rows share one walk; the panel (the folder itself) makes its own.
+    expect(requests.filter((r) => r === `HEAD ${POD}`).length).toBe(1);
+    expect(requests.filter((r) => r === `GET ${POD}.acl`).length).toBeLessThanOrEqual(3);
   });
 
   it("draws a folder seen before at once, asks where each .acl lives only once, and revalidates", async () => {
     await mount("projects/");
-    await showPlaces({ name: "places", path: "projects/" });
+    await reading;
     await open("");
     requests.length = 0;
     held = () => true;
@@ -141,7 +167,7 @@ describe("C1 — a folder of your pod", () => {
 
   it("never redraws under someone using a field", async () => {
     await mount("projects/");
-    await showPlaces({ name: "places", path: "projects/" });
+    await reading;
     pod[POD + "projects/"] = { body: listing(["newer.md"]), etag: '"p3"' };
     held = (url) => url === POD + "projects/";
     const read = showPlaces({ name: "places", path: "projects/" }, false);
@@ -160,14 +186,14 @@ describe("C1 — a folder of your pod", () => {
   it("says a folder cannot be read, with a way to try again", async () => {
     pod[POD + "projects/"] = { status: 403 };
     await mount("projects/");
-    await showPlaces({ name: "places", path: "projects/" });
+    await reading;
     expect(app.querySelector('[role="alert"]')!.textContent).toMatch(/403/);
     expect(app.querySelector("#places-retry")).toBeTruthy();
   });
 
   it("shows an item in the panel, and the pod root never offers a way up", async () => {
     await mount("");
-    await showPlaces({ name: "places", path: "" });
+    await reading;
     expect(app.querySelector(".places-panel h2")!.textContent).toBe("My pod");
     app.querySelector<HTMLButtonElement>(`[data-select="${POD}projects/"]`)!.click();
     expect(app.querySelector(".places-panel h2")!.textContent).toBe("projects/");
@@ -179,7 +205,7 @@ describe("C1 — a folder of your pod", () => {
 describe("C1 — a file opens in Preview", () => {
   it("renders Markdown without what could run", async () => {
     await mount("projects/readme.md");
-    await showPlaces({ name: "places", path: "projects/readme.md" });
+    await reading;
     const preview = app.querySelector(".preview")!;
     expect(preview.querySelector("h1")!.textContent).toBe("Projects");
     expect(preview.innerHTML).not.toMatch(/<script|href="javascript:/);
@@ -187,7 +213,7 @@ describe("C1 — a file opens in Preview", () => {
 
   it("pretty-prints JSON, shows images, and offers the rest as a download", async () => {
     await mount("projects/data.json");
-    await showPlaces({ name: "places", path: "projects/data.json" });
+    await reading;
     expect(app.querySelector("pre.preview")!.textContent).toBe('{\n  "a": 1\n}');
 
     await open("projects/logo.png");
@@ -202,7 +228,7 @@ describe("C1 — a file opens in Preview", () => {
 
   it("says who can read the file and closes back to its folder", async () => {
     await mount("projects/public.md");
-    await showPlaces({ name: "places", path: "projects/public.md" });
+    await reading;
     expect(app.querySelector(".file-status")!.textContent).toMatch(/who can read it: Anyone/);
     expect(app.querySelector<HTMLAnchorElement>(".places-head a.button-link")!.getAttribute("href")).toBe("#/p/projects/");
   });
@@ -223,5 +249,130 @@ describe("C1 — words", () => {
     expect(when(new Date("2026-09-26T09:05:00"), now)).toBe("Today, 09:05");
     expect(when(new Date("2026-09-25T18:40:00"), now)).toBe("Yesterday, 18:40");
     expect(when(new Date("2026-09-01T10:00:00"), now)).toBe("1 Sept 2026");
+  });
+});
+
+/** Waits until `check` holds: the panel reads its rules after the list is drawn. */
+async function until(check: () => unknown): Promise<void> {
+  for (let i = 0; i < 50 && !check(); i++) await settle();
+  expect(check()).toBeTruthy();
+}
+
+async function panelFor(folder: string, item?: string): Promise<HTMLElement> {
+  await mount(folder);
+  await reading;
+  if (item) app.querySelector<HTMLButtonElement>(`tr [data-select="${POD + item}"]`)!.click();
+  await until(() => app.querySelector("#access fieldset"));
+  return app.querySelector<HTMLElement>(".places-panel")!;
+}
+
+function choose(selector: string, value?: string): void {
+  const el = app.querySelector<HTMLInputElement | HTMLSelectElement>(selector)!;
+  if (value !== undefined) el.value = value;
+  else (el as HTMLInputElement).checked = true;
+  el.dispatchEvent(new Event("change"));
+}
+
+async function save(): Promise<void> {
+  app.querySelector<HTMLFormElement>("#access")!.requestSubmit();
+  await until(() => writes.length || app.querySelector("#access .error"));
+  await settle();
+}
+
+describe("C2 — who can read it", () => {
+  it("shows a folder's named people and saves Can edit as Read + Append + Write, never Control", async () => {
+    await panelFor("projects/drafts/");
+    const radio = app.querySelector<HTMLInputElement>('input[value="people"]')!;
+    expect(radio.checked).toBe(true);
+    expect(app.querySelector(".person")!.textContent).toContain("HyperScope's agent");
+    expect(app.querySelector<HTMLButtonElement>("#access-save")!.disabled).toBe(true);
+
+    choose(`select[data-person="${AGENT}"]`, "edit");
+    await save();
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toMatchObject({ method: "PUT", url: POD + "projects/drafts/.acl", ifMatch: '"dacl"' });
+    expect(writes[0].body).toMatch(new RegExp(`acl:agent <${AGENT}>;[\\s\\S]*?acl:mode acl:Read, acl:Append, acl:Write\\.`));
+    expect(writes[0].body!.match(/acl:Control/g)).toHaveLength(1); // the owner's, only
+  });
+
+  it("Only me removes every named person", async () => {
+    await panelFor("projects/drafts/");
+    choose('input[value="me"]');
+    await save();
+    expect(writes[0].body).not.toContain(AGENT);
+  });
+
+  it("gives an item that follows its folder rules of its own, starting from them", async () => {
+    await panelFor("projects/", "projects/readme.md");
+    expect(app.querySelector("#access")!.textContent).toMatch(/follows My pod/);
+    choose('input[value="link"]');
+    await save();
+    expect(writes[0]).toMatchObject({ method: "PUT", url: POD + "projects/readme.md.acl", ifNoneMatch: "*" });
+    expect(writes[0].body).toContain("acl:agentClass foaf:Agent");
+    expect(writes[0].body).toContain("acl:accessTo <./readme.md>");
+  });
+
+  it("fills in one member's WebID from a chip, never the collective", async () => {
+    groups = [HS];
+    await panelFor("projects/drafts/");
+    await until(() => app.querySelector(`[data-add="${INES}"]`));
+    app.querySelector<HTMLButtonElement>(`[data-add="${INES}"]`)!.click();
+    expect(app.querySelector(`select[data-person="${INES}"]`)).toBeTruthy();
+    await save();
+    expect(writes[0].body).toContain(`acl:agent <${INES}>`);
+    expect(writes[0].body).not.toMatch(/agentGroup|config\.ttl/);
+  });
+
+  it("flags someone who left the collective but still has access", async () => {
+    groups = [HS];
+    pod[POD + "projects/drafts/.acl"].body += `\n<#n> a acl:Authorization; acl:agent <${NEIL}>; acl:accessTo <./>; acl:default <./>; acl:mode acl:Read.`;
+    await panelFor("projects/drafts/");
+    await until(() => app.querySelector(".person .is-warn"));
+    expect(app.querySelector(".person .is-warn")!.textContent).toBe("Left HyperScope. Still has access until removed.");
+  });
+
+  it("refuses a WebID that is not one, and yourself", async () => {
+    await panelFor("projects/drafts/");
+    const add = (value: string) => {
+      app.querySelector<HTMLInputElement>("#add-webid")!.value = value;
+      app.querySelector<HTMLButtonElement>("#add-person")!.click();
+      return app.querySelector("#access .error")?.textContent ?? "";
+    };
+    expect(add("not a webid")).toMatch(/not a WebID/);
+    expect(add(WEBID)).toMatch(/That is you/);
+    expect(writes).toHaveLength(0);
+  });
+
+  it("writes nothing when the rules changed after the panel read them", async () => {
+    await panelFor("projects/drafts/");
+    choose('input[value="me"]');
+    pod[POD + "projects/drafts/.acl"].etag = '"someone-else"';
+    app.querySelector<HTMLFormElement>("#access")!.requestSubmit();
+    await until(() => document.querySelector(".toast"));
+    expect(document.querySelector(".toast")!.textContent).toMatch(/changed after this screen read them/);
+    expect(writes).toHaveLength(0);
+  });
+
+  it("restores from parent after asking once more, with If-Match", async () => {
+    await panelFor("projects/", "projects/public.md");
+    app.querySelector<HTMLButtonElement>("#restore")!.click();
+    expect(writes).toHaveLength(0);
+    app.querySelector<HTMLButtonElement>("#restore-confirm")!.click();
+    await until(() => writes.length);
+    expect(writes[0]).toEqual({ method: "DELETE", url: POD + "projects/public.md.acl", ifMatch: '"pacl"', ifNoneMatch: undefined, body: undefined });
+  });
+
+  it("never offers to restore the pod root, and shows the technical rules read only", async () => {
+    await panelFor("");
+    expect(app.querySelector("#restore")).toBeNull();
+    expect(app.querySelector("#technical pre")!.textContent).toContain("acl:Authorization");
+    expect(app.querySelector("#technical textarea")).toBeNull();
+  });
+
+  it("locks the panel on rules it has no words for", async () => {
+    pod[POD + "projects/drafts/.acl"].body += `\n<#g> a acl:Authorization; acl:agentGroup <https://x.example/g#team>; acl:accessTo <./>; acl:mode acl:Read.`;
+    await panelFor("projects/drafts/");
+    expect(app.querySelector("#access-save")).toBeNull();
+    expect(app.querySelector("#access .is-warn")!.textContent).toMatch(/no words for/);
   });
 });

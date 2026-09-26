@@ -27,6 +27,9 @@ let configStatus: number | null = null;
 let runs: typeof COLLECTIVE | null = null;
 /** What readRoster returns to this member; null: it refuses (not a member yet). */
 let rosterEntries: { webId: string; nick: string | null }[] | null = null;
+/** Short names the roster keeps for people no longer listed (a removal). */
+let rosterLeft: Record<string, string> = {};
+let placesCtx: { loadGroups: () => Promise<unknown> } | null = null;
 /** Holds readOwnProfile until opened, to look at the screen while the pods are being read. */
 let profileGate: Promise<void> | null = null;
 let profileReads = 0;
@@ -83,7 +86,10 @@ vi.mock("./lib/admin", async (importOriginal) => ({
   readMembers: async () => [],
   readRoster: async () => {
     if (!rosterEntries) throw new Error("Could not read the roster (403).");
-    return { members: rosterEntries, nicks: new Map(rosterEntries.map((e) => [e.webId, e.nick ?? ""])) };
+    return {
+      members: rosterEntries,
+      nicks: new Map([...rosterEntries.map((e) => [e.webId, e.nick ?? ""] as [string, string]), ...Object.entries(rosterLeft)]),
+    };
   },
   readPerson: async (webId: string) => ({
     webId,
@@ -94,8 +100,10 @@ vi.mock("./lib/admin", async (importOriginal) => ({
 
 vi.mock("./places", () => ({
   placesFrame: () => `<div id="places"></div>`,
-  mountPlaces: (_el: HTMLElement, route: { path: string }, ctx: { names: Map<string, string> }) =>
-    void places.push(`mount ${route.path} ${[...ctx.names.values()].join(",")}`),
+  mountPlaces: async (_el: HTMLElement, route: { path: string }, ctx: { names: Map<string, string>; loadGroups: () => Promise<unknown> }) => {
+    placesCtx = ctx;
+    places.push(`mount ${route.path} ${[...ctx.names.values()].join(",")}`);
+  },
   showPlaces: async (route: { path: string }) => void places.push(`show ${route.path}`),
   forgetPlaces: () => void places.push("forget"),
 }));
@@ -139,6 +147,8 @@ beforeEach(() => {
   profileGate = null;
   profileReads = 0;
   places.length = 0;
+  rosterLeft = {};
+  placesCtx = null;
   sessionStorage.clear();
   invitedTo(COLLECTIVE.configUrl);
 });
@@ -508,5 +518,31 @@ describe("C1 — Places inside the shell", () => {
     const app = await render("#/p/");
     app.querySelector<HTMLButtonElement>("#logout")!.click();
     expect(places).toContain("forget");
+  });
+});
+
+describe("C2 — the members the permissions panel offers", () => {
+  it("offers a collective's members one by one, and knows who left", async () => {
+    profile = { ...profile, memberOf: [COLLECTIVE.group] };
+    listed = true;
+    rosterEntries = [{ webId: "https://pod.example/amina/profile/card#me", nick: "amina" }];
+    rosterLeft = { "https://pod.example/ines/profile/card#me": "ines" };
+    await render("#/p/");
+    expect(await placesCtx!.loadGroups()).toEqual([
+      {
+        name: "HyperScope",
+        agent: COLLECTIVE.agent,
+        members: [{ webId: "https://pod.example/amina/profile/card#me", label: "amina" }],
+        left: [{ webId: "https://pod.example/ines/profile/card#me", label: "ines" }],
+      },
+    ]);
+  });
+
+  it("offers nothing from a roster it cannot read", async () => {
+    profile = { ...profile, memberOf: [COLLECTIVE.group] };
+    listed = true;
+    await render("#/p/");
+    rosterEntries = null;
+    expect(await placesCtx!.loadGroups()).toEqual([]);
   });
 });

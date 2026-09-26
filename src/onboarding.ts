@@ -32,7 +32,8 @@ import { pendingInvite, setInvite, takeNewcomer } from "./invite";
 import { bindHome, renderHomeView } from "./home";
 import { bindMember, renderMemberView, loadRoster } from "./member";
 import { currentRoute, isPlaces, onRouteChange, replaceWithHome, routeHref } from "./router";
-import { forgetPlaces, mountPlaces, placesFrame, showPlaces } from "./places";
+import { forgetPlaces, mountPlaces, placesFrame, showPlaces, type Group } from "./places";
+import { readRoster } from "./lib/admin";
 import { bindShell, renderShell, tabsFor, type TabCollective } from "./shell";
 import { declared } from "./steps";
 
@@ -312,7 +313,13 @@ async function compose(
     body = placesFrame();
     const names = agentNames(data);
     const placesRoute = route;
-    bind = () => mountPlaces(app.querySelector<HTMLElement>("#places")!, placesRoute, { webId, podUrl, names });
+    bind = () =>
+      void mountPlaces(app.querySelector<HTMLElement>("#places")!, placesRoute, {
+        webId,
+        podUrl,
+        names,
+        loadGroups: () => groupsOf(data, names),
+      });
   } else if (route.name === "more") {
     body = renderMoreView(tabCollectives);
     bind = () => {};
@@ -338,6 +345,42 @@ function agentNames(data: Loaded): Map<string, string> {
     if (m.profile?.name) names.set(m.webId, m.profile.name);
   }
   return names;
+}
+
+/**
+ * The collectives whose members the permissions panel offers as chips, one
+ * WebID each (ADR 006 §2). Someone is "left" when the roster keeps their
+ * short name but no longer lists them (a removal), or, for the collective
+ * you run, when their own profile no longer declares it. A roster you cannot
+ * read gives no chips; nothing is guessed.
+ */
+async function groupsOf(data: Loaded, names: Map<string, string>): Promise<Group[]> {
+  const collectives = [
+    ...(data.run ? [data.run.collective] : []),
+    ...data.collectives.filter((c) => c.state === "member").map((c) => c.collective),
+  ];
+  const read = await Promise.allSettled(collectives.map((c) => readRoster(c)));
+  const groups: Group[] = [];
+  read.forEach((result, i) => {
+    if (result.status === "rejected") return;
+    const collective = collectives[i];
+    const { members, nicks } = result.value;
+    const listed = new Set(members.map((m) => m.webId));
+    const leftOwnSide = collective === data.run?.collective
+      ? new Set(data.run.members.filter((m) => m.state === "left").map((m) => m.webId))
+      : new Set<string>();
+    const label = (webId: string) => names.get(webId) ?? nicks.get(webId) ?? webId;
+    groups.push({
+      name: collective.name,
+      agent: collective.agent,
+      members: members.filter((m) => !leftOwnSide.has(m.webId)).map((m) => ({ webId: m.webId, label: label(m.webId) })),
+      left: [
+        ...[...nicks.keys()].filter((w) => !listed.has(w)),
+        ...leftOwnSide,
+      ].map((webId) => ({ webId, label: label(webId) })),
+    });
+  });
+  return groups;
 }
 
 /** A collective is named by its config.ttl or by its group IRI (`…/config.ttl#name`). */

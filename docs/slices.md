@@ -160,12 +160,21 @@ the end ([manual tests](manual-tests.md), "C · Places").
   URL); a move between folders redraws Places only, the collectives are
   not read again; share checks read each `.acl`'s location from memory
   (`readAccess`), which closes L5's last open item.
-- **C2 · Who can read it.** Only me / anyone with the link / named people
+- **C2 · Who can read it** · built, live test pending. Only me / anyone with the link / named people
   ("Can read" = Read, "Can edit" = Read + Append + Write; Control never
   granted from the screen); chips filling in a collective's members, one
   WebID each (ADR 006 §2), and a person who left flagged; Restore from
   parent (never on the pod root); the technical rules shown read only.
-  New in `acl.ts`: public access, removing an item's own `.acl`.
+  New in `acl.ts`: public access, removing an item's own `.acl`. As
+  built (`src/access-panel.ts`): the panel edits a draft, and Save writes
+  the whole state once (`setAccess`), refused when the `.acl` changed after
+  the panel read it; an item that follows its folder starts from those
+  rules. Restore from parent is a `DELETE` with `If-Match`, refused on
+  whatever advertises `pim:Storage`. "Left" comes from the roster (a short
+  name kept, no `foaf:member`) or, for the collective you run, the
+  member's own profile. A grant with modes the presets have no name for
+  shows as Custom and is kept; an inbox's Append for everyone signed in
+  is kept too.
 - **C3 · Write files.** New folder, new file, upload; the editor (Preview
   first, Source beside it, Save only if nobody changed the file, a notice
   when someone did). Through `conditional.ts`.

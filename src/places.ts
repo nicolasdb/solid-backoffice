@@ -18,7 +18,10 @@ import { describePodError, isAuthError } from "./lib/pod";
 import { routeHref, type Route } from "./router";
 import { renderMarkdown } from "./ui/markdown";
 import { busy } from "./ui/typing";
-import { esc, renderError, renderPending } from "./ui/patterns";
+import { esc, renderError, renderPending, toast } from "./ui/patterns";
+import { bindAccess, loadDraft, renderAccess, type Draft, type Group } from "./access-panel";
+
+export type { Group };
 import { focusView } from "./ui/a11y";
 
 export interface PlacesContext {
@@ -26,6 +29,8 @@ export interface PlacesContext {
   podUrl: string;
   /** Labels for WebIDs the app already knows: "HyperScope's agent", a member's name. */
   names: Map<string, string>;
+  /** Your collectives' members, for the permissions panel's chips; read when first needed. */
+  loadGroups: () => Promise<Group[]>;
 }
 
 /** Who can read an item, as a row says it; `null` while its rules are on the way. */
@@ -41,9 +46,18 @@ export interface RowRules {
 const listings = new Map<string, Item[]>();
 const rows = new Map<string, RowRules | "error">();
 const files = new Map<string, FileContent>();
+/** What could not be read, per address, drawn in place of the list or the file. */
+const errors = new Map<string, unknown>();
 /** The item shown in the panel (a phone shows it as a sheet). */
 let selected: string | null = null;
 let sheetOpen = false;
+/** The permissions panel's draft, for the item in the panel (C2). */
+let draft: Draft | null = null;
+let draftError: { url: string; message: string } | null = null;
+let groups: Group[] | null = null;
+let groupsAsked = false;
+/** The item whose permissions are being read, so a redraw does not read them twice. */
+let draftLoading: string | null = null;
 let frame: HTMLElement | null = null;
 let ctx: PlacesContext | null = null;
 let route: Route = { name: "places", path: "" };
@@ -54,10 +68,16 @@ let objectUrls: string[] = [];
 
 export function forgetPlaces(): void {
   listings.clear();
+  errors.clear();
   rows.clear();
   files.clear();
   selected = null;
   sheetOpen = false;
+  draft = null;
+  draftError = null;
+  draftLoading = null;
+  groups = null;
+  groupsAsked = false;
   frame = null;
   ctx = null;
   releaseObjectUrls();
@@ -213,7 +233,9 @@ function renderRow(item: Item): string {
 function renderFolder(url: string): string {
   const items = listings.get(url);
   const list = !items
-    ? renderPending("Reading this folder…")
+    ? errors.has(url)
+      ? renderFailure(errors.get(url))
+      : renderPending("Reading this folder…")
     : !items.length
       ? `<p class="meta">This folder is empty.</p>`
       : `<table class="items">
@@ -232,8 +254,7 @@ function renderFolder(url: string): string {
 }
 
 /** The panel: one item, or the folder itself when nothing is selected. */
-function renderPanel(folderUrl: string): string {
-  const url = selected ?? folderUrl;
+function renderPanel(url: string, folderUrl: string): string {
   const item = listings.get(parentOf(url) ?? "")?.find((i) => i.url === url);
   const isFolder = url.endsWith("/");
   const inside = isFolder ? listings.get(url) : undefined;
@@ -245,15 +266,7 @@ function renderPanel(folderUrl: string): string {
     item && !isFolder ? size(item.size) : "",
   ].filter(Boolean);
 
-  let rules: string;
-  if (r === "error") rules = `<p class="meta">Its rules could not be read.</p>`;
-  else if (!r) rules = `<p class="meta">Reading its rules…</p>`;
-  else if (r.own) rules = `<p class="meta">${isFolder ? "This folder" : "This file"} has rules of its own.</p>`;
-  else {
-    const from = r.from === ctx!.podUrl ? "My pod" : nameOf(r.from ?? "");
-    rules = `<p class="meta">No rules of its own: it follows <strong>${esc(from)}</strong>.</p>`;
-  }
-
+  const access = draft?.url === url ? draft : null;
   return `
     <aside class="places-panel${sheetOpen ? " is-open" : ""}" aria-label="${esc(name)}">
       <div class="panel-head">
@@ -262,11 +275,8 @@ function renderPanel(folderUrl: string): string {
         <button class="ghost small sheet-close" type="button" id="sheet-close">Close</button>
       </div>
       ${facts.length ? `<p class="meta">${esc(facts.join(" · "))}</p>` : ""}
-      <div class="panel-block">
-        <span class="label-mono">Who can read it</span>
-        <p>${r && r !== "error" ? esc(r.who) : ""}</p>
-        ${rules}
-      </div>
+      ${r && r !== "error" && !access?.dirty ? `<p>${esc(r.who)}</p>` : ""}
+      ${renderAccess(access, accessEnv(), access || draftError?.url !== url ? null : draftError.message)}
       <div class="actions">
         ${isFolder ? (url !== folderUrl ? `<a class="button-link" href="${hrefOf(url)}">Open</a>` : "") : `<a class="button-link" href="${hrefOf(url)}">Open</a><button class="ghost small" type="button" id="download" data-url="${esc(url)}">Download</button>`}
       </div>
@@ -310,7 +320,7 @@ function renderPreview(file: FileContent): string {
 function renderFile(url: string): string {
   const file = files.get(url);
   const r = rows.get(url);
-  const body = file ? renderPreview(file) : renderPending(`Reading ${nameOf(url)}…`);
+  const body = file ? renderPreview(file) : errors.has(url) ? renderFailure(errors.get(url)) : renderPending(`Reading ${nameOf(url)}…`);
   const parent = parentOf(url) ?? ctx!.podUrl;
   return `
     <section class="places-main places-file" aria-labelledby="places-title">
@@ -319,6 +329,7 @@ function renderFile(url: string): string {
         <div class="places-title-row">${breadcrumb(url)}${file ? `<span class="pill">${esc(KIND_LABEL[file.kind])}</span>` : ""}</div>
         <div class="actions">
           <button class="ghost small" type="button" id="download" data-url="${esc(url)}">Download</button>
+          <button class="ghost small" type="button" data-select="${esc(url)}">Who can read it</button>
           <a class="button-link" href="${hrefOf(parent)}">Close</a>
         </div>
       </div>
@@ -329,10 +340,23 @@ function renderFile(url: string): string {
     </section>`;
 }
 
+/** The item in the panel: the selected one, else the folder itself; a file shows it only when asked. */
+function panelUrl(): string | null {
+  const url = urlOf((route as { path: string }).path);
+  if (url.endsWith("/")) return selected ?? url;
+  return selected === url ? url : null;
+}
+
+function accessEnv() {
+  return { webId: ctx!.webId, podUrl: ctx!.podUrl, names: ctx!.names, groups };
+}
+
 function renderPlaces(): string {
   const url = urlOf((route as { path: string }).path);
-  const main = url.endsWith("/") ? renderFolder(url) + renderPanel(url) : renderFile(url);
-  return `<div class="places-grid${url.endsWith("/") ? "" : " is-file"}">${renderSide()}${main}</div>`;
+  const panel = panelUrl();
+  const main = url.endsWith("/") ? renderFolder(url) : renderFile(url);
+  const side = panel ? renderPanel(panel, url.endsWith("/") ? url : parentOf(url)!) : "";
+  return `<div class="places-grid${panel ? "" : " is-file"}">${renderSide()}${main}${side}</div>`;
 }
 
 function draw(focus: boolean): void {
@@ -343,25 +367,27 @@ function draw(focus: boolean): void {
   if (focus) focusView(frame);
 }
 
+/** Someone is typing, or has a change to the permissions not saved yet. */
+function inUse(): boolean {
+  return !frame || busy(frame) || Boolean(draft?.dirty);
+}
+
 /** Redraws after a read, unless someone is typing; keeps focus where it was. */
 function redraw(): void {
-  if (!frame || busy(frame)) return;
+  if (!frame || inUse()) return;
   const active = document.activeElement as HTMLElement | null;
   const key = active && frame.contains(active) ? (active.dataset.select ? `[data-select="${CSS.escape(active.dataset.select)}"]` : active.id ? `#${CSS.escape(active.id)}` : null) : null;
   draw(false);
   if (key) frame.querySelector<HTMLElement>(key)?.focus();
 }
 
-function showError(err: unknown, where: string): void {
-  const target = frame?.querySelector<HTMLElement>(where);
-  if (!target) return;
-  target.innerHTML = renderError({
+function renderFailure(err: unknown): string {
+  return renderError({
     title: isAuthError(err) ? "Your session ended" : "This could not be read",
     detail: describePodError(err),
     action: { label: "Try again", id: "places-retry" },
     technical: err instanceof Error ? err.message : String(err),
   });
-  target.querySelector("#places-retry")?.addEventListener("click", () => showPlaces(route));
 }
 
 /* ── Reading ───────────────────────────────────────────────────────────── */
@@ -373,10 +399,13 @@ async function readFolder(url: string, mine: number): Promise<void> {
     items = await listFolder(url);
   } catch (err) {
     if (mine !== generation) return;
-    if (!listings.has(url)) showError(err, "#places-list");
+    errors.set(url, err);
+    listings.delete(url);
+    draw(false);
     return;
   }
   if (mine !== generation) return;
+  errors.delete(url);
   listings.set(url, items);
   if (JSON.stringify(items) !== before) redraw();
   await readRules([url, ...items.map((i) => i.url)], mine);
@@ -410,8 +439,10 @@ function patchRules(url: string): void {
   if (pill) pill.innerHTML = rulesPill(url);
   const current = urlOf((route as { path: string }).path);
   const inPanel = (selected ?? current) === url || current === url;
-  if (inPanel && !busy(frame)) {
+  if (inPanel && !inUse()) {
     const panel = frame.querySelector(".places-panel, .file-status");
+    // The rules changed under a panel nobody is editing: read its draft again.
+    if (draft?.url === url) draft = null;
     if (panel) redraw();
   }
 }
@@ -424,11 +455,13 @@ async function readOne(url: string, mine: number): Promise<void> {
     if (mine !== generation) return;
     const was = files.get(url);
     files.set(url, file);
+    errors.delete(url);
     if (!was || was.etag !== file.etag || was.etag === null) redraw();
   } catch (err) {
     if (mine !== generation) return;
     files.delete(url);
-    showError(err, "#places-file");
+    errors.set(url, err);
+    draw(false);
   }
   await rules;
   // The folder is read too, so Close lands on a list already drawn.
@@ -446,6 +479,7 @@ function bind(): void {
     button.addEventListener("click", () => {
       selected = button.dataset.select!;
       sheetOpen = true;
+      if (draft?.url !== selected) draft = null;
       draw(false);
       frame?.querySelector<HTMLElement>(".places-panel h2")?.setAttribute("tabindex", "-1");
       frame?.querySelector<HTMLElement>(".places-panel h2")?.focus();
@@ -455,9 +489,27 @@ function bind(): void {
     const back = selected;
     sheetOpen = false;
     selected = null;
+    draft = null;
     draw(false);
     if (back) frame?.querySelector<HTMLElement>(`[data-select="${CSS.escape(back)}"]`)?.focus();
   });
+  const panel = panelUrl();
+  const aside = frame.querySelector<HTMLElement>(".places-panel");
+  if (panel && aside) {
+    if (draft?.url === panel) {
+      bindAccess(aside, draft, accessEnv(), {
+        changed: () => drawKeepingFocus(),
+        saved: (message) => {
+          draft = null;
+          if (message) toast(message);
+          void showPlaces(route, false);
+        },
+      });
+    } else if (draftError?.url !== panel) {
+      void startDraft(panel, generation);
+    }
+  }
+  frame.querySelector("#places-retry")?.addEventListener("click", () => void showPlaces(route));
   const download = frame.querySelector<HTMLButtonElement>("#download");
   download?.addEventListener("click", async () => {
     const url = download.dataset.url!;
@@ -465,18 +517,62 @@ function bind(): void {
     try {
       await downloadFile(url, files.get(url));
     } catch (err) {
-      showError(err, url.endsWith("/") ? "#places-list" : "#places-file");
+      toast(`Could not download ${nameOf(url)}: ${describePodError(err)}`);
     } finally {
       download.disabled = false;
     }
   });
 }
 
+/** Reads the permissions of the item in the panel, and the members for its chips. */
+async function startDraft(url: string, mine: number): Promise<void> {
+  if (draftLoading === url) return;
+  draftLoading = url;
+  if (!groupsAsked) {
+    groupsAsked = true;
+    ctx!.loadGroups().then(
+      (g) => {
+        groups = g;
+        if (draft && !inUse()) drawKeepingFocus();
+      },
+      () => (groups = [])
+    );
+  }
+  try {
+    const next = await loadDraft(url, ctx!.webId, ctx!.podUrl).finally(() => {
+      if (draftLoading === url) draftLoading = null;
+    });
+    if (mine !== generation || panelUrl() !== url) return;
+    draft = next;
+    draftError = null;
+  } catch (err) {
+    if (mine !== generation) return;
+    draft = null;
+    draftError = { url, message: describePodError(err) };
+  }
+  drawKeepingFocus();
+}
+
+/** Redraws now (the person's own change), keeping focus on the control they used. */
+function drawKeepingFocus(): void {
+  if (!frame) return;
+  const active = document.activeElement as HTMLElement | null;
+  const key = active && frame.contains(active)
+    ? active.id
+      ? `#${CSS.escape(active.id)}`
+      : ["data-select", "data-remove", "data-add", "data-person"].map((a) => active.getAttribute(a) !== null ? `[${a}="${CSS.escape(active.getAttribute(a)!)}"]` : "").find(Boolean) ||
+        (active.matches('input[name="visibility"]') ? `input[name="visibility"][value="${(active as HTMLInputElement).value}"]` : null)
+    : null;
+  draw(false);
+  const target = key ? frame.querySelector<HTMLElement>(key) : null;
+  (target ?? frame.querySelector<HTMLElement>("#add-webid"))?.focus();
+}
+
 /** First entry into Places: remembers the frame and who is signed in. */
-export function mountPlaces(el: HTMLElement, next: Route, context: PlacesContext): void {
+export function mountPlaces(el: HTMLElement, next: Route, context: PlacesContext): Promise<void> {
   frame = el;
   ctx = context;
-  showPlaces(next, true);
+  return showPlaces(next, true);
 }
 
 /**
@@ -490,6 +586,8 @@ export async function showPlaces(next: Route, focus = true): Promise<void> {
   if (moved) {
     selected = null;
     sheetOpen = false;
+    draft = null;
+    draftError = null;
   }
   const mine = ++generation;
   draw(focus);
