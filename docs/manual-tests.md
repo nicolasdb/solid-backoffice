@@ -382,3 +382,8 @@ browser's developer tools on the Network tab, filtered to the pod's host.
    ever wiped by a redraw.
 5. Sign out, sign in as another account: nothing from the first account
    shows, even for a moment.
+
+**Run record, 26 Sep 2026** (test.nicolasdb.eu, `dev` at `1069a19`): 1
+passes: faster on the first load, each tab appears at once. 2–5 not
+reported yet: the 304s and the provider's CORS for `If-None-Match`, a
+change from another window, typing kept, and switching accounts.
