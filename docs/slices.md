@@ -183,11 +183,18 @@ the end ([manual tests](manual-tests.md), "C · Places").
   `If-Match`, and on a 412 the editor keeps your text and offers "Save
   mine over theirs" or "Replace my text with theirs". Unsaved text stays in
   memory across navigation, never in browser storage.
-- **C4 · Rename, move, delete.** Move and rename carry a folder's contents
+- **C4 · Rename, move, delete** · built, live test pending. Move and rename carry a folder's contents
   and their rules (the old backoffice left the files behind, found live 25
   Sep 2026); delete says how many items are inside first. Order of writes:
   copy everything, check it, only then delete; a move stopped halfway
   leaves the original whole. Pinned by a test, including a failure halfway.
+  As built (`src/lib/move.ts`, `src/item-actions.ts`): an item with rules
+  of its own is copied empty, then its `.acl`, then its content, so it is
+  never readable under a looser folder; the copy is walked and compared
+  before the source is deleted bottom up. Refused before any write: a name
+  already there, a folder into itself, rules it cannot rewrite, and the
+  pod, `profile/`, `inbox/`, `settings/`, `config.ttl`, `membres.ttl`.
+  Move offers the folders already opened.
 - **C5 · Following (J7).** Follow an address (kept only once the app could
   read it with your WebID); the list in `settings/following.ttl` on your own
   pod, with a title and excerpt from your last visit, so the overview reads

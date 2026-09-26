@@ -159,3 +159,55 @@ describe("writing files (C3)", () => {
     expect((await readFile(url)).text).toBe("# Plan, mine\n");
   });
 });
+
+/** Slice C4: a move carries contents and rules; a failure halfway leaves the source whole. */
+describe("rename, move, delete (C4)", () => {
+  const work = amina.pod + "work/";
+  const statusAs = async (role: "hsagent" | "outsider", url: string) => {
+    await actAs(role);
+    const status = (await current.fetch(url)).status;
+    await actAs("amina");
+    return status;
+  };
+
+  it("stops a move halfway without losing anything", async () => {
+    const { move } = await import("../../src/lib/move");
+    const signedIn = current.fetch;
+    let puts = 0;
+    current.fetch = async (input, init) => {
+      if (init?.method === "PUT" && ++puts === 3) return new Response(null, { status: 500 });
+      return signedIn(input, init);
+    };
+    await expect(move(projects + "drafts/", work + "drafts/", amina.webId, amina.pod)).rejects.toMatchObject({ code: "copy-failed" });
+    current.fetch = signedIn;
+    expect((await listFolder(projects + "drafts/")).map((i) => i.name)).toEqual(["idea.md"]);
+    expect(await statusAs("hsagent", projects + "drafts/idea.md")).toBe(200);
+    expect((await current.fetch(work + "drafts/")).status).toBe(404);
+  });
+
+  it("moves a folder with its contents and rules: the agent reads it at the new place", async () => {
+    const { move } = await import("../../src/lib/move");
+    await move(projects + "drafts/", work + "drafts/", amina.webId, amina.pod);
+    expect((await current.fetch(projects + "drafts/")).status).toBe(404);
+    expect((await listFolder(work + "drafts/")).map((i) => i.name)).toEqual(["idea.md"]);
+    expect(await statusAs("hsagent", work + "drafts/idea.md")).toBe(200);
+    expect(await statusAs("outsider", work + "drafts/idea.md")).toBe(403);
+  });
+
+  it("renames a file with rules of its own; they name the new file", async () => {
+    const { move } = await import("../../src/lib/move");
+    await move(amina.pod + "private.txt", amina.pod + "secret.txt", amina.webId, amina.pod);
+    const access = await aclLib.getAccess(amina.pod + "secret.txt", amina.webId);
+    expect(access.inherited).toBe(false);
+    expect((await current.fetch(amina.pod + "private.txt")).status).toBe(404);
+    expect((await readFile(amina.pod + "secret.txt")).text).toBe("Only me.\n");
+  });
+
+  it("counts what a folder holds, then deletes it all", async () => {
+    const { countInside, deleteTree } = await import("../../src/lib/move");
+    expect(await countInside(work, amina.webId)).toBe(4); // plan é.md, data.bin, drafts/, drafts/idea.md
+    await deleteTree(work, amina.pod);
+    expect((await current.fetch(work)).status).toBe(404);
+    await expect(deleteTree(amina.pod + "profile/", amina.pod)).rejects.toMatchObject({ code: "refused" });
+  });
+});

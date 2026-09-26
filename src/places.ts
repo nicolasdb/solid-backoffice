@@ -27,6 +27,7 @@ import {
   type FileContent,
   type Item,
 } from "./lib/files";
+import { bindActions, renderActions, type Change } from "./item-actions";
 import { bindEditor, canEdit, isDirty, renderEditor, renderEditorActions, startEditing, type Editing } from "./editor";
 import { forgetAclLocations, type AccessRules } from "./lib/acl";
 import { describePodError, isAuthError } from "./lib/pod";
@@ -77,6 +78,8 @@ let editing: Editing | null = null;
 let editWhenRead: string | null = null;
 /** The "new folder" / "new file" form in a folder's header. */
 let creating: { kind: "folder" | "file"; error: string | null } | null = null;
+/** Rename, move or delete in progress in the panel (C4). */
+const changes: { change: Change | null } = { change: null };
 /** The item whose permissions are being read, so a redraw does not read them twice. */
 let draftLoading: string | null = null;
 let frame: HTMLElement | null = null;
@@ -100,6 +103,7 @@ export function forgetPlaces(): void {
   editing = null;
   editWhenRead = null;
   creating = null;
+  changes.change = null;
   groups = null;
   groupsAsked = false;
   frame = null;
@@ -326,6 +330,7 @@ function renderPanel(url: string, folderUrl: string): string {
       ${facts.length ? `<p class="meta">${esc(facts.join(" · "))}</p>` : ""}
       ${r && r !== "error" && !access?.dirty ? `<p>${esc(r.who)}</p>` : ""}
       ${renderAccess(access, accessEnv(), access || draftError?.url !== url ? null : draftError.message)}
+      ${renderActions(url, changes.change, changeEnv())}
       <div class="actions">
         ${isFolder ? (url !== folderUrl ? `<a class="button-link" href="${hrefOf(url)}">Open</a>` : "") : `<a class="button-link" href="${hrefOf(url)}">Open</a><button class="ghost small" type="button" id="download" data-url="${esc(url)}">Download</button>`}
       </div>
@@ -405,6 +410,24 @@ function panelUrl(): string | null {
   return selected === url ? url : null;
 }
 
+/** Every folder the app has seen, for Move's destinations. */
+function changeEnv() {
+  const folders = new Set<string>();
+  for (const [folder, items] of listings) {
+    folders.add(folder);
+    items.filter((i) => i.isFolder).forEach((i) => folders.add(i.url));
+  }
+  return { webId: ctx!.webId, podUrl: ctx!.podUrl, folders: [...folders] };
+}
+
+/** Forgets what was read at and under `prefix`: it moved or is gone. */
+function forgetUnder(prefix: string): void {
+  for (const map of [listings, rows, files, errors] as Map<string, unknown>[]) {
+    for (const key of [...map.keys()]) if (key.startsWith(prefix)) map.delete(key);
+  }
+  if (editing?.url.startsWith(prefix)) editing = null;
+}
+
 function accessEnv() {
   return { webId: ctx!.webId, podUrl: ctx!.podUrl, names: ctx!.names, groups };
 }
@@ -427,7 +450,7 @@ function draw(focus: boolean): void {
 
 /** Someone is typing, or has a change to the permissions not saved yet. */
 function inUse(): boolean {
-  return !frame || busy(frame) || Boolean(draft?.dirty) || isDirty(editing) || Boolean(creating);
+  return !frame || busy(frame) || Boolean(draft?.dirty) || isDirty(editing) || Boolean(creating) || Boolean(changes.change);
 }
 
 /** Redraws after a read, unless someone is typing; keeps focus where it was. */
@@ -549,6 +572,7 @@ function bind(): void {
       selected = button.dataset.select!;
       sheetOpen = true;
       if (draft?.url !== selected) draft = null;
+      if (changes.change?.url !== selected) changes.change = null;
       draw(false);
       frame?.querySelector<HTMLElement>(".places-panel h2")?.setAttribute("tabindex", "-1");
       frame?.querySelector<HTMLElement>(".places-panel h2")?.focus();
@@ -559,6 +583,7 @@ function bind(): void {
     sheetOpen = false;
     selected = null;
     draft = null;
+    changes.change = null;
     draw(false);
     if (back) frame?.querySelector<HTMLElement>(`[data-select="${CSS.escape(back)}"]`)?.focus();
   });
@@ -577,6 +602,23 @@ function bind(): void {
     } else if (draftError?.url !== panel) {
       void startDraft(panel, generation);
     }
+    bindActions(aside, panel, changes, changeEnv(), {
+      changed: () => drawKeepingFocus(),
+      done: (from, to, message) => {
+        forgetUnder(from);
+        toast(message);
+        selected = null;
+        sheetOpen = false;
+        draft = null;
+        const here = urlOf((route as { path: string }).path);
+        if (here.startsWith(from)) {
+          // You were in (or on) what moved: follow it, or go up after a delete.
+          location.hash = hrefOf(to ? to + here.slice(from.length) : (parentOf(from) ?? ctx!.podUrl));
+        } else {
+          void showPlaces(route, false);
+        }
+      },
+    });
   }
   frame.querySelector("#places-retry")?.addEventListener("click", () => void showPlaces(route));
   bindWrites();
@@ -761,6 +803,7 @@ export async function showPlaces(next: Route, focus = true): Promise<void> {
     draft = null;
     draftError = null;
     creating = null;
+    changes.change = null;
   }
   const mine = ++generation;
   draw(focus);

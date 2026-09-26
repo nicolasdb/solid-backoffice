@@ -458,3 +458,19 @@ the provider, a real browser, a phone, both themes.
    uploaded, the other refused by name; nothing is replaced.
 7. Markdown with a `<script>` or a `javascript:` link: the preview shows no
    such link and runs nothing.
+
+### C4 · Rename, move, delete
+
+1. Make a folder `tmp/` with two files and a subfolder that has rules of
+   its own (share it with someone in C2). **Rename** `tmp/` to `tmp2/`:
+   the panel shows "Copying… Checking the copy… Removing the old place…";
+   `tmp2/` holds everything, and the subfolder still says **Own**. The
+   person it was shared with still opens it at the new address.
+2. **Move** a file to another folder: only folders you have opened are
+   offered; the item, its own folder and anything inside it are not.
+3. **Delete** `tmp2/`: it says how many items are inside before anything
+   happens; after, the folder is gone.
+4. `profile/`, `inbox/`, `settings/` and the pod itself offer no Rename,
+   Move or Delete, and say why.
+5. Close the tab in the middle of moving a large folder, reopen: the
+   original is whole (a copy may be left beside it; nothing is lost).

@@ -90,6 +90,9 @@ one changes, change the other. Never point it at the real provider.
   "Who can read it" panel (C2): a draft saved in one conditional write,
   chips that fill in one WebID each. `src/editor.ts` edits text files
   (C3): Preview first, saves with `If-Match`, unsaved text in memory only.
+  `src/lib/move.ts` (C4) moves, renames and deletes, contents and rules
+  included: copy, check, then delete (order pinned in `move.test.ts`);
+  `src/item-actions.ts` is its part of the panel.
 - `src/lib/read.ts` — display reads with an in-memory ETag cache
   (`If-None-Match`, 304 hands back the kept body); writes never use it.
   Forgotten at sign-out, with the last load.
@@ -115,7 +118,9 @@ agent, snapshots or the protocol belongs in solid-kit's ADRs, not here.
   "unknown" or "pending", never "refused": applicants cannot read it.
 - **Order of writes is part of the design.** Declare in the profile before
   sending the request; create and open the inbox before advertising it; grant
-  before announcing. Tests in `src/onboarding.test.ts` pin each order.
+  before announcing. Tests in `src/onboarding.test.ts` pin each order. A move
+  copies (own rules before content), checks, then deletes
+  (`src/lib/move.test.ts`).
 - **Everything the backoffice writes is on the signed-in user's pod**, except
   messages POSTed to an inbox (pocpod0 BP-6, single writer).
 - **Provider-specific features** (CSS account API, minting, access logs) go in

@@ -42,7 +42,11 @@ async function answer(url: string, init: RequestInit = {}): Promise<Response> {
     if (sent["If-Match"] && (!exists || doc.etag !== sent["If-Match"])) return new Response(null, { status: 412 });
     if (sent["If-None-Match"] === "*" && exists) return new Response(null, { status: 412 });
     if (method === "DELETE") delete pod[url];
-    else pod[url] = { body: String(init.body ?? ""), type: sent["Content-Type"], etag: `"w${++version}"` };
+    else {
+      const raw = init.body as { text?: () => Promise<string> } | string | undefined;
+      const body = typeof raw === "object" && raw?.text ? await raw.text() : String(raw ?? "");
+      pod[url] = { body, type: sent["Content-Type"], etag: `"w${++version}"` };
+    }
     return new Response(null, { status: method === "DELETE" ? 205 : 201 });
   }
   const headers: Record<string, string> = { Link: `<${url}.acl>; rel="acl"${url === POD ? ', <http://www.w3.org/ns/pim/space#Storage>; rel="type"' : ""}` };
@@ -65,7 +69,7 @@ ${extra}`;
 const listing = (names: string[]) =>
   `@prefix ldp: <http://www.w3.org/ns/ldp#>. @prefix dc: <http://purl.org/dc/terms/>.
 ${names.map((n) => `<${n}> a ldp:Resource; dc:modified "2026-09-25T10:00:00Z".`).join("\n")}
-<> ldp:contains ${names.map((n) => `<${n}>`).join(", ")}.`;
+${names.length ? `<> ldp:contains ${names.map((n) => `<${n}>`).join(", ")}.` : ""}`;
 
 function standardPod(): Record<string, Doc> {
   return {
@@ -486,5 +490,64 @@ describe("C3 — writing files", () => {
     await mount("projects/logo.png");
     await reading;
     expect(app.querySelector("#edit")).toBeNull();
+  });
+});
+
+describe("C4 — rename, move, delete", () => {
+  async function select(folder: string, item: string): Promise<void> {
+    await mount(folder);
+    await reading;
+    app.querySelector<HTMLButtonElement>(`tr [data-select="${POD + item}"]`)!.click();
+    await until(() => app.querySelector("[data-change]"));
+  }
+
+  it("renames a file with its rules: copy, rules before content, then delete", async () => {
+    await select("projects/", "projects/public.md");
+    app.querySelector<HTMLButtonElement>('[data-change="rename"]')!.click();
+    const input = app.querySelector<HTMLInputElement>("#rename-name")!;
+    expect(input.value).toBe("public.md");
+    input.value = "open.md";
+    app.querySelector<HTMLFormElement>("#change-form")!.requestSubmit();
+    await until(() => document.querySelector(".toast")?.textContent?.includes("Moved"));
+    expect(writes.map((w) => `${w.method} ${w.url.slice(POD.length)}`)).toEqual([
+      "PUT projects/open.md",
+      "PUT projects/open.md.acl",
+      "PUT projects/open.md",
+      "DELETE projects/public.md",
+      "DELETE projects/public.md.acl",
+    ]);
+    expect(pod[POD + "projects/open.md"].body).toBe("# Public");
+    expect(pod[POD + "projects/open.md.acl"].body).toContain("acl:agentClass foaf:Agent");
+  });
+
+  it("asks before deleting a folder, with how many items are inside", async () => {
+    await select("", "projects/");
+    app.querySelector<HTMLButtonElement>('[data-change="delete"]')!.click();
+    await until(() => app.querySelector("#change-form")!.textContent!.includes("items inside"));
+    expect(app.querySelector("#change-form")!.textContent).toMatch(/Delete projects and the 6 items inside\? This cannot be undone\./);
+    expect(writes).toHaveLength(0);
+    app.querySelector<HTMLButtonElement>("#delete-confirm")!.click();
+    await until(() => document.querySelector(".toast")?.textContent?.includes("Deleted"));
+    expect(writes.every((w) => w.method === "DELETE")).toBe(true);
+    expect(writes.at(-1)!.url).toBe(POD + "projects/");
+  });
+
+  it("offers as destinations the folders seen, never the item itself or where it is", async () => {
+    await mount("");
+    await reading;
+    await open("projects/");
+    app.querySelector<HTMLButtonElement>(`tr [data-select="${POD}projects/drafts/"]`)!.click();
+    await until(() => app.querySelector("[data-change]"));
+    app.querySelector<HTMLButtonElement>('[data-change="move"]')!.click();
+    const options = [...app.querySelectorAll<HTMLOptionElement>("#move-to option")].map((o) => o.textContent);
+    expect(options).toEqual(["My pod"]);
+  });
+
+  it("never offers to move or delete the pod itself", async () => {
+    await mount("");
+    await reading;
+    await until(() => app.querySelector(".places-panel p.meta"));
+    expect(app.querySelector("[data-change]")).toBeNull();
+    expect(app.querySelector(".places-panel")!.textContent).toMatch(/Your pod itself cannot be moved or deleted/);
   });
 });
