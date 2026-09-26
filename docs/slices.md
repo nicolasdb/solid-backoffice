@@ -40,10 +40,9 @@ still `make vps-deploy`.
    Measured with `test/pods/speed.test.ts`. Left: finding a resource's
    `.acl` costs a HEAD before the GET, one round on every share check.
    `src/lib/read.ts` and the rules are carried back to solid-kit (ADR 007).
-4. **C · Places**: drawn on the canvas, desktop and phone (file preview and
-   editor, following, named people, the technical rules as the advanced
-   mode; [layout-brief](layout-brief.md), "Places, second pass"). A few
-   states are still listed there on a note. Then D, E. In [journeys](journeys.md) terms: J1, J3 and J5's
+4. **C · Places**, in six slices (C1 browse → C6 technical rules, below),
+   drawn on the canvas desktop and phone. Next: C1. Then People & apps,
+   D, E. In [journeys](journeys.md) terms: J1, J3 and J5's
    admin side are built; J2, J4 and J6 work already; J7 is C, J8 is D.
 
 ## A — Member side of the handshake · built
@@ -137,15 +136,61 @@ the Read grants, then removes the `foaf:member` line, then sends `as:Remove`.
 Messages the app does not understand stay visible under "Other messages".
 Grants are refused before any write when a target has no `.acl` of its own.
 
-## C — Places: several pods in one workspace
+## C — Places: your pod, and what you follow
 
-A list of pods, stored on the user's own pod: their own, the collective's, and
-any pod where someone granted them something (the Xavier case). One file
-browser across them, with the ACL editor from `src/lib/acl.ts` on every place
-where the user holds Control. Download is the minimum for binary files.
-**Move** carries a folder's contents with it: renaming a folder in the old
-backoffice left the files behind (found live, 25 Sep 2026). Following
-(J7, [explanation/following.md](explanation/following.md)) is part of C too.
+Planned 26 Sep 2026, drawn on the canvas ([layout-brief](layout-brief.md),
+"Places", both passes). Your own pod as a file browser, with the permissions
+editor from `src/lib/acl.ts`, and following (J7,
+[explanation/following.md](explanation/following.md)) as a read-only reader
+for addresses others share with you. Every screen reads as
+[reading pods quickly](explanation/reading-pods.md) says (solid-kit ADR 007).
+Each slice below is usable on its own and is run live before the next.
+
+- **C1 · Browse your pod.** The Places tab and its route; "My pod" in the
+  side list; a folder's items with path, name, last modified (`dct:modified`
+  from the listing) and whether it has rules of its own; a file opens in
+  Preview (Markdown, text, JSON, image); download for the rest. Read only.
+  "Who can read it" fills in as each item's rules arrive, never holding the
+  list back; where each `.acl` lives is kept in memory (it costs a HEAD).
+  New: `src/lib/files.ts` (listing, reading).
+- **C2 · Who can read it.** Only me / anyone with the link / named people
+  ("Can read" = Read, "Can edit" = Read + Append + Write; Control never
+  granted from the screen); chips filling in a collective's members, one
+  WebID each (ADR 006 §2), and a person who left flagged; Restore from
+  parent (never on the pod root); the technical rules shown read only.
+  New in `acl.ts`: public access, removing an item's own `.acl`.
+- **C3 · Write files.** New folder, new file, upload; the editor (Preview
+  first, Source beside it, Save only if nobody changed the file, a notice
+  when someone did). Through `conditional.ts`.
+- **C4 · Rename, move, delete.** Move and rename carry a folder's contents
+  and their rules (the old backoffice left the files behind, found live 25
+  Sep 2026); delete says how many items are inside first. Order of writes:
+  copy everything, check it, only then delete; a move stopped halfway
+  leaves the original whole. Pinned by a test, including a failure halfway.
+- **C5 · Following (J7).** Follow an address (kept only once the app could
+  read it with your WebID); the list in `settings/following.ttl` on your own
+  pod, with a title and excerpt from your last visit, so the overview reads
+  nothing from other pods; open one read only; favourite; unfollow.
+- **C6 · Technical rules, advanced mode.** The raw `.acl` editable behind
+  "Show the technical rules"; Save takes two taps and is refused unless the
+  Turtle parses, the owner keeps Control, and nobody changed it meanwhile.
+  Desktop only.
+
+Each slice: its `src/lib` against `test/pods` (the cast gets folders and
+files), its screen against mocks, a section in `manual-tests.md`.
+
+Not in C, on purpose:
+
+- **Editing someone else's pod** where they granted you Write (the Xavier
+  case). Following stays read only. A use case of its own, to write up
+  (J9 in [journeys](journeys.md)).
+- **Wipe pod contents**: dropped.
+
+## People & apps · next after C, to define
+
+Who has access to what, from the rules the app has read (the old
+backoffice's "People & apps"). No pod-wide index exists, so it can list only
+the rules visited; how to present that honestly is the first thing to settle.
 
 ## D — Provider layer, shown only on our provider
 
@@ -179,10 +224,10 @@ not its HANDOFF.md, which is older than several features.
 | File browser, new file / folder | C | |
 | Upload, rename (copy then delete), delete with a count of what is inside | C | rename must move a folder's contents too |
 | Editor with live preview (Markdown, JSON check, code) | C | |
-| Wipe pod contents, protected paths kept | C | keep the protected-path list |
+| Wipe pod contents, protected paths kept | dropped | decided 26 Sep 2026 |
 | Sharing: only me / anyone with the link / one WebID read or edit | C | `acl.ts` already writes all three |
 | Raw WAC view ("Show the technical rules") | C | |
-| People & apps (who has access, from ACLs visited) | C | no pod-wide index exists; same limit |
+| People & apps (who has access, from ACLs visited) | People & apps, after C | no pod-wide index exists; same limit |
 | Create an account and pod (email, password) | J1 | done; guard kept: CSS treats an empty pod name as "claim the root" |
 | More pods on the same account | D | |
 | Agent WebIDs, linked by ownership proof; unlink | D | |
