@@ -27,6 +27,8 @@ let configStatus: number | null = null;
 let runs: typeof COLLECTIVE | null = null;
 /** What readRoster returns to this member; null: it refuses (not a member yet). */
 let rosterEntries: { webId: string; nick: string | null }[] | null = null;
+/** Holds readOwnProfile until opened, to look at the screen while the pods are being read. */
+let profileGate: Promise<void> | null = null;
 
 vi.mock("./lib/auth", () => ({ authFetch: vi.fn() }));
 vi.mock("./lib/pod", () => ({
@@ -47,7 +49,10 @@ vi.mock("./lib/collective", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./lib/collective")>();
   return {
     ...actual,
-    readOwnProfile: async () => profile,
+    readOwnProfile: async () => {
+      if (profileGate) await profileGate;
+      return profile;
+    },
     loadCollective: async (address: string) => {
       if (configStatus !== null) {
         throw Object.assign(new Error(`Could not read ${address} (${configStatus}).`), { status: configStatus, address });
@@ -119,6 +124,7 @@ beforeEach(() => {
   inboxFolderExists = false;
   configStatus = null;
   runs = null;
+  profileGate = null;
   sessionStorage.clear();
   invitedTo(COLLECTIVE.configUrl);
 });
@@ -404,5 +410,64 @@ describe("J1 — a new account comes back from the provider", () => {
     await render();
     expect(calls).toEqual([]);
     expect(sessionStorage.getItem("solid-backoffice.newcomer")).not.toBeNull();
+  });
+});
+
+describe("L5 — switching tabs", () => {
+  /** A read the test lets through when it chooses. */
+  function holdReads(): () => void {
+    let open!: () => void;
+    profileGate = new Promise((r) => (open = r));
+    return () => {
+      profileGate = null;
+      open();
+    };
+  }
+
+  it("draws the tab from the last load at once, then what the pods say now", async () => {
+    sessionStorage.clear();
+    profile = { ...profile, name: "Neil" };
+    const app = await render();
+    expect(app.querySelector(".app-shell")!.textContent).toContain("Neil");
+
+    profile = { ...profile, name: "Neil Armstrong" };
+    const release = holdReads();
+    const switching = renderMembership(app, WEBID, POD, () => {}, true);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(app.textContent).not.toContain("Neil Armstrong");
+    expect(app.querySelector(".app-shell")).not.toBeNull();
+
+    release();
+    await switching;
+    expect(app.textContent).toContain("Neil Armstrong");
+  });
+
+  it("never redraws under someone typing", async () => {
+    sessionStorage.clear();
+    const app = await render();
+
+    profile = { ...profile, name: "Someone else" };
+    const release = holdReads();
+    const switching = renderMembership(app, WEBID, POD, () => {}, true);
+    await new Promise((r) => setTimeout(r, 0));
+    const field = app.querySelector<HTMLInputElement>("#address")!;
+    field.value = "https://pod.example/other/config.ttl";
+
+    release();
+    await switching;
+    expect(app.querySelector("#address")).toBe(field);
+    expect(field.value).toBe("https://pod.example/other/config.ttl");
+  });
+
+  it("reads the pods before drawing when it is not a tab switch", async () => {
+    sessionStorage.clear();
+    const app = await render();
+    profile = { ...profile, name: "Changed by a button" };
+    const release = holdReads();
+    const after = renderMembership(app, WEBID, POD, () => {});
+    await new Promise((r) => setTimeout(r, 0));
+    release();
+    await after;
+    expect(app.textContent).toContain("Changed by a button");
   });
 });
