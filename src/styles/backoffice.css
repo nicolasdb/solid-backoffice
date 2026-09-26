@@ -369,6 +369,32 @@ pre.source code { background: none; padding: 0; }
 .collectives-head { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-6); max-width: 44rem; }
 .collectives-head h1 { margin: 0; }
 .collectives-main > .section-title:first-child { margin-top: 0; }
+/* Collectives: a card per collective, the whole card opens it; two per row. */
+.ccards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+@media (min-width: 48rem) { .ccards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ccard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-5);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.ccard:hover { border-color: var(--accent-line); }
+.ccard-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--text-h4); }
+.join-row { max-width: 44rem; }
+.join-row .step-title { margin: 0; font-size: var(--text-body); font-weight: 600; }
+
+/* One collective opened: the path is the heading, what to copy on the right. */
+.path-head { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-6); }
+.path-head .crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); font-size: var(--text-h4); }
+.path-head .crumbs h1 { display: inline; margin: 0; font-size: inherit; font-weight: 600; }
+.path-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); min-width: 0; max-width: 100%; }
+.path-side p { margin: 0; overflow-wrap: anywhere; }
 
 @media (min-width: 64rem) {
   .screen-wide { padding-inline: var(--space-20); }

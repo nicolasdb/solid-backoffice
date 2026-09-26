@@ -168,7 +168,10 @@ describe("slice A — the member's side of the handshake", () => {
     profile.memberOf = [COLLECTIVE.group, "https://example.org/some-club#org"];
     listed = true;
     const app = await render("#/c");
-    expect(app.textContent).toContain("You are a member.");
+    const card = app.querySelector<HTMLAnchorElement>(".ccard")!;
+    expect(card.getAttribute("href")).toBe(tab(COLLECTIVE));
+    expect(card.textContent).toContain("Member");
+    expect(card.textContent).toContain("Your folder is not shared with it yet");
     expect(app.textContent).toContain("not managed here");
   });
 
@@ -451,7 +454,7 @@ describe("layout A — tabs", () => {
     const list = await render("#/c");
     expect(list.querySelector(`a[href="${tab(COLLECTIVE)}"]`)).not.toBeNull();
     const own = await render(tab(COLLECTIVE));
-    expect(own.textContent).toContain("You run");
+    expect(own.textContent).toContain("Requests");
     expect(own.textContent).toContain("Members");
     expect(own.querySelector(".crumbs")!.textContent!.replace(/\s+/g, " ").trim()).toBe("Collectives / HyperScope");
     expect(own.querySelector('.tab[aria-current="page"]')!.textContent).toContain("Collectives");

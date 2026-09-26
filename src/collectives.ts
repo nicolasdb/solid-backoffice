@@ -43,7 +43,7 @@ export function renderCollectivesView(data: Loaded): string {
 
       <h2 class="section-title">You belong to</h2>
       ${joined.length ? "" : `<p class="lead">No collective yet.</p>`}
-      ${joined.map(([c]) => collectiveCard(c)).join("")}
+      ${joined.length ? `<ul class="ccards">${joined.map(([c]) => collectiveCard(c)).join("")}</ul>` : ""}
 
       ${notJoined.length ? `<h2 class="section-title">Not joined yet</h2>` : ""}
       ${notJoined.map(([c, i]) => joinStep(c, i, profile)).join("")}
@@ -126,40 +126,34 @@ export function bindCollectives(app: HTMLElement, data: Loaded, ctx: ViewContext
 
 /* ── Collectives ───────────────────────────────────────────────────────── */
 
-function tabLink(collective: Collective, label: string): string {
-  return `<a href="${routeHref({ name: "collective", address: collective.configUrl })}">${esc(label)}</a>`;
+/** A collective as a card that opens it (canvas board 4): name, state, one line. */
+function card(collective: Collective, pill: string, line: string): string {
+  return `
+    <li><a class="ccard" href="${routeHref({ name: "collective", address: collective.configUrl })}">
+      <span class="ccard-head"><strong>${esc(collective.name)}</strong>${pill}</span>
+      <span class="meta">${esc(line)}</span>
+    </a></li>`;
 }
 
 function runCard(run: RunView): string {
-  const { collective } = run;
+  const waiting = run.requests.length;
+  const pill = waiting
+    ? `<span class="pill is-wait">${waiting} ${waiting === 1 ? "request" : "requests"}</span>`
+    : `<span class="pill">You run it</span>`;
   return `
     <h2 class="section-title">You run</h2>
-    <section class="step">
-      <div class="step-head">
-        <h3>${esc(collective.name)}</h3>
-        <span class="label-mono">Collective</span>
-      </div>
-      <p class="meta">${esc(runSummary(run))}</p>
-      <p>${tabLink(collective, `Open ${collective.name}`)}</p>
-    </section>`;
+    <ul class="ccards">${card(run.collective, pill, runSummary(run))}</ul>`;
 }
 
 function collectiveCard(view: CollectiveView): string {
   const { collective, state, published } = view;
-  return `
-    <section class="step">
-      <div class="step-head">
-        <h3>${esc(collective.name)}</h3>
-        ${statePill(state)}
-      </div>
-      <p class="lead">${esc(stateLabel(state, collective.name))}</p>
-      <p class="meta">${
-        published
-          ? `Your folder <code>${esc(collective.bundleFolder)}</code> is shared with it.`
-          : "Your folder is not shared with it yet."
-      }</p>
-      <p>${tabLink(collective, `Open ${collective.name}`)}</p>
-    </section>`;
+  const line =
+    state === "member"
+      ? published
+        ? `You share ${collective.bundleFolder}`
+        : "Your folder is not shared with it yet"
+      : stateLabel(state, collective.name);
+  return card(collective, statePill(state), line);
 }
 
 function joinStep(view: CollectiveView, i: number, profile: MemberDeclaration): string {
@@ -202,16 +196,11 @@ function renderBroken(entry: Loaded["broken"][number]): string {
 
 function stepFindCollective(first: boolean): string {
   return `
-    <section class="step is-quiet">
-      <div class="step-head">
-        <h3>${first ? "Join a collective" : "Join another collective"}</h3>
-      </div>
-      <p class="lead">
-        Paste the invitation link the collective sent you.
-      </p>
+    <section class="step is-quiet join-row">
+      <h2 class="step-title">${first ? "Join a collective" : "Join another collective"}</h2>
       <form id="find-form" class="find-row">
         <div class="field">
-          <label for="address">Invitation link (or the collective's address)</label>
+          <label for="address">Its address, or the invitation link it sent you</label>
           <input id="address" name="address" type="url"
                  placeholder="https://…?collective=…" required />
         </div>

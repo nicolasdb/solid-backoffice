@@ -27,13 +27,13 @@ import {
 } from "./lib/collective";
 import { focusView } from "./ui/a11y";
 import { busy } from "./ui/typing";
-import { esc, renderError, renderPending, toast } from "./ui/patterns";
+import { renderError, renderPending, toast } from "./ui/patterns";
 import { bindRun, loadRun, renderRunView, type RunView } from "./admin";
 import { pendingInvite, setInvite, takeNewcomer } from "./invite";
 import { bindCollectives, renderCollectivesView } from "./collectives";
 import { bindYou, readSource, renderYouView, youTodo } from "./you";
 import { bindMember, renderMemberView, loadRoster } from "./member";
-import { currentRoute, isPlaces, onRouteChange, replaceRoute, routeHref, type Route } from "./router";
+import { currentRoute, isPlaces, onRouteChange, replaceRoute, type Route } from "./router";
 import { forgetPlaces, mountPlaces, placesFrame, showPlaces, type Group } from "./places";
 import { readRoster } from "./lib/admin";
 import { bindShell, renderShell, tabsFor } from "./shell";
@@ -288,11 +288,6 @@ function landing(): Route {
   return route;
 }
 
-/** "Collectives / HyperScope": the way back from one collective to the list. */
-function crumbs(name: string): string {
-  return `<nav class="crumbs" aria-label="Path"><a href="${routeHref({ name: "collectives" })}">Collectives</a> <span aria-hidden="true">/</span> <span aria-current="page">${esc(name)}</span></nav>`;
-}
-
 /** The tab the address bar names, as HTML plus what binds its buttons. */
 async function compose(
   app: HTMLElement,
@@ -313,7 +308,7 @@ async function compose(
 
   if (target && data.run && sameCollective(data.run.collective, target)) {
     const run = data.run;
-    body = crumbs(run.collective.name) + renderRunView(run);
+    body = renderRunView(run);
     bind = () => bindRun(app, run, rerender);
   } else if (memberIndex >= 0) {
     const view = data.collectives[memberIndex];
@@ -323,7 +318,7 @@ async function compose(
       roster = await loadRoster(view.collective);
       rosters.set(key, roster);
     }
-    body = crumbs(view.collective.name) + renderMemberView(view, memberIndex, roster, webId);
+    body = renderMemberView(view, memberIndex, roster, webId);
     bind = () => bindMember(app, view, memberIndex, ctx);
   } else if (isPlaces(route)) {
     body = placesFrame();

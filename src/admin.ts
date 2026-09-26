@@ -28,7 +28,7 @@ import { describePodError } from "./lib/pod";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { bindButton, bindForm, run } from "./bind";
-import { bindCopy, copyable } from "./steps";
+import { bindCopy, collectiveHead, copyable } from "./steps";
 
 interface Request {
   message: InboxMessage;
@@ -303,18 +303,13 @@ export function renderRunView(view: RunView): string {
       : `<p class="lead">Nobody yet. Accepted requests appear here.</p>`;
 
   return `
-    <header class="view-head run-head">
-      <div class="stack">
-        <p class="eyebrow">You run</p>
-        <h1 class="display" data-view-title>${esc(collective.name)}</h1>
-        <p class="meta">Invitation link, to send to people: ${copyable(link, "Invitation link copied.")}</p>
-        ${isLocal() ? `<p class="meta">This link points to your development server: it works only on this computer.</p>` : ""}
-      </div>
-      <div class="actions">
-        ${requests.length ? `<span class="pill is-wait">${requests.length} ${requests.length === 1 ? "request" : "requests"}</span>` : ""}
-        <span class="pill">${esc(runSummary(view).split(" · ")[0])}</span>
-      </div>
-    </header>
+    ${collectiveHead(
+      collective.name,
+      requests.length ? `<span class="pill is-wait">${requests.length} ${requests.length === 1 ? "request" : "requests"}</span>` : "",
+      `<p class="meta">Invitation link: ${copyable(link, "Invitation link copied.")}</p>
+       ${isLocal() ? `<p class="meta">This link points to your development server: it works only on this computer.</p>` : ""}`,
+      "run-head"
+    )}
 
     <nav class="jump" aria-label="Sections">
       <button type="button" class="chip" data-jump="run-requests">Requests <span>${requestCount}</span></button>

@@ -18,7 +18,8 @@ import { readPerson, readRoster } from "./lib/admin";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { bindButton } from "./bind";
-import { bindCopy, copyable, stateLabel, statePill } from "./steps";
+import { bindCopy, collectiveHead, copyable, stateLabel, statePill } from "./steps";
+import { trimAddress } from "./ui/address";
 import type { CollectiveView, ViewContext } from "./onboarding";
 
 export interface RosterMember {
@@ -153,14 +154,11 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
     </section>`;
 
   return `
-    <header class="view-head">
-      <p class="eyebrow">${state === "pending" ? "You asked to join" : "You belong to"}</p>
-      <div class="view-title">
-        <h1 class="display" data-view-title>${name}</h1>
-        ${statePill(state)}
-      </div>
-      <p class="meta">Its address: <code>${esc(collective.configUrl)}</code></p>
-    </header>
+    ${collectiveHead(
+      collective.name,
+      statePill(state),
+      `<p class="meta">Its address: ${copyable(collective.configUrl, "Address copied.", trimAddress(collective.configUrl, webId))}</p>`
+    )}
     <div class="member-grid">
       <div class="stack">${sharing}${membership}</div>
       <aside class="stack">${membersCard(collective, roster, webId, state === "pending")}${agentCard(collective)}</aside>

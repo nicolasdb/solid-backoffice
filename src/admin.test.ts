@@ -137,16 +137,17 @@ describe("You run", () => {
     view = { ...view, requests: [], members: [], inboxError: "Could not read the inbox (403).", membersError: "Could not read the roster (403)." };
     const app = render();
     expect(app.textContent).toContain("Could not read the inbox (403).");
-    expect(app.textContent).toContain("members: could not be read");
+    expect(app.querySelector("#run-members-title")!.textContent).toBe("Members · ?");
   });
 
-  it("puts the name, the invitation link and the counts in the header", () => {
+  it("puts the path, the invitation link and the requests waiting in the header", () => {
     const app = render();
     const head = app.querySelector(".run-head")!;
     expect(head.querySelector("h1")!.textContent).toBe("HyperScope");
     expect(head.textContent).toContain(`?collective=${COLLECTIVE.configUrl}`);
+    expect(head.querySelector(".crumbs a")!.getAttribute("href")).toBe("#/c");
     expect(head.textContent).toContain("1 request");
-    expect(head.textContent).toContain("1 member");
+    expect(app.querySelector("#run-members-title")!.textContent).toBe("Members · 1");
   });
 
   it("copies the invitation link when it is clicked", async () => {

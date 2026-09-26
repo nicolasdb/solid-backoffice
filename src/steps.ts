@@ -88,3 +88,20 @@ export function bindCopy(root: HTMLElement): void {
     });
   });
 }
+
+/**
+ * The head of one collective opened inside Collectives (canvas "Tabs, third
+ * pass", board 5): the path back, the collective's name as the page's
+ * heading, and on the right what to copy from it.
+ */
+export function collectiveHead(name: string, extra: string, right: string, className = ""): string {
+  return `
+    <header class="view-head path-head${className ? ` ${className}` : ""}">
+      <nav class="crumbs" aria-label="Path">
+        <a href="#/c">Collectives</a> <span aria-hidden="true">/</span>
+        <h1 data-view-title aria-current="page">${esc(name)}</h1>
+        ${extra}
+      </nav>
+      <div class="path-side">${right}</div>
+    </header>`;
+}
