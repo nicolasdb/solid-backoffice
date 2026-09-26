@@ -32,12 +32,13 @@ still `make vps-deploy`.
    keyboard only (`trackInputModality`, `src/ui/a11y.ts`), and, once
    settled, `.screen-wide` and the tab bar that moves to the bottom on a
    phone.
-3. **L5 · speed**, before C's file browser multiplies the reads: measure
-   `load()` (test pods and live), keep the last load in memory and
-   revalidate in the background instead of reloading on every tab, run
-   independent reads in parallel, and an in-memory ETag cache
-   (`If-None-Match`, CSS 7 answers 304) beside `authFetch`. Memory only,
-   never browser storage.
+3. **L5 · speed**: built, live test pending
+   ([manual-tests](manual-tests.md#l5--speed-on-the-live-pod)). Independent
+   reads start at once (`load()`, `loadRun()`); a tab switch draws from the
+   last load and reads again behind it; display reads revalidate with
+   `If-None-Match` (`src/lib/read.ts`, CSS 7 answers 304). Memory only.
+   Measured with `test/pods/speed.test.ts`. Left: finding a resource's
+   `.acl` costs a HEAD before the GET, one round on every share check.
 4. **C · Places**: drawn on the canvas, desktop and phone (file preview and
    editor, following, named people, the technical rules as the advanced
    mode; [layout-brief](layout-brief.md), "Places, second pass"). A few

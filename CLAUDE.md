@@ -73,12 +73,15 @@ one changes, change the other. Never point it at the real provider.
   screen.
 - `src/onboarding.ts` — signed in: reads the pods (`load`: the collective
   you run via `findRunCollective`, your profile, your collectives) on every
-  render, then shows the tab the hash names (`src/router.ts`) inside
+  render (a tab switch draws from the last load first), then shows the tab the hash names (`src/router.ts`) inside
   `src/shell.ts` (layout A: tabs on top, a bottom bar on a phone). Tabs:
   `src/home.ts` (your collectives, joining, "You"), `src/member.ts` (a
   collective you belong to: sharing, leaving, its members and agent),
   `src/admin.ts` (the one you run); `src/steps.ts` holds the pieces they
   share. No role, progress or tab state is stored.
+- `src/lib/read.ts` — display reads with an in-memory ETag cache
+  (`If-None-Match`, 304 hands back the kept body); writes never use it.
+  Forgotten at sign-out, with the last load.
 - `src/theme.ts` — the light / dark switch in the top bar and the landing's
   nav: light by default, kept in localStorage, never on a pod.
 

@@ -29,6 +29,7 @@ import {
   createThing,
 } from "@inrupt/solid-client";
 import { authFetch } from "./auth";
+import { readTurtle } from "./read";
 import { NS } from "./vocab";
 
 export { NS };
@@ -245,7 +246,7 @@ export async function updateOwnProfile(
 
 export async function readOwnProfile(webId: string): Promise<MemberDeclaration> {
   const docUrl = profileDocOf(webId);
-  const res = await authFetch(docUrl, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  const res = await readTurtle(docUrl);
   if (!res.ok) throw new Error(`Could not read your profile (${res.status}).`);
   return parseProfile(await res.text(), docUrl, webId);
 }
@@ -274,7 +275,7 @@ export interface CollectiveLoadError extends Error {
  */
 export async function loadCollective(address: string): Promise<Collective> {
   const docUrl = profileDocOf(address);
-  const res = await authFetch(docUrl, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  const res = await readTurtle(docUrl);
   if (!res.ok) {
     const err = new Error(`Could not read ${docUrl} (${res.status}).`) as CollectiveLoadError;
     err.status = res.status;
@@ -289,7 +290,7 @@ export async function loadCollective(address: string): Promise<Collective> {
  * — the normal case for an applicant, since only members may read it.
  */
 export async function isListed(collective: Collective, webId: string): Promise<boolean | null> {
-  const res = await authFetch(collective.roster, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  const res = await readTurtle(collective.roster);
   if (res.status === 401 || res.status === 403 || res.status === 404) return null;
   if (!res.ok) throw new Error(`Could not read ${collective.roster} (${res.status}).`);
   return parseRoster(await res.text(), collective.roster, collective.group).includes(webId);
@@ -321,7 +322,7 @@ export interface CollectiveSummary {
 
 export async function summarise(collective: Collective): Promise<CollectiveSummary> {
   const read = async (url: string) => {
-    const res = await authFetch(url, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+    const res = await readTurtle(url);
     return res.ok ? parse(await res.text(), url) : null;
   };
   const [roster, inbox] = await Promise.all([read(collective.roster), read(collective.inbox)]);

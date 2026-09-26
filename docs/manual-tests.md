@@ -357,3 +357,28 @@ agree", the share announced). Slices A and B step 1 is done by this run.
 deferred, not blocking; the sign-up line now only says to keep the
 passphrase safe. Still to run: A and B steps 3 (the newcomer's own "You are
 a member" after reload), 5 and 6.
+
+## L5 · speed, on the live pod
+
+`test/pods/speed.test.ts` counts the requests one `load()` makes and adds
+latency to each; with 300 ms per request, a member's home went from 2555 to
+1737 ms and the collective's from 3749 to 1536 ms, and a second load gets 304
+for what did not change. **It cannot show a real network, the provider's
+CORS, or how the tabs feel.** This pass covers only those. Open the
+browser's developer tools on the Network tab, filtered to the pod's host.
+
+1. Sign in and wait for Home. Click a collective's tab, then Home again.
+   Each tab appears at once, with no "Reading your profile…" line; the reads
+   show up in the Network tab after it.
+2. On the second visit to a tab, the profile, `config.ttl` and
+   `membres.ttl` answer **304**. If a read fails with a CORS error naming
+   `If-None-Match`, write it down: the app then asks again without it, so
+   the screens still work, but the provider's CORS needs the header allowed.
+3. In a second browser window, change your name on the pod (or ask to join
+   from another account). Switch tabs in the first window: the change
+   appears a moment after the tab, without a reload.
+4. Start typing in "Join a collective", then switch tabs and come back while
+   something changed on the pod: nothing you typed on the current screen is
+   ever wiped by a redraw.
+5. Sign out, sign in as another account: nothing from the first account
+   shows, even for a moment.

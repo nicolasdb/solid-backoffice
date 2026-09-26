@@ -20,6 +20,7 @@
  */
 import { Parser, type Quad } from "n3";
 import { authFetch } from "./auth";
+import { readTurtle } from "./read";
 import { NS } from "./vocab";
 import { buildAnswer, buildRemove } from "./activity";
 import {
@@ -105,7 +106,7 @@ export function parseActivity(turtle: string, url: string): InboxMessage {
 
 async function readMessage(url: string): Promise<InboxMessage> {
   try {
-    const res = await authFetch(url, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+    const res = await readTurtle(url);
     if (!res.ok) return unreadable(url, `Could not be read (${res.status}).`);
     const type = res.headers.get("content-type") ?? "";
     if (!/turtle|n-triples|n3/i.test(type)) return unreadable(url, `Not an activity: ${type || "no content type"}.`);
@@ -117,7 +118,7 @@ async function readMessage(url: string): Promise<InboxMessage> {
 
 /** Every message in the collective's inbox, oldest first. Never drops one. */
 export async function readInbox(collective: Collective): Promise<InboxMessage[]> {
-  const res = await authFetch(collective.inbox, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  const res = await readTurtle(collective.inbox);
   if (!res.ok) throw new Error(`Could not read the inbox at ${collective.inbox} (${res.status}).`);
   const urls = parseInboxListing(await res.text(), collective.inbox);
   const messages = await Promise.all(urls.map(readMessage));
@@ -142,7 +143,7 @@ export interface Person {
 export async function readPerson(webId: string): Promise<Person> {
   try {
     const doc = profileDocOf(webId);
-    const res = await authFetch(doc, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+    const res = await readTurtle(doc);
     if (!res.ok) return { webId, profile: null, problem: `Their profile could not be read (${res.status}).` };
     return { webId, profile: parseProfile(await res.text(), doc, webId), problem: null };
   } catch (err) {
@@ -273,7 +274,7 @@ export async function removeFromRoster(collective: Collective, webId: string): P
 
 /** The roster, read by its owner. */
 export async function readRoster(collective: Collective): Promise<ReturnType<typeof parseRosterEntries>> {
-  const res = await authFetch(collective.roster, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  const res = await readTurtle(collective.roster);
   if (!res.ok) throw new Error(`Could not read the roster at ${collective.roster} (${res.status}).`);
   return parseRosterEntries(await res.text(), collective.roster, collective.group);
 }

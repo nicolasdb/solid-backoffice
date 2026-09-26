@@ -7,10 +7,12 @@
  * Roles are read from the pods, never stored (docs/explanation/membership.md).
  * Every screen reads its state from the pods each time it renders, so someone
  * who comes back tomorrow, or did a step by hand, sees where they really are.
+ * A tab switch draws from the last load first and reads behind it (L5).
  */
 import { describePodError, exists, isAuthError } from "./lib/pod";
 import { getAccess } from "./lib/acl";
 import { setUpNewcomer } from "./lib/newcomer";
+import { forgetReads } from "./lib/read";
 import {
   findRunCollective,
   isListed,
@@ -189,6 +191,7 @@ export async function renderMembership(
     stopRouting?.();
     stopRouting = null;
     last = null;
+    forgetReads();
     // The sign-in screen has no tabs; leave no route in the address.
     history.replaceState(null, "", location.pathname + location.search);
     onLogout();
