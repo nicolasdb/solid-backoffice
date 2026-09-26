@@ -251,12 +251,27 @@ provider's host (`…/neil/profile/card#me`, `src/ui/address.ts`), which is
 enough to recognise someone but not to paste their WebID elsewhere
 (decided 26 Sep 2026).
 
+**D lives on You** (decided 26 Sep 2026, tabs third pass in
+[layout-brief](layout-brief.md)): the page under the avatar, with your
+name, agent and inbox and the card's source read only, gains your pods,
+agents, connectors and the access log.
+
 **People & apps** joins D (decided 26 Sep 2026): who has access to what,
 from the rules the app has read (the old backoffice's view), beside the
 access log that says who actually read. Unlike the rest of D it is Solid
 protocol, so it shows on any provider. No pod-wide index exists, so it can
 list only the rules visited; how to present that honestly is the first
 thing to settle.
+
+**Your inbox, later (not scheduled).** The handshake lives in two files:
+`org:memberOf` in your `profile/card`, `foaf:member` in the collective's
+roster. The `as:Accept` / `as:Reject` / `as:Remove` a collective posts to
+your inbox change nothing; nothing reads them today, and deleting one
+changes no state. Two uses to come: show "Refused" from an `as:Reject`
+(the roster cannot say it to someone it refused), and the inbox as mail
+between members, since any signed-in WebID may append to it (a member
+shares minutes that name you, gives you edit on them, and posts a note to
+your inbox; your agent could do the same).
 
 ## E — Maps of Making landing
 

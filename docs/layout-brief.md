@@ -247,6 +247,18 @@ toasts and screen-reader announcements after each write.
   4. **Words: the app's name stays "Backoffice"** (brand, page title);
      everything the person reads inside it says what it is about: "Your
      pod", "Collectives", "You".
+  5. **You shows its source.** The page is an editor of `profile/card`:
+     name is `foaf:name`, agent `acl:delegates`, inbox `ldp:inbox`, each
+     collective joined `org:memberOf`. Below the steps, the card itself,
+     read only, raw Turtle, with the lines each step wrote marked, and
+     "Open in Pods" to go further (the editor's conditional save). No hand
+     editing here: a broken card can break sign-in. As on Maps of Making's
+     "Source data": what you see is what you shared, unaltered. What Solid
+     writes is shown, never hidden, so it becomes familiar.
+  6. **You is D's home.** Your pods on the account, agents minted for you,
+     connectors, the access log and your full WebID sit on You (the
+     provider parts only on our provider). People & apps, about others,
+     stays a tab of its own.
 
 The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
 (a Claude Design canvas, private to its owner).
