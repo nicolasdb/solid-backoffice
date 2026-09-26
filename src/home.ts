@@ -21,7 +21,7 @@ import { announce } from "./ui/a11y";
 import { esc, renderError, toast } from "./ui/patterns";
 import { bindButton, bindForm } from "./bind";
 import { runSummary, type RunView } from "./admin";
-import { pendingInvite, setInvite } from "./invite";
+import { collectiveFromInput, pendingInvite, setInvite } from "./invite";
 import { routeHref } from "./router";
 import { declared, stateLabel, statePill, step } from "./steps";
 import type { CollectiveView, Loaded, ViewContext } from "./onboarding";
@@ -113,8 +113,8 @@ export function bindHome(app: HTMLElement, data: Loaded, ctx: ViewContext): void
   }
 
   bindForm(app, "#find-form", async (form) => {
-    const address = (form.elements.namedItem("address") as HTMLInputElement).value.trim();
-    if (!isValidWebId(address)) throw new Error("A collective's address starts with https:// and has no spaces.");
+    const address = collectiveFromInput((form.elements.namedItem("address") as HTMLInputElement).value);
+    if (!isValidWebId(address)) throw new Error("An invitation link or a collective's address starts with https:// and has no spaces.");
     // Load it now, so a wrong address fails here, next to the field.
     await loadCollective(address);
     setInvite(address);
@@ -239,13 +239,12 @@ function stepFindCollective(first: boolean): string {
         <h3>${first ? "Join a collective" : "Join another collective"}</h3>
       </div>
       <p class="lead">
-        Paste the address the collective gave you, or open the invitation link
-        they sent.
+        Paste the invitation link the collective sent you.
       </p>
       <form id="find-form" class="field">
-        <label for="address">Collective's address</label>
+        <label for="address">Invitation link (or the collective's address)</label>
         <input id="address" name="address" type="url"
-               placeholder="https://…/config.ttl" required />
+               placeholder="https://…?collective=…" required />
         <div><button type="submit" class="ghost">Look it up</button></div>
       </form>
       <p class="step-error error" role="alert" hidden></p>

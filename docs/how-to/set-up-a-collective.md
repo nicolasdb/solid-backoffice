@@ -37,8 +37,11 @@ files and `.acl` documents on its pod.
 6. **Check** by signing in to the backoffice as an unrelated account and
    opening the invitation link: the collective's card appears, and
    `membres.ttl` stays unreadable.
-7. **Invite** with
+7. **Invite** by sending the invitation link, copied from the collective's
+   tab in the backoffice:
    `https://<backoffice>/?collective=https://<pod>/<collective>/config.ttl`.
+   Opened, it shows the invited welcome; pasted into "Join another
+   collective" by someone already signed in, it finds the collective.
 
 The rights for the other containers (`depots/`, `principles/`, …) are listed
 in [ADR 006 §5](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md).

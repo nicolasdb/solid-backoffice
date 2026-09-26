@@ -216,7 +216,7 @@ describe("slice A — the member's side of the handshake", () => {
     runs = COLLECTIVE;
     const app = await render(tab(COLLECTIVE));
     expect(app.textContent).toContain(COLLECTIVE.configUrl);
-    expect(app.querySelector("#copy-invite")).toBeNull();
+    expect(app.textContent).toContain("served online");
   });
 
   it("will not send a join request before there is an inbox for the answer", async () => {

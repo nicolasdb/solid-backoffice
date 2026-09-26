@@ -157,8 +157,23 @@ describe("You run", () => {
     expect(copied).toBe(COLLECTIVE.configUrl);
   });
 
-  it("offers no invitation link on localhost, where it would invite nobody", () => {
-    expect(render().querySelector("#copy-invite")).toBeNull();
+  it("offers no invitation link on localhost, where it would invite nobody, only the address", () => {
+    const head = render().querySelector(".run-head")!;
+    expect(head.querySelector<HTMLElement>("[data-copy]")!.dataset.copy).toBe(COLLECTIVE.configUrl);
+    expect(head.textContent).toContain("served online");
+  });
+
+  it("gives the invitation link to copy once served online, and not the address", () => {
+    const real = window.location;
+    Object.defineProperty(window, "location", { value: new URL("https://test.example/"), configurable: true });
+    try {
+      const head = render().querySelector(".run-head")!;
+      const copy = head.querySelectorAll<HTMLElement>("[data-copy]");
+      expect(copy.length).toBe(1);
+      expect(copy[0].dataset.copy).toBe(`https://test.example/?collective=${encodeURIComponent(COLLECTIVE.configUrl)}`);
+    } finally {
+      Object.defineProperty(window, "location", { value: real, configurable: true });
+    }
   });
 
   it("filters the members on screen by name, short name or address", () => {

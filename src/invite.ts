@@ -17,6 +17,20 @@ export function captureInvite(): void {
   if (address) setInvite(address);
 }
 
+/**
+ * What someone pastes into "Join a collective": the invitation link (its
+ * `?collective=` is the address, whichever backoffice served it) or the
+ * collective's address itself.
+ */
+export function collectiveFromInput(text: string): string {
+  const trimmed = text.trim();
+  try {
+    return new URL(trimmed).searchParams.get("collective") ?? trimmed;
+  } catch {
+    return trimmed;
+  }
+}
+
 export function pendingInvite(): string | null {
   try {
     return sessionStorage.getItem(INVITE_KEY);

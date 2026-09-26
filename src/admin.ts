@@ -261,6 +261,14 @@ export function invitationLink(collective: Collective): string | null {
   return url.href;
 }
 
+/** Copy icon: Bootstrap Icons "copy" (MIT). */
+const COPY_ICON = `<svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/></svg>`;
+
+/** Text that copies itself when clicked. */
+function copyable(text: string, copied: string): string {
+  return `<button type="button" class="copyable" data-copy="${esc(text)}" data-copied="${esc(copied)}" title="Copy"><code>${esc(text)}</code>${COPY_ICON}<span class="visually-hidden">Copy</span></button>`;
+}
+
 /**
  * The collective's own screen (layout L2): requests beside members on a wide
  * screen, one above the other on a phone with chips to jump between them.
@@ -298,14 +306,16 @@ export function renderRunView(view: RunView): string {
       <div class="stack">
         <p class="eyebrow">You run</p>
         <h1 class="display" data-view-title>${esc(collective.name)}</h1>
-        <p class="meta">Address to give people:
-          <button type="button" class="copyable" data-copy="${esc(collective.configUrl)}" data-copied="Address copied."
-                  title="Copy the address"><code>${esc(collective.configUrl)}</code><span class="copy-hint" aria-hidden="true">Copy</span></button></p>
+        ${
+          link
+            ? `<p class="meta">Invitation link, to send to people: ${copyable(link, "Invitation link copied.")}</p>`
+            : `<p class="meta">Its address: ${copyable(collective.configUrl, "Address copied.")}</p>
+               <p class="meta">The invitation link to send appears once the backoffice is served online, not on localhost.</p>`
+        }
       </div>
       <div class="actions">
         ${requests.length ? `<span class="pill is-wait">${requests.length} ${requests.length === 1 ? "request" : "requests"}</span>` : ""}
         <span class="pill">${esc(runSummary(view).split(" · ")[0])}</span>
-        ${link ? `<button id="copy-invite" class="ghost small" data-copy="${esc(link)}" data-copied="Invitation link copied.">Copy the invitation link</button>` : ""}
       </div>
     </header>
 

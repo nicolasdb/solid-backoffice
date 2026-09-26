@@ -276,16 +276,20 @@ Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
    the bar stays at the bottom on both tabs (after long addresses were made
    to wrap); signing in from a tab works (no fragment in the redirect URL).
 2. **L2, the collective's own screen.** As `hyperscope-HQ`, HyperScope's
-   tab: the name, the address, the counts and "Copy the invitation link"
-   (on test.nicolasdb.eu only, not on localhost; paste the copied link in a
-   private window: it opens the invited welcome). Desktop: requests left,
+   tab: the name, the counts and the invitation link, which copies itself
+   when clicked (on test.nicolasdb.eu; on localhost the address instead).
+   Paste the copied link in a private window: it opens the invited welcome.
+   Paste it, signed in as another account, into "Join another collective":
+   the collective's card appears. Desktop: requests left,
    members right as a table; "Find a member" narrows it by name, short name
    or address. Phone: "Requests · Members · Other" chips scroll to each
    section without changing the address; each member is a block. Home keeps
    only the summary card. Then run steps 3, 5 and 6 of slices A and B above
-   on this screen. Clicking the address copies it.
+   on this screen.
    **Run 26 Sep 2026**, desktop: layout fine; the filter matched every row
    (all members share the host) and now searches name, short name and path.
+   The header offered the config.ttl address "to give people"; it now gives
+   the invitation link, the one thing an owner sends.
 3. **Theme switch.** The icon left of the avatar (and in the welcome
    screen's corner) goes same-as-device → light → dark. The choice survives
    a reload; in a private window it lasts until the reload. Both themes read
