@@ -56,8 +56,8 @@ public. A collective that restricts it to signed-in people still gets its
 invitations; the screen then shows the backoffice's copy and the inviting
 host.
 
-Not built yet: part of the layout pass
-([layout brief](../layout-brief.md)).
+Built in layout L3 (`src/welcome.ts`): both `http://schema.org/` and
+`https://schema.org/` are read.
 
 ### Requirements
 

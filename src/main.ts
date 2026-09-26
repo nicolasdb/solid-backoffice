@@ -8,6 +8,8 @@
  * `renderHome` hands over to the backoffice's own screens; everything above
  * it is the kit's shell, kept unchanged.
  */
+import "@fontsource/newsreader/latin-400.css";
+import "@fontsource/newsreader/latin-400-italic.css";
 import "./styles/core.css";
 import "./styles/theme.css";
 import "./styles/patterns.css";

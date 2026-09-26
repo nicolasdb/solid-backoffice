@@ -93,8 +93,9 @@ details.step:not([open]) {
    the tab bar that moves to the bottom on a phone. */
 
 :root {
-  /* The landing's serif. Georgia until the self-hosted face lands (layout L3). */
-  --font-display: Georgia, "Times New Roman", serif;
+  /* The display serif, self-hosted (@fontsource/newsreader, OFL, latin
+     400 and italic; imported by main.ts). Georgia while it loads. */
+  --font-display: "Newsreader", Georgia, serif;
 }
 
 .app-top {
@@ -357,7 +358,17 @@ button.small {
   gap: var(--space-3);
 }
 
-/* theme.css styles url and text inputs; a search field looks the same. */
+/* theme.css styles url and text inputs; email, password and search fields
+   look the same. */
+input[type="email"],
+input[type="password"] {
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}
+
 .find input {
   width: 15rem;
   max-width: 100%;
@@ -519,12 +530,6 @@ table.members .row-actions button { margin-top: var(--space-1); }
   stroke-linecap: round;
 }
 
-.theme-corner {
-  position: absolute;
-  top: calc(var(--space-4) + env(safe-area-inset-top));
-  right: calc(var(--space-4) + env(safe-area-inset-right));
-}
-
 /* Text that copies itself when clicked: the text, then a copy icon. */
 button.copyable {
   display: inline;
@@ -550,6 +555,191 @@ button.copyable:hover code { color: var(--text-primary); }
 }
 
 button.copyable:hover .copy-icon { fill: var(--accent); }
+
+/* ── The landing (layout L3, src/welcome.ts) ─────────────────────────────── */
+
+.landing {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 var(--space-8) env(safe-area-inset-bottom);
+}
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: calc(var(--space-5) + env(safe-area-inset-top)) 0 var(--space-5);
+}
+
+.landing-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/* A button that reads as a link: it acts on the page, not the address. */
+button.link-button {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+button.link-button:hover { color: var(--text-primary); text-decoration: underline; }
+.panel-card button.link-button { color: var(--accent); }
+
+.landing-hero,
+.landing-why,
+.landing-then {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.landing-hero { padding: var(--space-16) 0 var(--space-20); }
+.landing-hero-text { gap: var(--space-6); padding-top: var(--space-6); min-width: 0; }
+
+.landing-title {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.landing-h2 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.pull {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-h3);
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.landing-lead { font-size: var(--text-h4); max-width: 34em; }
+
+.invite-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 32rem;
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.invite-card div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.panel-card {
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+}
+
+.panel-card h2 { margin: 0; }
+.panel-card .field { max-width: none; }
+
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.divider {
+  width: 100%;
+  height: var(--border-width);
+  margin: 0;
+  border: none;
+  background: var(--border-subtle);
+}
+
+.landing-band {
+  padding: var(--space-16) 0;
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.landing-band:focus { outline: none; }
+
+.how-steps {
+  list-style: none;
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-8);
+}
+
+.how-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--border);
+}
+
+.how-number { font-family: var(--font-mono); font-size: var(--text-micro); color: var(--accent); }
+.how-title { margin: 0; font-size: var(--text-h3); }
+.how-steps .lead { margin: 0; font-size: var(--text-body); }
+
+.ladder { display: block; width: 100%; height: auto; }
+.ladder-ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-opacity: 0.6; }
+.ladder-ring.is-network { stroke-opacity: 0.35; stroke-dasharray: 4 6; }
+.ladder-dot { fill: var(--accent); }
+.ladder-dot.is-faint { fill-opacity: 0.4; }
+.ladder-link { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-opacity: 0.5; stroke-dasharray: 3 5; }
+.ladder-label {
+  fill: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.6px;
+  text-anchor: middle;
+}
+
+.landing-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6) 0 var(--space-8);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+
+@media (min-width: 64rem) {
+  .landing-hero,
+  .landing-why,
+  .landing-then { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .landing-hero-text { grid-column: span 7; }
+  .landing-panel { grid-column: span 5; }
+  .landing-why > :first-child { grid-column: span 6; }
+  .landing-why-text { grid-column: span 6; padding-top: var(--space-8); }
+  .landing-then { align-items: center; }
+  .landing-then > :first-child { grid-column: span 5; }
+  .landing-then > :last-child { grid-column: span 7; }
+  .how-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 40rem) and (max-width: 64rem) {
+  .how-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 40rem) {
+  .landing { padding-inline: var(--space-4); }
+  .landing-hero { padding: var(--space-8) 0 var(--space-12); }
+  .landing-band { padding: var(--space-12) 0; }
+  .landing-links { gap: var(--space-4); }
+  #to-how { display: none; }
+}
 
 /* focusView's ring on a heading only for keyboard users (trackInputModality):
    a browser rings a programmatically focused heading on page load too, which

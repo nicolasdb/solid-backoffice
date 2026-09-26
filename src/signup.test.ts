@@ -25,6 +25,7 @@ vi.mock("./lib/css-account", async (importOriginal) => {
 });
 
 const { renderWelcome } = await import("./signup");
+const { authFetch } = await import("./lib/auth");
 const { setInvite } = await import("./invite");
 const PROVIDER = "https://pod.example/";
 
@@ -63,7 +64,7 @@ describe("before sign-in", () => {
     expect(app.textContent).toContain("You're invited to join a collective");
     expect(app.textContent).toContain("pod.example");
     expect(app.querySelector("#signup-form")).not.toBeNull();
-    expect(app.querySelector("#switch-mode")!.textContent).toBe("I already have a Solid account");
+    expect(app.querySelector("#switch-mode")!.textContent).toBe("Sign in instead");
   });
 
   it("offers sign-in first otherwise, and account creation one click away", () => {
@@ -149,5 +150,62 @@ describe("before sign-in", () => {
     expect(app.querySelector<HTMLInputElement>("#email")!.readOnly).toBe(true);
     expect(app.textContent).toContain("Your email and passphrase are saved.");
     expect(calls).not.toContain(`login ${PROVIDER}`);
+  });
+});
+
+describe("the landing", () => {
+  const CONFIG_URL = "https://pod.example/hs/config.ttl";
+  const config = (extra = "") => `
+    @prefix hs: <https://pod.nicolasdb.eu/hyperscope/vocab#> .
+    @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+    @prefix ldp: <http://www.w3.org/ns/ldp#> .
+    @prefix schema: <http://schema.org/> .
+    <#hs> a hs:Collective ; foaf:name "HyperScope" ; hs:roster <membres.ttl> ;
+      ldp:inbox <inbox/> ; hs:agent <agent#me> ; hs:bundleFolder "output2/hs/" ${extra} .`;
+  const serve = (body: string | null) =>
+    vi.mocked(authFetch).mockImplementation(async () =>
+      body === null ? new Response("", { status: 401 }) : new Response(body, { status: 200 })
+    );
+  const settle = async () => {
+    for (let i = 0; i < 5; i++) await tick();
+  };
+
+  it("explains the backoffice to someone who was not invited, and says joining starts with a link", () => {
+    const app = render();
+    expect(app.querySelector("h1")!.textContent).toBe("Your pod, and the collectives you belong to.");
+    expect(app.textContent).toContain("Open the invitation link its people send you");
+    expect(app.querySelector("#how")).not.toBeNull();
+    expect(app.querySelector(".ladder")!.textContent).toContain("A COLLECTIVE");
+  });
+
+  it("names the collective and its folder once its config.ttl is read, keeping what was typed", async () => {
+    serve(config());
+    setInvite(CONFIG_URL + "?fresh=1");
+    const app = render();
+    type(app, "name", "Zoé");
+    await settle();
+    expect(app.querySelector(".invite-card")!.textContent).toContain("HyperScope");
+    expect(app.textContent).toContain("HyperScope invited you.");
+    expect(app.textContent).toContain("output2/hs/");
+    expect(app.querySelector<HTMLInputElement>("#name")!.value).toBe("Zoé");
+  });
+
+  it("uses the collective's own slogan and description when it has them", async () => {
+    serve(config('; schema:slogan "Look closer, together." ; schema:description "People who read slowly."'));
+    setInvite(CONFIG_URL + "?fresh=2");
+    const app = render();
+    await settle();
+    expect(app.querySelector("h1")!.textContent).toBe("Look closer, together.");
+    expect(app.textContent).toContain("People who read slowly.");
+  });
+
+  it("keeps the backoffice's words and names the host when config.ttl cannot be read", async () => {
+    serve(null);
+    setInvite(CONFIG_URL + "?fresh=3");
+    const app = render();
+    await settle();
+    expect(app.querySelector("h1")!.textContent).toBe("Your work stays yours.");
+    expect(app.textContent).toContain("pod.example");
+    expect(app.querySelector(".invite-card")).toBeNull();
   });
 });

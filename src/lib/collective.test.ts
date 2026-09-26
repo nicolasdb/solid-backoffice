@@ -47,6 +47,21 @@ describe("parseCollectiveConfig", () => {
     expect(() => parseCollectiveConfig(two, CONFIG_URL)).toThrow(/several/);
   });
 
+  it("reads an optional slogan and description, and ignores one written twice", () => {
+    const withCopy = CONFIG.replace('foaf:name "HyperScope" ;', `foaf:name "HyperScope" ;
+      <http://schema.org/slogan> "Look closer, together." ;
+      <http://schema.org/description> "A collective of people who read slowly." ;`);
+    expect(parseCollectiveConfig(withCopy, CONFIG_URL)).toMatchObject({
+      slogan: "Look closer, together.",
+      description: "A collective of people who read slowly.",
+    });
+    const twice = withCopy.replace('"Look closer, together." ;', '"Look closer, together.", "Another." ;');
+    const parsed = parseCollectiveConfig(twice, CONFIG_URL);
+    expect(parsed.slogan).toBeUndefined();
+    expect(parsed.description).toBe("A collective of people who read slowly.");
+    expect(parseCollectiveConfig(CONFIG, CONFIG_URL)).not.toHaveProperty("slogan");
+  });
+
   it("refuses a config with no agent rather than guessing one", () => {
     const noAgent = CONFIG.replace("hs:agent <agents/agent#me> ;", "");
     expect(() => parseCollectiveConfig(noAgent, CONFIG_URL)).toThrow(/hs:agent/);

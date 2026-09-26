@@ -152,6 +152,9 @@ toasts and screen-reader announcements after each write.
   Other instead of the mockup's tablist (buttons, since the address's
   fragment belongs to the router); the members table turns into one block
   per member.
+- **Landing, as built (L3):** "How it works" and the form switch are
+  buttons, not `#` links; the not-invited "Join a collective" step says
+  joining starts with the invitation link its people send.
 - **A member's view** (the collective's tab, for a member): as drawn, to try.
   Sharing first, membership below with a quiet Leave; the roster's members
   and the collective's agent beside them. New: members see the roster,

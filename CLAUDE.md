@@ -65,7 +65,9 @@ one changes, change the other. Never point it at the real provider.
   and pod through the CSS account API (J1). Shown only when
   `SIGNUP_PROVIDER` is set. `test/pods/` creates its whole cast with it.
 - `src/signup.ts` — the screen before sign-in: sign in, or create an account
-  (invitation → create first). `src/invite.ts` carries the invitation and the
+  (invitation → create first), inside the landing of `src/welcome.ts`
+  (generic words, or the invited collective's from its public `config.ttl`,
+  read before sign-in). `src/invite.ts` carries the invitation and the
   new account's name across the provider's sign-in page;
   `src/lib/newcomer.ts` writes that name and the inbox on the first home
   screen.

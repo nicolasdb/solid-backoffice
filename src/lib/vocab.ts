@@ -7,6 +7,7 @@ export const NS = {
   as: "https://www.w3.org/ns/activitystreams#",
   xsd: "http://www.w3.org/2001/XMLSchema#",
   rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+  schema: "http://schema.org/",
   /**
    * PROVISIONAL. The same namespace the pull procedure's provenance.ttl uses.
    * It lives on the HyperScope pod although the pattern is generic; moving it

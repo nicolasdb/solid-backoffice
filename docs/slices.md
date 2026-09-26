@@ -70,8 +70,10 @@ landing page. Done steps already fold to their title (25 Sep 2026).
 **L1 built and run live** (shell, tabs, home, a member's tab; 26 Sep 2026,
 desktop and phone on test.nicolasdb.eu). **L2 built** (the collective's own
 screen: requests beside a members table, a filter, the invitation link to
-copy); live check next. L3 (the landing), L4 (members and agent on a
-member's tab) after.
+copy); live check next. **L3 built** (the landing: generic, or the invited
+collective's words from its public `config.ttl`, its own slogan and
+description when set; Newsreader self-hosted); live check next. L4 (members
+and agent on a member's tab) after.
 
 **Deferred (26 Sep 2026): the invitation link does not work live** (copied
 from the collective's tab, opened or pasted into "Join another collective").

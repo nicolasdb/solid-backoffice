@@ -290,10 +290,18 @@ Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
    (all members share the host) and now searches name, short name and path.
    The header offered the config.ttl address "to give people"; it now gives
    the invitation link, the one thing an owner sends.
-3. **Theme switch.** The icon left of the avatar (and in the welcome
-   screen's corner) goes same-as-device → light → dark. The choice survives
+3. **Theme switch.** The icon left of the avatar (and in the
+   landing's nav) goes same-as-device → light → dark. The choice survives
    a reload; in a private window it lasts until the reload. Both themes read
    well on every tab.
+4. **L3, the landing.** Signed out, in a private window, desktop and phone:
+   `/` shows the backoffice's own page (sign in first, "Create one on
+   pod.nicolasdb.eu" one click away; "How it works" scrolls without changing
+   the address). `/?collective=https://pod.nicolasdb.eu/hyperscope/config.ttl`
+   shows the invited page: HyperScope's card, its folder in step 03, the
+   create form first. Add `schema:slogan` to HyperScope's `config.ttl`,
+   reload: it is the title; remove it again. Titles are in Newsreader
+   (serif), not Georgia. Both themes.
 
 ### J1 — a new account from an invitation (the end-to-end run)
 

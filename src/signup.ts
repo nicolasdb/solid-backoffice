@@ -6,20 +6,24 @@
  * "Create an account" first; anyone else sees the sign-in form first. The
  * other mode is one click away.
  *
+ * The page around the forms, and its words, are src/welcome.ts.
+ *
  * Account creation is the CSS account API (`lib/css-account.ts`), which only
  * our provider has: with no `provider` the screen is the plain sign-in form.
  * Everything after the account exists is ordinary Solid: the provider's own
  * page signs the person in, and the home screen sets their name and inbox from
  * the record left here (`invite.ts`).
  */
-import { bindThemeButton, renderThemeButton } from "./theme";
+import { bindThemeButton } from "./theme";
 import { loginWithIdentifier } from "./lib/auth";
 import { AccountError, createAccount, emailProblem, passwordProblem, podAddress, usernameProblem } from "./lib/css-account";
+import { loadCollective, type Collective } from "./lib/collective";
 import { slugify } from "./lib/pod";
-import { APP_NAME, DEFAULT_IDENTIFIER } from "./config";
+import { DEFAULT_IDENTIFIER } from "./config";
 import { pendingInvite, rememberNewcomer } from "./invite";
 import { esc } from "./ui/patterns";
 import { focusView } from "./ui/a11y";
+import { landingCopy, renderHeroText, renderLanding, renderLandingRest, type Invitation } from "./welcome";
 
 export interface WelcomeOptions {
   /** Where accounts are created; null hides account creation. */
@@ -39,59 +43,106 @@ function invitationHost(): string | null {
   }
 }
 
+/**
+ * The invitation's config.ttl, read once per address before sign-in (it is
+ * public, docs/reference/collective-files.md). `null`: it could not be read,
+ * and the page keeps the backoffice's words.
+ */
+const invitations = new Map<string, Promise<Collective | null>>();
+const READ_TIMEOUT_MS = 6000;
+
+function readInvitation(address: string): Promise<Collective | null> {
+  let read = invitations.get(address);
+  if (!read) {
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), READ_TIMEOUT_MS));
+    read = Promise.race([loadCollective(address).catch(() => null), timeout]);
+    invitations.set(address, read);
+  }
+  return read;
+}
+
+/** Already read: used to draw the page at once when switching between the two forms. */
+const readInvitations = new Map<string, Collective | null>();
+
 export function renderWelcome(app: HTMLElement, options: WelcomeOptions): void {
   const { provider, message } = options;
+  const address = pendingInvite();
   const host = invitationHost();
   const mode = provider ? options.mode ?? (host ? "signup" : "signin") : "signin";
+  const invitation: Invitation | null = host
+    ? { host, collective: address ? readInvitations.get(address) ?? null : null }
+    : null;
 
-  const heading = host ? "You're invited to join a collective" : APP_NAME;
-  const intro = host
-    ? `<p class="lead">
-         The invitation comes from <code>${esc(host)}</code>. Your work stays in
-         a pod of your own; the collective only reads what you choose to share.
-       </p>`
-    : "";
+  const other = mode === "signup" ? "signin" : "signup";
+  const switchLabel = provider
+    ? mode === "signup" ? "I already have an account" : "Create an account"
+    : null;
 
-  app.innerHTML = `
-    ${renderThemeButton("theme-corner")}
-    <main class="screen stack">
-      <h1 data-view-title>${esc(heading)}</h1>
-      ${intro}
-      ${mode === "signup" && provider ? signUpForm(provider) : signInForm()}
-      ${message ? `<p class="error">${esc(message)}</p>` : ""}
-      ${
-        provider
-          ? `<p><button id="switch-mode" class="ghost" type="button">${
-              mode === "signup" ? "I already have a Solid account" : "Create an account"
-            }</button></p>`
-          : ""
-      }
-    </main>`;
+  app.innerHTML = renderLanding({
+    copy: landingCopy(invitation, provider),
+    invitation,
+    panel: mode === "signup" && provider ? signUpForm(provider, message) : signInForm(provider, message),
+    switchLabel,
+  });
 
   bindThemeButton(app);
-  app.querySelector("#switch-mode")?.addEventListener("click", () =>
-    renderWelcome(app, { provider, mode: mode === "signup" ? "signin" : "signup" })
-  );
+  const switchMode = () => renderWelcome(app, { provider, mode: other });
+  app.querySelector("#switch-mode")?.addEventListener("click", switchMode);
+  app.querySelector("#nav-switch")?.addEventListener("click", switchMode);
+  // A button, not an #how link: after sign-in the fragment is the router's.
+  app.querySelector("#to-how")?.addEventListener("click", () => {
+    const how = app.querySelector<HTMLElement>("#how")!;
+    how.scrollIntoView({ behavior: "smooth", block: "start" });
+    how.focus({ preventScroll: true });
+  });
   if (mode === "signup" && provider) bindSignUp(app, provider);
   else bindSignIn(app, options);
   focusView(app);
+
+  // Read the invitation, then change only the words: the form, and anything
+  // typed in it, stays.
+  if (host && address && !readInvitations.has(address)) {
+    void readInvitation(address).then((collective) => {
+      readInvitations.set(address, collective);
+      const hero = app.querySelector<HTMLElement>("#hero-text");
+      const rest = app.querySelector<HTMLElement>("#landing-rest");
+      if (!collective || !hero || !rest) return;
+      const read: Invitation = { host, collective };
+      const copy = landingCopy(read, provider);
+      hero.innerHTML = renderHeroText(copy, read);
+      rest.innerHTML = renderLandingRest(copy);
+    });
+  }
 }
 
 /* ── Sign in ───────────────────────────────────────────────────────────── */
 
-function signInForm(): string {
+function providerHost(provider: string): string {
+  return new URL(provider).host;
+}
+
+function signInForm(provider: string | null, message?: string): string {
   return `
-    <p class="lead">
-      Sign in with your pod's address, or with your WebID if you don't know
-      which provider hosts it — it will be discovered from your profile.
-    </p>
-    <form id="login-form" class="stack">
+    <form id="login-form" class="stack panel-card">
+      <h2>Sign in</h2>
       <div class="field">
         <label for="identifier">Pod or WebID</label>
         <input id="identifier" name="identifier" type="url"
                value="${esc(DEFAULT_IDENTIFIER)}" required />
+        <p class="meta">
+          Your pod's address, or your WebID if you don't know which provider
+          hosts it: it will be found from your profile.
+        </p>
       </div>
       <div><button type="submit">Sign in</button></div>
+      ${message ? `<p class="error" role="alert">${esc(message)}</p>` : ""}
+      ${
+        provider
+          ? `<hr class="divider">
+             <p class="meta">No Solid account yet?
+               <button type="button" class="link-button" id="switch-mode">Create one on ${esc(providerHost(provider))}</button></p>`
+          : ""
+      }
     </form>`;
 }
 
@@ -125,7 +176,7 @@ const FIELD_OF: Record<string, Field | null> = {
   provider: null,
 };
 
-function signUpForm(provider: string): string {
+function signUpForm(provider: string, message?: string): string {
   const field = (id: Field, label: string, input: string, hint = "") => `
     <div class="field">
       <label for="${id}">${label}</label>
@@ -134,14 +185,15 @@ function signUpForm(provider: string): string {
       <p class="error" id="${id}-error" role="alert" hidden></p>
     </div>`;
   return `
-    <p class="lead">An account on <code>${esc(new URL(provider).host)}</code>, with a pod of your own.</p>
-    <form id="signup-form" class="stack" novalidate>
+    <form id="signup-form" class="stack panel-card" novalidate>
+      <div class="step-head"><h2>Create your account</h2><span class="pill">Step 1 of 2</span></div>
+      <p class="meta">An account on <code>${esc(providerHost(provider))}</code>, with a pod of your own.</p>
       ${field("name", "Your name", `<input id="name" name="name" type="text" autocomplete="name" required />`,
         `<p class="meta">Shown next to your work, in the collectives you join.</p>`)}
       ${field("username", "Username",
         `<input id="username" name="username" type="text" autocomplete="username"
                 autocapitalize="none" spellcheck="false" required />`,
-        `<p class="meta">Your pod's address: <code id="pod-address">${esc(podAddress(provider, "…"))}</code></p>`)}
+        `<p class="meta">Your pod's address: <code id="pod-address">${esc(podAddress(provider, "your-name"))}</code></p>`)}
       ${field("email", "Email", `<input id="email" name="email" type="email" autocomplete="email" required />`)}
       ${field("password", `Set a passphrase <span class="meta">— a regular password still works</span>`,
         `<input id="password" name="password" type="password" autocomplete="new-password"
@@ -151,14 +203,20 @@ function signUpForm(provider: string): string {
            At least 8 characters.</p>`)}
       ${field("confirm", "Type it again",
         `<input id="confirm" name="confirm" type="password" autocomplete="new-password" required />`)}
-      <div><button id="reveal" class="ghost" type="button" aria-pressed="false">Show passphrase</button></div>
-      <div><button type="submit">Create my account</button></div>
+      <div class="panel-actions">
+        <button id="reveal" class="ghost small" type="button" aria-pressed="false">Show passphrase</button>
+        <button type="submit">Create my account</button>
+      </div>
       <p class="meta">
         Next, your provider's page asks for this email and passphrase once, to
         sign you in. Keep it somewhere safe: this provider cannot reset it by
         email yet.
       </p>
       <p class="error" id="signup-error" role="alert" hidden></p>
+      ${message ? `<p class="error" role="alert">${esc(message)}</p>` : ""}
+      <hr class="divider">
+      <p class="meta">Already have a Solid account?
+        <button type="button" class="link-button" id="switch-mode">Sign in instead</button></p>
     </form>`;
 }
 
@@ -166,7 +224,7 @@ function bindSignUp(app: HTMLElement, provider: string): void {
   const form = app.querySelector<HTMLFormElement>("#signup-form")!;
   const input = (id: Field) => form.querySelector<HTMLInputElement>(`#${id}`)!;
   const address = form.querySelector<HTMLElement>("#pod-address")!;
-  const showAddress = () => (address.textContent = podAddress(provider, input("username").value.trim() || "…"));
+  const showAddress = () => (address.textContent = podAddress(provider, input("username").value.trim() || "your-name"));
 
   // The username follows the name until the person types one of their own.
   let usernameEdited = false;

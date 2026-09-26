@@ -61,6 +61,10 @@ export interface Collective {
   agent: string;
   /** The folder a member shares through, relative to their pod root, e.g. "output2/hyperscope/". */
   bundleFolder: string;
+  /** The welcome screen's title for people it invites (`schema:slogan`), when it has exactly one. */
+  slogan?: string;
+  /** The paragraph under it (`schema:description`), when it has exactly one. */
+  description?: string;
 }
 
 function parse(turtle: string, base: string): Quad[] {
@@ -103,6 +107,19 @@ export function parseCollectiveConfig(turtle: string, configUrl: string, expecte
     throw new Error(`${configUrl}: hs:bundleFolder must be a folder path like "output2/hyperscope/".`);
   }
 
+  // Presentation only, so a repeated one is ignored rather than refused:
+  // no grant depends on it (docs/reference/collective-files.md#welcome-copy).
+  // schema.org is written with http:// or https://; both are read.
+  const optional = (term: string): string | undefined => {
+    const values = [NS.schema, "https://schema.org/"]
+      .flatMap((ns) => objectsOf(quads, subject, ns + term))
+      .map((v) => v.trim())
+      .filter(Boolean);
+    return values.length === 1 ? values[0] : undefined;
+  };
+  const slogan = optional("slogan");
+  const description = optional("description");
+
   return {
     configUrl,
     group: subject,
@@ -111,6 +128,8 @@ export function parseCollectiveConfig(turtle: string, configUrl: string, expecte
     inbox: one(INBOX, "ldp:inbox"),
     agent: one(NS.hs + "agent", "hs:agent"),
     bundleFolder,
+    ...(slogan ? { slogan } : {}),
+    ...(description ? { description } : {}),
   };
 }
 
