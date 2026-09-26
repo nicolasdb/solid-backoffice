@@ -239,6 +239,67 @@ details.step:not([open]) {
   min-width: 0;
 }
 
+/* You, under the avatar: a small menu, not a page. */
+.account-menu { position: relative; }
+.account-menu > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  list-style: none;
+}
+.account-menu > summary::-webkit-details-marker { display: none; }
+.account-menu > summary:hover, .account-menu[open] > summary { background: var(--surface-recessed); }
+.account-menu .caret { color: var(--text-tertiary); font-size: var(--text-micro); }
+.avatar { position: relative; }
+.avatar-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--warn);
+  border: 2px solid var(--surface);
+}
+.account-pop {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 30;
+  width: 20rem;
+  max-width: calc(100vw - 2rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-elevated);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.12);
+  overflow-wrap: anywhere;
+}
+.account-sec { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-bottom: var(--border-width) solid var(--border-subtle); }
+.account-sec:last-child { border-bottom: 0; }
+.account-sec:has(.menu-link) { padding: var(--space-1) 0; }
+.menu-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.menu-link:hover { background: var(--surface-recessed); }
+
 .account-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -276,22 +337,42 @@ button.small {
   padding: var(--space-8) var(--space-8) calc(var(--space-12) + env(safe-area-inset-bottom));
 }
 
-/* Home: collectives in the wide column, "You" beside them from 64rem. */
-.home-grid,
+/* You: the steps, and beside them from 64rem the profile's source. */
+.you-grid,
 .member-grid {
   display: grid;
   gap: var(--space-8);
   align-items: start;
 }
 
-.home-title { margin: 0 0 var(--space-6); }
-.home-main > .section-title:first-child,
-.home-aside .section-title:first-child { margin-top: 0; }
+.you-head { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.you-head h1 { margin: 0; }
+.source-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.source-head .section-title { margin: 0; overflow-wrap: anywhere; }
+/* The profile as the pod holds it: raw, read only, the steps' lines marked. */
+pre.source {
+  margin: 0;
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-recessed);
+  font-size: var(--text-micro);
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+pre.source code { background: none; padding: 0; }
+.src-line { display: block; padding-left: var(--space-2); border-left: 3px solid transparent; }
+.src-line.is-marked { background: var(--accent-soft); border-left-color: var(--accent); }
+.src-mark { float: right; margin-left: var(--space-3); font-family: var(--font-sans, inherit); color: var(--accent); }
+
+.collectives-head { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-6); max-width: 44rem; }
+.collectives-head h1 { margin: 0; }
+.collectives-main > .section-title:first-child { margin-top: 0; }
 
 @media (min-width: 64rem) {
   .screen-wide { padding-inline: var(--space-20); }
-  .home-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
-  .home-aside { position: sticky; top: var(--space-6); }
+  .you-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
   .member-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
 }
 

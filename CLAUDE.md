@@ -75,11 +75,15 @@ one changes, change the other. Never point it at the real provider.
   screen.
 - `src/onboarding.ts` — signed in: reads the pods (`load`: the collective
   you run via `findRunCollective`, your profile, your collectives) on every
-  render (a tab switch draws from the last load first), then shows the tab the hash names (`src/router.ts`) inside
-  `src/shell.ts` (layout A: tabs on top, a bottom bar on a phone). Tabs:
-  `src/home.ts` (your collectives, joining, "You"), `src/member.ts` (a
-  collective you belong to: sharing, leaving, its members and agent),
-  `src/admin.ts` (the one you run); `src/steps.ts` holds the pieces they
+  render (a tab switch draws from the last load first), then shows the
+  screen the hash names (`src/router.ts`) inside `src/shell.ts` (tabs on
+  top, a bottom bar on a phone; the avatar opens You). `#/` lands on Pods,
+  or on Collectives while an invitation waits. Tabs: Pods, then
+  Collectives (`src/collectives.ts`: the one you run, the ones you belong
+  to, joining); one collective opens inside it as `src/member.ts`
+  (sharing, leaving, its members and agent) or `src/admin.ts` (the one you
+  run). `src/you.ts` is You (name, inbox, agent, and `profile/card` read
+  only with the steps' lines marked). `src/steps.ts` holds the pieces they
   share. No role, progress or tab state is stored.
 - `src/places.ts` — Pods (slice C, the tab once called Places): your pod
   as a file explorer, built as an iceberg (list → `···` menu → access

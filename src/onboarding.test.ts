@@ -109,6 +109,7 @@ vi.mock("./places", () => ({
 }));
 
 const { renderMembership } = await import("./onboarding");
+const { authFetch } = await import("./lib/auth");
 const { captureInvite } = await import("./invite");
 const tab = (c: { configUrl: string }) => `#/c/${encodeURIComponent(c.configUrl)}`;
 
@@ -156,7 +157,7 @@ beforeEach(() => {
 describe("slice A — the member's side of the handshake", () => {
   it("assumes no collective: without an invitation or a membership, it only offers to look one up", async () => {
     sessionStorage.clear();
-    const app = await render();
+    const app = await render("#/c");
     expect(app.querySelector("#join-0")).toBeNull();
     expect(app.textContent).toContain("Join a collective");
     expect(app.querySelector("#find-form")).not.toBeNull();
@@ -166,7 +167,7 @@ describe("slice A — the member's side of the handshake", () => {
     sessionStorage.clear();
     profile.memberOf = [COLLECTIVE.group, "https://example.org/some-club#org"];
     listed = true;
-    const app = await render();
+    const app = await render("#/c");
     expect(app.textContent).toContain("You are a member.");
     expect(app.textContent).toContain("not managed here");
   });
@@ -180,7 +181,7 @@ describe("slice A — the member's side of the handshake", () => {
 
   it("offers an existing inbox/ the profile does not advertise, instead of a new one", async () => {
     inboxFolderExists = true;
-    const app = await render();
+    const app = await render("#/you");
     expect(app.textContent).toContain("Use this inbox");
     await click(app, "#make-inbox");
     expect(calls).toEqual([
@@ -192,7 +193,7 @@ describe("slice A — the member's side of the handshake", () => {
 
   it("shows the collective an account runs, and never offers it to join itself", async () => {
     runs = COLLECTIVE;
-    const app = await render();
+    const app = await render("#/c");
     expect(app.textContent).toContain("You run");
     expect(app.textContent).toContain("0 members · 0 requests");
     expect(app.querySelector("#join-0")).toBeNull();
@@ -203,7 +204,7 @@ describe("slice A — the member's side of the handshake", () => {
 
   it("suggests a collective account's own agent, from its config.ttl", async () => {
     runs = COLLECTIVE;
-    const app = await render();
+    const app = await render("#/you");
     expect(app.querySelector(`[data-add-agent="${COLLECTIVE.agent}"]`)).not.toBeNull();
     await click(app, `[data-add-agent="${COLLECTIVE.agent}"]`);
     expect(calls).toEqual(["profile edit"]);
@@ -211,7 +212,7 @@ describe("slice A — the member's side of the handshake", () => {
 
   it("says plainly when you belong to no collective", async () => {
     sessionStorage.clear();
-    const app = await render();
+    const app = await render("#/c");
     expect(app.textContent).toContain("No collective yet.");
   });
 
@@ -241,20 +242,35 @@ describe("slice A — the member's side of the handshake", () => {
   it("files a collective you only looked up under Not joined yet", async () => {
     const app = await render();
     const belong = [...app.querySelectorAll("h2.section-title")].map((h) => h.textContent);
-    expect(belong).toEqual(["You belong to", "Not joined yet", "You"]);
+    expect(belong).toEqual(["You belong to", "Not joined yet"]);
     expect(app.textContent).toContain("No collective yet.");
   });
 
-  it("opens every line of \"You\" from Edit your profile", async () => {
+  it("shows your profile as your pod holds it on You, marking the lines the steps wrote", async () => {
     profile.inbox = POD + "inbox/";
-    const app = await render();
-    app.querySelector<HTMLButtonElement>("#edit-profile")!.click();
-    expect([...app.querySelectorAll<HTMLDetailsElement>(".you-row")].every((d) => d.open)).toBe(true);
+    const card = `@prefix foaf: <http://xmlns.com/foaf/0.1/>.\n@prefix org: <http://www.w3.org/ns/org#>.\n<#me> a foaf:Person;\n  foaf:name "Neil";\n  org:memberOf <${COLLECTIVE.group}>;\n  <http://www.w3.org/ns/ldp#inbox> <${POD}inbox/>.`;
+    vi.mocked(authFetch).mockResolvedValue(new Response(card, { status: 200, headers: { etag: '"c1"', "content-type": "text/turtle" } }));
+    const app = await render("#/you");
+    expect(app.querySelector("[data-view-title]")!.textContent).toBe("Neil");
+    const marks = [...app.querySelectorAll(".src-line.is-marked .src-mark")].map((m) => m.textContent);
+    expect(marks).toEqual(["Your name", "Joined HyperScope", "Your inbox"]);
+    expect(app.querySelector("pre.source")!.textContent).toContain('foaf:name "Neil"');
+    expect(app.querySelector('a[href="#/p/profile/card"]')!.textContent).toBe("Open in Pods");
+    expect(app.querySelector("pre.source textarea, pre.source input")).toBeNull();
+    vi.mocked(authFetch).mockReset();
+  });
+
+  it("says why the source could not be read, and keeps the steps", async () => {
+    vi.mocked(authFetch).mockResolvedValue(new Response("", { status: 403 }));
+    const app = await render("#/you");
+    expect(app.querySelector(".you-source .error")!.textContent).toContain("403");
+    expect(app.querySelector("#name-form")).not.toBeNull();
+    vi.mocked(authFetch).mockReset();
   });
 
   it("folds finished steps to their title", async () => {
     profile.inbox = POD + "inbox/";
-    const app = await render();
+    const app = await render("#/you");
     const inbox = [...app.querySelectorAll("details.you-row")].find((d) => d.textContent!.includes("Your inbox"));
     expect(inbox).toBeTruthy();
     expect(inbox!.hasAttribute("open")).toBe(false);
@@ -273,7 +289,7 @@ describe("slice A — the member's side of the handshake", () => {
   });
 
   it("creates the inbox, opens it to signed-in agents, and only then advertises it", async () => {
-    const app = await render();
+    const app = await render("#/you");
     await click(app, "#make-inbox");
     expect(calls).toEqual([
       `ensure ${POD}inbox/`,
@@ -341,12 +357,31 @@ describe("slice A — the member's side of the handshake", () => {
 describe("layout A — tabs", () => {
   const tabLabels = (app: HTMLElement) => [...app.querySelectorAll(".tab")].map((t) => t.querySelector(".tab-label")!.textContent);
 
-  it("gives a collective a tab only once you have asked to join it", async () => {
+  it("has two tabs, Pods then Collectives, whatever you belong to", async () => {
     let app = await render();
-    expect(tabLabels(app)).toEqual(["Home", "Pods"]);
+    expect(tabLabels(app)).toEqual(["Pods", "Collectives"]);
     profile.memberOf = [COLLECTIVE.group];
     app = await render();
-    expect(tabLabels(app)).toEqual(["Home", "HyperScope", "Pods"]);
+    expect(tabLabels(app)).toEqual(["Pods", "Collectives"]);
+  });
+
+  it("lands on Pods, or on Collectives while an invitation waits, and says which in the address", async () => {
+    let app = await render();
+    expect(window.location.hash).toBe("#/c");
+    expect(app.querySelector("#join-0")).not.toBeNull();
+    sessionStorage.clear();
+    app = await render();
+    expect(window.location.hash).toBe("#/p/");
+    expect(places).toContain("mount  ");
+  });
+
+  it("puts a dot on the avatar while your name or inbox is missing", async () => {
+    let app = await render("#/c");
+    expect(app.querySelector(".avatar-dot")).not.toBeNull();
+    expect(app.querySelector(".account-pop")!.textContent).toContain("1 to do");
+    profile.inbox = POD + "inbox/";
+    app = await render("#/c");
+    expect(app.querySelector(".avatar-dot")).toBeNull();
   });
 
   it("keeps sharing and leaving on the collective's tab, joining on home", async () => {
@@ -388,7 +423,7 @@ describe("layout A — tabs", () => {
     sessionStorage.clear();
     profile.memberOf = [COLLECTIVE.group];
     listed = true;
-    const app = await render();
+    const app = await render("#/c");
     const input = app.querySelector<HTMLInputElement>("#find-form input[name=address]")!;
     input.value = `https://backoffice.example/?collective=${COLLECTIVE.configUrl}`;
     app.querySelector<HTMLFormElement>("#find-form")!.requestSubmit();
@@ -397,19 +432,21 @@ describe("layout A — tabs", () => {
     expect(sessionStorage.getItem("solid-backoffice.invite")).toBeNull();
   });
 
-  it("goes home when the tab's collective is not one you belong to", async () => {
+  it("goes back to Collectives when the collective is not one you belong to", async () => {
     const app = await render(tab(COLLECTIVE));
-    expect(window.location.hash).toBe("#/");
+    expect(window.location.hash).toBe("#/c");
     expect(app.querySelector("#join-0")).not.toBeNull();
   });
 
-  it("opens the collective you run on its own tab, with its requests", async () => {
+  it("opens the collective you run inside Collectives, with the way back", async () => {
     runs = COLLECTIVE;
-    const home = await render();
-    expect(tabLabels(home)).toEqual(["Home", "HyperScope", "Pods"]);
+    const list = await render("#/c");
+    expect(list.querySelector(`a[href="${tab(COLLECTIVE)}"]`)).not.toBeNull();
     const own = await render(tab(COLLECTIVE));
     expect(own.textContent).toContain("You run");
     expect(own.textContent).toContain("Members");
+    expect(own.querySelector(".crumbs")!.textContent!.replace(/\s+/g, " ").trim()).toBe("Collectives / HyperScope");
+    expect(own.querySelector('.tab[aria-current="page"]')!.textContent).toContain("Collectives");
   });
 });
 
@@ -451,7 +488,7 @@ describe("L5 — switching tabs", () => {
   it("draws the tab from the last load at once, then what the pods say now", async () => {
     sessionStorage.clear();
     profile = { ...profile, name: "Neil" };
-    const app = await render();
+    const app = await render("#/c");
     expect(app.querySelector(".app-shell")!.textContent).toContain("Neil");
 
     profile = { ...profile, name: "Neil Armstrong" };
@@ -468,7 +505,7 @@ describe("L5 — switching tabs", () => {
 
   it("never redraws under someone typing", async () => {
     sessionStorage.clear();
-    const app = await render();
+    const app = await render("#/c");
 
     profile = { ...profile, name: "Someone else" };
     const release = holdReads();

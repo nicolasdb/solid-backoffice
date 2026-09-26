@@ -1,8 +1,9 @@
 /**
  * The signed-in app: what the pods say about you, read once per screen, then
  * the tab the address bar names (src/router.ts) inside the shell
- * (src/shell.ts). Home is src/home.ts, a collective you belong to is
- * src/member.ts, the one you run is src/admin.ts.
+ * (src/shell.ts): Pods (src/places.ts), Collectives (src/collectives.ts; a
+ * collective you belong to opens as src/member.ts, the one you run as
+ * src/admin.ts), and You under the avatar (src/you.ts).
  *
  * Roles are read from the pods, never stored (docs/explanation/membership.md).
  * Every screen reads its state from the pods each time it renders, so someone
@@ -29,12 +30,13 @@ import { busy } from "./ui/typing";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
 import { bindRun, loadRun, renderRunView, type RunView } from "./admin";
 import { pendingInvite, setInvite, takeNewcomer } from "./invite";
-import { bindHome, renderHomeView } from "./home";
+import { bindCollectives, renderCollectivesView } from "./collectives";
+import { bindYou, readSource, renderYouView, youTodo } from "./you";
 import { bindMember, renderMemberView, loadRoster } from "./member";
-import { currentRoute, isPlaces, onRouteChange, replaceWithHome, routeHref } from "./router";
+import { currentRoute, isPlaces, onRouteChange, replaceRoute, routeHref, type Route } from "./router";
 import { forgetPlaces, mountPlaces, placesFrame, showPlaces, type Group } from "./places";
 import { readRoster } from "./lib/admin";
-import { bindShell, renderShell, tabsFor, type TabCollective } from "./shell";
+import { bindShell, renderShell, tabsFor } from "./shell";
 import { declared } from "./steps";
 
 /** What every view's buttons need: who is signed in, and how to redraw. */
@@ -217,7 +219,7 @@ export async function renderMembership(
   const draw = async (data: Loaded, rosters: Map<string, Roster>, quiet: boolean): Promise<void> => {
     const screen = await compose(app, data, rosters, webId, podUrl, rerender);
     if (mine !== renderCount) return;
-    const html = renderShell({ webId, name: data.profile.name, tabs: screen.tabs, body: screen.body });
+    const html = renderShell({ webId, name: data.profile.name, tabs: screen.tabs, todo: youTodo(data.profile), body: screen.body });
     if (quiet && (html === drawn || busy(app))) return;
     const focused = quiet ? document.activeElement?.id : undefined;
     app.innerHTML = html;
@@ -274,6 +276,21 @@ export async function renderMembership(
   await draw(data, last.rosters, false);
 }
 
+/**
+ * Where `#/` lands: Collectives while an invitation waits (joining is the one
+ * thing waiting on you), Pods otherwise. The address bar then says which.
+ */
+function landing(): Route {
+  const route: Route = pendingInvite() ? { name: "collectives" } : { name: "places", path: "" };
+  replaceRoute(route);
+  return route;
+}
+
+/** "Collectives / HyperScope": the way back from one collective to the list. */
+function crumbs(name: string): string {
+  return `<nav class="crumbs" aria-label="Path"><a href="${routeHref({ name: "collectives" })}">Collectives</a> <span aria-hidden="true">/</span> <span aria-current="page">${esc(name)}</span></nav>`;
+}
+
 /** The tab the address bar names, as HTML plus what binds its buttons. */
 async function compose(
   app: HTMLElement,
@@ -284,12 +301,9 @@ async function compose(
   rerender: () => void
 ): Promise<{ tabs: ReturnType<typeof tabsFor>; body: string; bind: () => void }> {
   const ctx: ViewContext = { webId, podUrl, profile: data.profile, rerender };
-  const tabCollectives: TabCollective[] = [
-    ...(data.run ? [{ name: data.run.collective.name, address: data.run.collective.configUrl, badge: data.run.requests.length || undefined }] : []),
-    ...data.collectives.filter((c) => declared(c.state)).map((c) => ({ name: c.collective.name, address: c.collective.configUrl })),
-  ];
 
   let route = currentRoute();
+  if (route.name === "home") route = landing();
   let body: string;
   let bind: () => void;
   const target = route.name === "collective" ? route.address : null;
@@ -297,7 +311,7 @@ async function compose(
 
   if (target && data.run && sameCollective(data.run.collective, target)) {
     const run = data.run;
-    body = renderRunView(run);
+    body = crumbs(run.collective.name) + renderRunView(run);
     bind = () => bindRun(app, run, rerender);
   } else if (memberIndex >= 0) {
     const view = data.collectives[memberIndex];
@@ -307,7 +321,7 @@ async function compose(
       roster = await loadRoster(view.collective);
       rosters.set(key, roster);
     }
-    body = renderMemberView(view, memberIndex, roster, webId);
+    body = crumbs(view.collective.name) + renderMemberView(view, memberIndex, roster, webId);
     bind = () => bindMember(app, view, memberIndex, ctx);
   } else if (isPlaces(route)) {
     body = placesFrame();
@@ -320,19 +334,19 @@ async function compose(
         names,
         loadGroups: () => groupsOf(data, names),
       });
-  } else if (route.name === "more") {
-    body = renderMoreView(tabCollectives);
-    bind = () => {};
+  } else if (route.name === "you") {
+    body = renderYouView(data, webId, podUrl, await readSource(webId));
+    bind = () => bindYou(app, data, ctx);
   } else {
-    // Home, or a tab that no longer exists (left, removed, typed by hand).
-    if (route.name !== "home") {
-      replaceWithHome();
-      route = { name: "home" };
+    // Collectives, or a collective that is no longer yours (left, removed, typed by hand).
+    if (route.name !== "collectives") {
+      route = { name: "collectives" };
+      replaceRoute(route);
     }
-    body = renderHomeView(data, webId);
-    bind = () => bindHome(app, data, ctx);
+    body = renderCollectivesView(data);
+    bind = () => bindCollectives(app, data, ctx);
   }
-  return { tabs: tabsFor(tabCollectives, route), body, bind };
+  return { tabs: tabsFor(route, data.run?.requests.length ?? 0), body, bind };
 }
 
 /** WebIDs the app can put a name on, for "who can read it". */
@@ -386,15 +400,4 @@ async function groupsOf(data: Loaded, names: Map<string, string>): Promise<Group
 /** A collective is named by its config.ttl or by its group IRI (`…/config.ttl#name`). */
 function sameCollective(collective: Collective, address: string): boolean {
   return address === collective.configUrl || address === collective.group;
-}
-
-/** The collectives past the tab bar's room. */
-function renderMoreView(collectives: TabCollective[]): string {
-  return `
-    <h1 data-view-title>Your collectives</h1>
-    <ul class="plain-list more-list">
-      ${collectives
-        .map((c) => `<li><a href="${routeHref({ name: "collective", address: c.address })}">${esc(c.name)}</a></li>`)
-        .join("")}
-    </ul>`;
 }

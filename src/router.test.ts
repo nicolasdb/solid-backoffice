@@ -7,7 +7,8 @@ describe("routes in the address bar", () => {
   it("round-trips every route", () => {
     const routes: Route[] = [
       { name: "home" },
-      { name: "more" },
+      { name: "collectives" },
+      { name: "you" },
       { name: "collective", address: config },
       { name: "places", path: "" },
       { name: "places", path: "projects/drafts/" },
@@ -26,6 +27,7 @@ describe("routes in the address bar", () => {
   it("falls back to home for anything it does not know", () => {
     expect(parseRoute("")).toEqual({ name: "home" });
     expect(parseRoute("#/nowhere")).toEqual({ name: "home" });
+    expect(parseRoute("#/more")).toEqual({ name: "home" });
     expect(parseRoute("#/c/%E0%A4%A")).toEqual({ name: "home" });
   });
 

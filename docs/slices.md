@@ -51,8 +51,16 @@ still `make vps-deploy`.
    folders and files with Inherit from parent; addresses drop your
    provider's host. The write logic is unchanged. Next: run
    [manual tests](manual-tests.md) "C · Pods" C1–C6 live. Then D (with
-   People & apps), E. In [journeys](journeys.md) terms: J1, J3 and J5's
-   admin side are built; J2, J4 and J6 work already; J7 is C, J8 is D.
+   People & apps), E.
+5. **Tabs, third pass** (26 Sep 2026, [layout-brief](layout-brief.md),
+   canvas "Tabs (third pass)"): built the same day. Sign-in lands on Pods
+   (Collectives while an invitation waits); two tabs, Pods and
+   Collectives, one collective opened inside it; Home is gone, You sits
+   under the avatar with `profile/card` shown read only. Next: run its
+   section of [manual tests](manual-tests.md) live, with C1–C6.
+
+In [journeys](journeys.md) terms: J1, J3 and J5's admin side are built;
+J2, J4 and J6 work already; J7 is C, J8 is D.
 
 ## A — Member side of the handshake · built
 

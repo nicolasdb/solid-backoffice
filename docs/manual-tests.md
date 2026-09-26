@@ -367,7 +367,7 @@ for what did not change. **It cannot show a real network, the provider's
 CORS, or how the tabs feel.** This pass covers only those. Open the
 browser's developer tools on the Network tab, filtered to the pod's host.
 
-1. Sign in and wait for Home. Click a collective's tab, then Home again.
+1. Sign in and wait for Pods. Click Collectives, then Pods again.
    Each tab appears at once, with no "Reading your profile…" line; the reads
    show up in the Network tab after it.
 2. On the second visit to a tab, the profile, `config.ttl` and
@@ -466,7 +466,7 @@ the provider, a real browser, a phone, both themes.
    nothing is written, a notice says someone changed it, your text stays.
    "Save mine over theirs" writes yours; "Replace my text with theirs"
    shows theirs.
-5. Type without saving, click Home, come back to the file: your text is
+5. Type without saving, click Collectives, come back to the file: your text is
    still there. Close: it asks before discarding.
 6. **Upload** two files, one with a name already in the folder: one is
    uploaded, the other refused by name; nothing is replaced.
@@ -523,3 +523,32 @@ the provider, a real browser, a phone, both themes.
 5. On a phone (≤ 40rem): the rules show, read only, with no Edit.
 6. An item that follows its folder: its technical rules are its folder's,
    with no Edit, and the drawer says to give it rules of its own first.
+
+## Tabs, third pass · Pods first, one Collectives tab, You under the avatar
+
+Built from the canvas page "Tabs (third pass)" and
+[layout-brief](layout-brief.md) (tabs third pass). Desktop and a phone,
+both themes.
+
+1. **Landing.** Sign in: Pods opens (`#/p/`). Open an invitation link
+   (`?collective=`) signed in as an account that has not joined: it opens
+   on Collectives (`#/c`) with "Join …" in view.
+2. **Tabs.** Two: Pods, Collectives, whatever you belong to. As
+   `hyperscope-HQ` with a request waiting, Collectives has a count; Pods
+   still opens first. On a phone the bottom bar holds the same two.
+3. **Collectives.** The one you run, the ones you belong to (with their
+   state), joining by address. Open one: the path reads "Collectives /
+   HyperScope" and Collectives stays the current tab; the path's link goes
+   back. A collective you left or never joined, typed in the address bar,
+   goes back to the list.
+4. **The avatar.** Click it: your name, your WebID (click copies it
+   whole), "Your name, agent and inbox", Sign out. Escape or a click
+   elsewhere closes it. An account without an inbox shows a dot on the
+   avatar and "1 to do" in the menu.
+5. **You** (`#/you`). The three steps as before (name, inbox, agent), and
+   beside them "Source · profile/card": the card as your pod holds it, read
+   only, the lines `foaf:name`, `ldp:inbox`, `acl:delegates` and each
+   `org:memberOf` marked ("Your name", "Joined HyperScope"…). Change your
+   name: the marked line changes with it. "Open in Pods" opens the same
+   file in Pods.
+
