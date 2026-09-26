@@ -1,16 +1,17 @@
 /**
  * The light / dark switch (top bar, and the welcome screen's corner).
  *
- * Three states, as on the style guide: "system" leaves `prefers-color-scheme`
- * in charge (theme.css), and only an explicit choice stamps `data-theme` on
- * `<html>`. The choice is a per-browser convenience, kept in localStorage and
- * never written to a pod; without storage (private window, blocked site data)
- * it lasts until the page is reloaded.
+ * Light by default (decided 26 Sep 2026: index.html stamps
+ * `data-theme="light"` so there is no dark flash before this runs). Then dark,
+ * then "system", which removes the stamp and leaves `prefers-color-scheme` in
+ * charge (theme.css). The choice is a per-browser convenience, kept in
+ * localStorage and never written to a pod; without storage (private window,
+ * blocked site data) it lasts until the page is reloaded.
  */
 export type Theme = "system" | "light" | "dark";
 
 const KEY = "backoffice:theme";
-const ORDER: Theme[] = ["system", "light", "dark"];
+const ORDER: Theme[] = ["light", "dark", "system"];
 
 const ICONS: Record<Theme, string> = {
   system: `<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>`,
@@ -18,12 +19,12 @@ const ICONS: Record<Theme, string> = {
   dark: `<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>`,
 };
 
-let current: Theme = "system";
+let current: Theme = "light";
 
 export function storedTheme(): Theme {
   try {
     const value = localStorage.getItem(KEY);
-    return value === "light" || value === "dark" ? value : "system";
+    return value === "dark" || value === "system" ? value : "light";
   } catch {
     return current;
   }
@@ -58,7 +59,7 @@ export function bindThemeButton(container: HTMLElement): void {
   button?.addEventListener("click", () => {
     const theme = nextTheme(storedTheme());
     try {
-      if (theme === "system") localStorage.removeItem(KEY);
+      if (theme === "light") localStorage.removeItem(KEY);
       else localStorage.setItem(KEY, theme);
     } catch {
       // No storage: the choice holds for this page only.

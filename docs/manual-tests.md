@@ -291,7 +291,7 @@ Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
    The header offered the config.ttl address "to give people"; it now gives
    the invitation link, the one thing an owner sends.
 3. **Theme switch.** The icon left of the avatar (and in the
-   landing's nav) goes same-as-device → light → dark. The choice survives
+   landing's nav) goes light (the default) → dark → same-as-device. The choice survives
    a reload; in a private window it lasts until the reload. Both themes read
    well on every tab.
 4. **L3, the landing.** Signed out, in a private window, desktop and phone

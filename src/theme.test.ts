@@ -4,29 +4,34 @@ import { applyTheme, bindThemeButton, nextTheme, renderThemeButton, storedTheme 
 describe("the theme switch", () => {
   beforeEach(() => {
     localStorage.clear();
-    applyTheme("system");
+    applyTheme("light");
   });
 
-  it("goes system, light, dark, then back to system", () => {
-    expect(["system", "light", "dark"].map((t) => nextTheme(t as never))).toEqual(["light", "dark", "system"]);
+  it("is light until someone chooses otherwise", () => {
+    expect(storedTheme()).toBe("light");
   });
 
-  it("stamps data-theme only for an explicit choice, and remembers it", () => {
+  it("goes light, dark, same as the device, then back to light", () => {
+    expect(["light", "dark", "system"].map((t) => nextTheme(t as never))).toEqual(["dark", "system", "light"]);
+  });
+
+  it("stamps data-theme except for 'same as the device', and remembers the choice", () => {
     const box = document.createElement("div");
     box.innerHTML = renderThemeButton();
     bindThemeButton(box);
     const button = box.querySelector<HTMLButtonElement>("#theme")!;
 
     button.click();
-    expect(document.documentElement.dataset.theme).toBe("light");
-    expect(storedTheme()).toBe("light");
-    expect(button.getAttribute("aria-label")).toContain("light");
-
-    button.click();
     expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(storedTheme()).toBe("dark");
+    expect(button.getAttribute("aria-label")).toContain("dark");
 
     button.click();
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+    expect(storedTheme()).toBe("system");
+
+    button.click();
+    expect(document.documentElement.dataset.theme).toBe("light");
     expect(localStorage.getItem("backoffice:theme")).toBeNull();
   });
 });
