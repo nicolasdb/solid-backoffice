@@ -76,6 +76,13 @@ Not in A, on purpose:
 
 ## Decided since A was built
 
+- **Sharing keeps what the folder inherits** (26 Sep 2026, overrules A's
+  first cut): Share adds the collective's agent to the rules
+  `output2/<collective>/` follows instead of starting from nobody, so your
+  own agent keeps the write it needs to deliver files; Stop sharing returns
+  the folder to "Inherit from parent" when nothing else set it apart.
+  `src/lib/sharing.ts`, pinned on CSS in `test/pods/member.test.ts`.
+
 The design review (draft 2) changed three things in A before B starts:
 account creation moves into the first journey (username, email, password;
 our provider only), the home screen splits into "You run" and "You belong

@@ -51,6 +51,12 @@ vi.mock("./lib/acl", () => ({
   setAuthenticatedAccess: async (url: string, _o: string, modes: string[]) =>
     void calls.push(`acl ${url} authenticated ${modes.join(",")}`),
 }));
+vi.mock("./lib/sharing", () => ({
+  shareFolder: async (url: string, _o: string, _p: string, agent: string) => void calls.push(`acl ${url} ${agent} read`),
+  stopSharing: async (url: string, _o: string, _p: string, agent: string) => void calls.push(`acl ${url} ${agent} `),
+  sharedWith: async (_u: string, _o: string, _p: string, agent: string) =>
+    agentGrants.some((a) => a.webId === agent && a.modes.includes("read")),
+}));
 vi.mock("./lib/collective", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./lib/collective")>();
   return {

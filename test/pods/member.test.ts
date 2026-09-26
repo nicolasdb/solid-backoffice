@@ -8,7 +8,8 @@ vi.mock("../../src/lib/auth", () => ({
 const { loadCollective, readOwnProfile, updateOwnProfile, profileEdits, sendToInbox, buildJoin } =
   await import("../../src/lib/collective");
 const { ensureContainer } = await import("../../src/lib/pod");
-const { getAccess, setAgentAccess, setAuthenticatedAccess } = await import("../../src/lib/acl");
+const { getAccess, setAccess, setAuthenticatedAccess } = await import("../../src/lib/acl");
+const { shareFolder, stopSharing, sharedWith } = await import("../../src/lib/sharing");
 const admin = await import("../../src/lib/admin");
 
 const cast = inject("cast");
@@ -57,24 +58,43 @@ describe("a member sets themselves up (slice A)", () => {
     expect(await current.fetch(cast.neil.pod + "inbox/").then((r) => r.status)).toBe(403);
   });
 
-  it("stops sharing, then undoes it: the agent loses Read, then gets it back", async () => {
+  it("shares keeping what the folder inherits, and stopping makes it inherit again", async () => {
     await actAs("neil");
-    const folder = neil.pod + "output2/hyperscope/";
-    await ensureContainer(folder);
-    await current.fetch(folder + "share.md", { method: "PUT", headers: { "Content-Type": "text/markdown" }, body: "shared" });
+    const output2 = neil.pod + "output2/";
+    const folder = output2 + "story/";
     const agent = cast.hsagent.webId;
-    const agentStatus = async () => {
-      await actAs("hsagent");
-      const s = await status(folder + "share.md");
+    const mine = cast.ines.webId; // stands in for Neil's own agent
+    await ensureContainer(folder);
+    await setAccess(output2, neil.webId, { agents: [{ webId: mine, modes: ["read", "append", "write"] }], public: [], authenticated: [] }, null);
+    const as = async (role: "hsagent" | "ines", url: string, init?: RequestInit) => {
+      await actAs(role);
+      const s = (await current.fetch(url, init)).status;
       await actAs("neil");
       return s;
     };
-    await setAgentAccess(folder, neil.webId, agent, ["read"]);
-    expect(await agentStatus()).toBe(200);
-    await setAgentAccess(folder, neil.webId, agent, []);
-    expect(await agentStatus()).toBe(403);
-    await setAgentAccess(folder, neil.webId, agent, ["read"]);
-    expect(await agentStatus()).toBe(200);
+    const put = (name: string) => ({ method: "PUT", headers: { "Content-Type": "text/markdown" }, body: name });
+
+    await shareFolder(folder, neil.webId, neil.pod, agent);
+    expect((await getAccess(folder, neil.webId)).inherited).toBe(false);
+    expect(await as("hsagent", folder)).toBe(200);
+    expect(await as("ines", folder + "a.md", put("a"))).toBe(201); // the parent's edit came along
+    expect(await sharedWith(folder, neil.webId, neil.pod, agent)).toBe(true);
+
+    await stopSharing(folder, neil.webId, neil.pod, agent);
+    expect((await getAccess(folder, neil.webId)).inherited).toBe(true);
+    expect(await as("hsagent", folder)).toBe(403);
+    expect(await as("ines", folder + "b.md", put("b"))).toBe(201);
+    expect(await sharedWith(folder, neil.webId, neil.pod, agent)).toBe(false);
+
+    // Something set apart on the folder stays when the agent goes.
+    await shareFolder(folder, neil.webId, neil.pod, agent);
+    const own = await getAccess(folder, neil.webId);
+    await setAccess(folder, neil.webId, { ...own, public: ["read"] }, own.etag);
+    await stopSharing(folder, neil.webId, neil.pod, agent);
+    const kept = await getAccess(folder, neil.webId);
+    expect(kept.inherited).toBe(false);
+    expect(kept.public).toEqual(["read"]);
+    expect(kept.agents.map((a) => a.webId)).toEqual([mine]);
   });
 });
 

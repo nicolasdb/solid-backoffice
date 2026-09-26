@@ -12,7 +12,7 @@
  * pinned in src/onboarding.test.ts: folder, grant, then announce.
  */
 import { ensureContainer } from "./lib/pod";
-import { setAgentAccess } from "./lib/acl";
+import { shareFolder, stopSharing } from "./lib/sharing";
 import { buildAnnounce, buildJoin, profileEdits, sendToInbox, updateOwnProfile, type Collective } from "./lib/collective";
 import { readPerson, readRoster } from "./lib/admin";
 import { announce } from "./ui/a11y";
@@ -102,7 +102,7 @@ function agentCard(collective: Collective): string {
     <section class="step is-quiet">
       <div class="step-head"><h2>Its agent</h2></div>
       <p class="meta"><code>${esc(collective.agent)}</code></p>
-      <p class="meta">The only one your folder is shared with. It reads; it never writes on your pod.</p>
+      <p class="meta">Sharing lets it read your folder; it never writes on your pod. Whoever else could reach the folder (your own agent, say) keeps that access.</p>
     </section>`;
 }
 
@@ -193,8 +193,9 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
     bindButton(publish, async () => {
       await ensureContainer(folderUrl);
       // The grant IS the consent (ADR 006 §1.1): per-WebID, on the member's
-      // own pod, revocable here. Never a group.
-      await setAgentAccess(folderUrl, webId, collective.agent, ["read"]);
+      // own pod, revocable here. Never a group. It starts from what the
+      // folder already follows, so your own agent keeps what output2/ gave it.
+      await shareFolder(folderUrl, webId, ctx.podUrl, collective.agent);
       await sendToInbox(collective.inbox, buildAnnounce(webId, folderUrl, collective.group));
       announce(`Your folder is published to ${collective.name}.`);
     }, rerender);
@@ -203,9 +204,9 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   const unpublish = app.querySelector<HTMLButtonElement>(`#unpublish-${i}`);
   if (unpublish) {
     bindButton(unpublish, async () => {
-      await setAgentAccess(folderUrl, webId, collective.agent, []);
+      await stopSharing(folderUrl, webId, ctx.podUrl, collective.agent);
       toast(`${collective.name} can no longer read the folder. Copies it already made stay.`, {
-        undo: () => void setAgentAccess(folderUrl, webId, collective.agent, ["read"]).then(rerender),
+        undo: () => void shareFolder(folderUrl, webId, ctx.podUrl, collective.agent).then(rerender),
       });
     }, rerender);
   }

@@ -11,7 +11,7 @@
  * A tab switch draws from the last load first and reads behind it (L5).
  */
 import { describePodError, exists, isAuthError } from "./lib/pod";
-import { readAccess } from "./lib/acl";
+import { sharedWith } from "./lib/sharing";
 import { setUpNewcomer } from "./lib/newcomer";
 import { forgetReads } from "./lib/read";
 import {
@@ -123,7 +123,7 @@ export async function load(webId: string, podUrl: string): Promise<Loaded> {
       const folderUrl = new URL(collective.bundleFolder, podUrl).href;
       const [listed, published] = await Promise.all([
         isListed(collective, webId),
-        grantsRead(folderUrl, webId, collective.agent),
+        sharedWith(folderUrl, webId, podUrl, collective.agent),
       ]);
       return {
         collective,
@@ -152,16 +152,6 @@ async function unadvertised(podUrl: string): Promise<string | null> {
   return (await exists(candidate)) ? candidate : null;
 }
 
-/** Whether the folder's own ACL grants the agent Read. Missing folder: no. */
-async function grantsRead(folderUrl: string, webId: string, agent: string): Promise<boolean> {
-  try {
-    const access = await readAccess(folderUrl, webId);
-    return access.agents.some((a) => a.webId === agent && a.modes.includes("read"));
-  } catch (err) {
-    if ((err as { status?: number }).status === 404) return false;
-    throw err;
-  }
-}
 
 /* ── Screens ───────────────────────────────────────────────────────────── */
 

@@ -14,9 +14,20 @@ says so.
 ## Folder
 
 Each collective gets its own folder under one parent:
-`output2/hyperscope/`, `output2/mom/`. `output2/` itself stays private.
-Sharing grants the collective's agent Read on its folder only, and the grant
-is the consent: it lives on your pod and you can remove it there.
+`output2/hyperscope/`, `output2/mom/`. The folder is created when you first
+share, not when you join (joining only writes `org:memberOf` in your profile
+and sends the request). Its name comes from the collective's `config.ttl`
+(`hs:bundleFolder`).
+
+Sharing **adds** Read for the collective's agent to the rules the folder
+already follows; it never resets them. `output2/` is yours to arrange: your
+own agent, for one, needs to write there to deliver files to your
+collectives, and whatever `output2/` gives it reaches each collective's
+folder too. So a folder that inherits gets rules of its own that start from
+what it inherited, plus the agent. The grant is the consent: it lives on
+your pod and you can remove it there. (The first cut, slice A, started the
+folder's rules from nobody and silently took your agent's access away;
+overruled on 26 Sep 2026.)
 
 Everything you put in that folder is shared, including files added later.
 The screen says so in one line.
@@ -38,7 +49,8 @@ Nothing already collected is ever removed, by either side.
 - **Delete a file** from your folder: the collective marks it as removed and
   keeps the copies it made.
 - **Stop sharing**: the grant goes; nothing new is collected; earlier copies
-  stay.
+  stay. If nothing else set the folder apart, it follows `output2/`'s rules
+  again ("Inherit from parent"); otherwise it keeps its own, minus the agent.
 - **Leave**: your profile stops declaring the membership. Stopping sharing is
   a separate choice, offered at the same time.
 
