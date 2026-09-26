@@ -54,9 +54,9 @@ export function renderHomeView(data: Loaded, webId: string): string {
   const notJoined = collectives.map((c, i) => [c, i] as const).filter(([c]) => !declared(c.state));
 
   return `
+    <h1 class="home-title" data-view-title>${esc(profile.name ?? "Your collectives")}</h1>
     <div class="home-grid">
-      <div class="stack">
-        <h1 data-view-title>${esc(profile.name ?? "Your collectives")}</h1>
+      <div class="stack home-main">
 
         ${run ? runCard(run) : ""}
         ${runError ? `<section class="step">${renderRunError(runError)}</section>` : ""}
@@ -83,11 +83,13 @@ export function renderHomeView(data: Loaded, webId: string): string {
           ${stepName(profile)}
           ${stepInbox(profile, unadvertisedInbox)}
           ${stepAgent(profile, run?.collective ?? null)}
+          <hr class="divider">
+          <button type="button" class="link-button" id="edit-profile">Edit your profile</button>
         </div>
         <p class="meta">Signed in as <code>${esc(webId)}</code></p>
         <p class="meta">
           Everything here is written on your own pod, except the short messages
-          sent to a collective's inbox. You can undo each step.
+          sent to a collective's inbox.
         </p>
       </aside>
     </div>`;
@@ -106,6 +108,13 @@ export function alreadyJoined(found: Collective, data: Loaded): string | null {
 export function bindHome(app: HTMLElement, data: Loaded, ctx: ViewContext): void {
   const { webId, podUrl, rerender } = ctx;
   const { profile, unadvertisedInbox, collectives, broken } = data;
+
+  // No profile screen yet: editing happens in the checklist, so open it all.
+  app.querySelector("#edit-profile")?.addEventListener("click", () => {
+    const rows = [...app.querySelectorAll<HTMLDetailsElement>(".you-row")];
+    rows.forEach((row) => (row.open = true));
+    rows[0]?.querySelector<HTMLElement>("input, button")?.focus();
+  });
 
   bindForm(app, "#name-form", async (form) => {
     const name = (form.elements.namedItem("name") as HTMLInputElement).value.trim();

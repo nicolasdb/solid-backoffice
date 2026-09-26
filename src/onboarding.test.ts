@@ -215,6 +215,13 @@ describe("slice A — the member's side of the handshake", () => {
     expect(app.textContent).toContain("No collective yet.");
   });
 
+  it("opens every line of \"You\" from Edit your profile", async () => {
+    profile.inbox = POD + "inbox/";
+    const app = await render();
+    app.querySelector<HTMLButtonElement>("#edit-profile")!.click();
+    expect([...app.querySelectorAll<HTMLDetailsElement>(".you-row")].every((d) => d.open)).toBe(true);
+  });
+
   it("folds finished steps to their title", async () => {
     profile.inbox = POD + "inbox/";
     const app = await render();
