@@ -175,9 +175,14 @@ the end ([manual tests](manual-tests.md), "C · Places").
   member's own profile. A grant with modes the presets have no name for
   shows as Custom and is kept; an inbox's Append for everyone signed in
   is kept too.
-- **C3 · Write files.** New folder, new file, upload; the editor (Preview
+- **C3 · Write files** · built, live test pending. New folder, new file, upload; the editor (Preview
   first, Source beside it, Save only if nobody changed the file, a notice
-  when someone did). Through `conditional.ts`.
+  when someone did). Through `conditional.ts`. As built (`src/editor.ts`,
+  writes in `files.ts`): every create is `If-None-Match: *` (CSS 7 answers
+  409 for an existing folder; both read "already there"); a save is
+  `If-Match`, and on a 412 the editor keeps your text and offers "Save
+  mine over theirs" or "Replace my text with theirs". Unsaved text stays in
+  memory across navigation, never in browser storage.
 - **C4 · Rename, move, delete.** Move and rename carry a folder's contents
   and their rules (the old backoffice left the files behind, found live 25
   Sep 2026); delete says how many items are inside first. Order of writes:

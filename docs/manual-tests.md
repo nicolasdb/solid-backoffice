@@ -439,3 +439,22 @@ the provider, a real browser, a phone, both themes.
    shows them as they are now.
 7. The pod root has no Restore from parent. "Show the technical rules"
    opens the raw `.acl`, read only.
+
+### C3 · Write files
+
+1. In a folder: **New folder**, a name with a slash is refused in place;
+   a new name appears in the list. The same name again: "already there".
+2. **New file** `plan.md`: it opens in the editor, side by side on a
+   desktop (the source alone on a phone), with its title filled in.
+3. Type: "Unsaved changes" shows and Save turns on; the preview follows a
+   moment later. Save (or Ctrl/⌘+S): "Saved", the pill goes away.
+4. Open the same file in a second window, save there, then save here:
+   nothing is written, a notice says someone changed it, your text stays.
+   "Save mine over theirs" writes yours; "Replace my text with theirs"
+   shows theirs.
+5. Type without saving, click Home, come back to the file: your text is
+   still there. Close: it asks before discarding.
+6. **Upload** two files, one with a name already in the folder: one is
+   uploaded, the other refused by name; nothing is replaced.
+7. Markdown with a `<script>` or a `javascript:` link: the preview shows no
+   such link and runs nothing.

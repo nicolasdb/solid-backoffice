@@ -12,7 +12,22 @@
  * Mounted by src/onboarding.ts into a frame of its own, so moving between
  * folders redraws this frame only, never the tabs or the collectives.
  */
-import { effectiveAccess, downloadFile, listFolder, nameOf, parentOf, readFile, type Effective, type FileContent, type Item } from "./lib/files";
+import {
+  createFile,
+  createFolder,
+  effectiveAccess,
+  downloadFile,
+  listFolder,
+  nameOf,
+  parentOf,
+  readFile,
+  typeFor,
+  uploadFile,
+  type Effective,
+  type FileContent,
+  type Item,
+} from "./lib/files";
+import { bindEditor, canEdit, isDirty, renderEditor, renderEditorActions, startEditing, type Editing } from "./editor";
 import { forgetAclLocations, type AccessRules } from "./lib/acl";
 import { describePodError, isAuthError } from "./lib/pod";
 import { routeHref, type Route } from "./router";
@@ -56,6 +71,12 @@ let draft: Draft | null = null;
 let draftError: { url: string; message: string } | null = null;
 let groups: Group[] | null = null;
 let groupsAsked = false;
+/** The file being edited, with its unsaved text (C3). Memory only. */
+let editing: Editing | null = null;
+/** A file just created: opens in the editor once read. */
+let editWhenRead: string | null = null;
+/** The "new folder" / "new file" form in a folder's header. */
+let creating: { kind: "folder" | "file"; error: string | null } | null = null;
 /** The item whose permissions are being read, so a redraw does not read them twice. */
 let draftLoading: string | null = null;
 let frame: HTMLElement | null = null;
@@ -76,6 +97,9 @@ export function forgetPlaces(): void {
   draft = null;
   draftError = null;
   draftLoading = null;
+  editing = null;
+  editWhenRead = null;
+  creating = null;
   groups = null;
   groupsAsked = false;
   frame = null;
@@ -248,9 +272,34 @@ function renderFolder(url: string): string {
   return `
     <section class="places-main" aria-labelledby="places-title">
       <h1 id="places-title" class="visually-hidden" data-view-title>${esc(url === ctx!.podUrl ? "My pod" : nameOf(url))}</h1>
-      <div class="places-head">${breadcrumb(url)}</div>
+      <div class="places-head">
+        ${breadcrumb(url)}
+        <div class="actions">
+          <button class="ghost small" type="button" id="new-folder">New folder</button>
+          <button class="ghost small" type="button" id="new-file">New file</button>
+          <button class="small" type="button" id="upload">Upload</button>
+          <input type="file" id="upload-input" multiple hidden>
+        </div>
+      </div>
+      ${renderCreate()}
+      <p class="meta" id="upload-status" role="status" hidden></p>
       <div id="places-list">${list}</div>
     </section>`;
+}
+
+function renderCreate(): string {
+  if (!creating) return "";
+  const what = creating.kind === "folder" ? "folder" : "file";
+  return `
+    <form class="create-row" id="create-form" novalidate>
+      <div class="field">
+        <label for="new-name">Name of the new ${what}</label>
+        <input id="new-name" type="text" autocomplete="off" spellcheck="false" placeholder="${creating.kind === "folder" ? "notes" : "notes.md"}">
+      </div>
+      <button type="submit" class="small">Create</button>
+      <button type="button" class="ghost small" id="create-cancel">Cancel</button>
+      ${creating.error ? `<p class="error" role="alert">${esc(creating.error)}</p>` : ""}
+    </form>`;
 }
 
 /** The panel: one item, or the folder itself when nothing is selected. */
@@ -320,22 +369,31 @@ function renderPreview(file: FileContent): string {
 function renderFile(url: string): string {
   const file = files.get(url);
   const r = rows.get(url);
-  const body = file ? renderPreview(file) : errors.has(url) ? renderFailure(errors.get(url)) : renderPending(`Reading ${nameOf(url)}…`);
+  const edit = editing?.url === url ? editing : null;
+  const body = edit
+    ? renderEditor(edit)
+    : file
+      ? renderPreview(file)
+      : errors.has(url)
+        ? renderFailure(errors.get(url))
+        : renderPending(`Reading ${nameOf(url)}…`);
   const parent = parentOf(url) ?? ctx!.podUrl;
+  const actions = edit
+    ? renderEditorActions(edit)
+    : `${file && canEdit(file) ? `<button class="small" type="button" id="edit">Edit</button>` : ""}
+       <button class="ghost small" type="button" id="download" data-url="${esc(url)}">Download</button>
+       <button class="ghost small" type="button" data-select="${esc(url)}">Who can read it</button>
+       <a class="button-link" href="${hrefOf(parent)}">Close</a>`;
   return `
     <section class="places-main places-file" aria-labelledby="places-title">
       <h1 id="places-title" class="visually-hidden" data-view-title>${esc(nameOf(url))}</h1>
       <div class="places-head">
         <div class="places-title-row">${breadcrumb(url)}${file ? `<span class="pill">${esc(KIND_LABEL[file.kind])}</span>` : ""}</div>
-        <div class="actions">
-          <button class="ghost small" type="button" id="download" data-url="${esc(url)}">Download</button>
-          <button class="ghost small" type="button" data-select="${esc(url)}">Who can read it</button>
-          <a class="button-link" href="${hrefOf(parent)}">Close</a>
-        </div>
+        <div class="actions">${actions}</div>
       </div>
       <div id="places-file">${body}</div>
       <div class="file-status" role="status">
-        <p class="meta">${file?.modified ? `Last saved ${esc(when(file.modified))} · ` : ""}who can read it: <strong>${r && r !== "error" ? esc(r.who) : "…"}</strong></p>
+        <p class="meta">${file?.modified ? `Last saved ${esc(when(file.modified))} · ` : ""}who can read it: <strong>${r && r !== "error" ? esc(r.who) : "…"}</strong>${edit ? ". Save writes only if nobody changed the file since you opened it." : ""}</p>
       </div>
     </section>`;
 }
@@ -369,7 +427,7 @@ function draw(focus: boolean): void {
 
 /** Someone is typing, or has a change to the permissions not saved yet. */
 function inUse(): boolean {
-  return !frame || busy(frame) || Boolean(draft?.dirty);
+  return !frame || busy(frame) || Boolean(draft?.dirty) || isDirty(editing) || Boolean(creating);
 }
 
 /** Redraws after a read, unless someone is typing; keeps focus where it was. */
@@ -456,6 +514,17 @@ async function readOne(url: string, mine: number): Promise<void> {
     const was = files.get(url);
     files.set(url, file);
     errors.delete(url);
+    if (editing?.url === url && !isDirty(editing) && file.etag !== editing.etag && file.text !== null) {
+      editing.base = editing.text = file.text;
+      editing.etag = file.etag;
+    }
+    if (editWhenRead === url && canEdit(file)) {
+      editWhenRead = null;
+      editing = startEditing(file, isPhone());
+      draw(false);
+      frame?.querySelector<HTMLTextAreaElement>("#source")?.focus();
+      return;
+    }
     if (!was || was.etag !== file.etag || was.etag === null) redraw();
   } catch (err) {
     if (mine !== generation) return;
@@ -510,6 +579,7 @@ function bind(): void {
     }
   }
   frame.querySelector("#places-retry")?.addEventListener("click", () => void showPlaces(route));
+  bindWrites();
   const download = frame.querySelector<HTMLButtonElement>("#download");
   download?.addEventListener("click", async () => {
     const url = download.dataset.url!;
@@ -522,6 +592,108 @@ function bind(): void {
       download.disabled = false;
     }
   });
+}
+
+function isPhone(): boolean {
+  return typeof matchMedia === "function" && matchMedia("(max-width: 40rem)").matches;
+}
+
+/** New folder, new file, upload (in a folder); the editor (on a file). */
+function bindWrites(): void {
+  if (!frame) return;
+  const here = urlOf((route as { path: string }).path);
+
+  const openCreate = (kind: "folder" | "file") => {
+    creating = { kind, error: null };
+    draw(false);
+    frame?.querySelector<HTMLInputElement>("#new-name")?.focus();
+  };
+  frame.querySelector("#new-folder")?.addEventListener("click", () => openCreate("folder"));
+  frame.querySelector("#new-file")?.addEventListener("click", () => openCreate("file"));
+  frame.querySelector("#create-cancel")?.addEventListener("click", () => {
+    creating = null;
+    draw(false);
+    frame?.querySelector<HTMLElement>("#new-folder")?.focus();
+  });
+  frame.querySelector<HTMLFormElement>("#create-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!creating) return;
+    const input = frame!.querySelector<HTMLInputElement>("#new-name")!;
+    const name = input.value;
+    const kind = creating.kind;
+    (e.target as HTMLFormElement).querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled = true;
+    try {
+      if (kind === "folder") {
+        await createFolder(here, name);
+        creating = null;
+        toast(`Created ${name.trim()}/.`);
+        await showPlaces(route, false);
+      } else {
+        const body = typeFor(name) === "text/markdown" ? `# ${name.trim().replace(/\.(md|markdown)$/i, "")}\n` : "";
+        const url = await createFile(here, name, body);
+        creating = null;
+        editWhenRead = url;
+        location.hash = hrefOf(url);
+      }
+    } catch (err) {
+      creating = { kind, error: describePodError(err) };
+      draw(false);
+      const again = frame?.querySelector<HTMLInputElement>("#new-name");
+      if (again) {
+        again.value = name;
+        again.focus();
+      }
+    }
+  });
+
+  const picker = frame.querySelector<HTMLInputElement>("#upload-input");
+  frame.querySelector("#upload")?.addEventListener("click", () => picker?.click());
+  picker?.addEventListener("change", async () => {
+    const chosen = [...(picker.files ?? [])];
+    if (!chosen.length) return;
+    const status = frame!.querySelector<HTMLElement>("#upload-status")!;
+    status.hidden = false;
+    const failed: string[] = [];
+    for (const [i, file] of chosen.entries()) {
+      status.textContent = `Uploading ${i + 1} of ${chosen.length}: ${file.name}…`;
+      try {
+        await uploadFile(here, file);
+      } catch (err) {
+        failed.push(describePodError(err));
+      }
+    }
+    const done = chosen.length - failed.length;
+    toast(
+      failed.length
+        ? `${done} of ${chosen.length} uploaded. ${failed.join(" ")}`
+        : `${done} file${done === 1 ? "" : "s"} uploaded.`
+    );
+    await showPlaces(route, false);
+  });
+
+  frame.querySelector("#edit")?.addEventListener("click", () => {
+    const file = files.get(here);
+    if (!file) return;
+    editing = startEditing(file, isPhone());
+    draw(false);
+    frame?.querySelector<HTMLTextAreaElement>("#source")?.focus();
+  });
+  if (editing?.url === here) {
+    const open = editing;
+    bindEditor(frame, open, {
+      changed: () => drawKeepingFocus(),
+      saved: (file) => {
+        files.set(here, file);
+        toast(`Saved ${nameOf(here)}.`);
+        drawKeepingFocus();
+      },
+      close: () => {
+        editing = null;
+        draw(false);
+        frame?.querySelector<HTMLElement>("#edit")?.focus();
+      },
+    });
+  }
 }
 
 /** Reads the permissions of the item in the panel, and the members for its chips. */
@@ -560,7 +732,7 @@ function drawKeepingFocus(): void {
   const key = active && frame.contains(active)
     ? active.id
       ? `#${CSS.escape(active.id)}`
-      : ["data-select", "data-remove", "data-add", "data-person"].map((a) => active.getAttribute(a) !== null ? `[${a}="${CSS.escape(active.getAttribute(a)!)}"]` : "").find(Boolean) ||
+      : ["data-select", "data-remove", "data-add", "data-person", "data-view"].map((a) => active.getAttribute(a) !== null ? `[${a}="${CSS.escape(active.getAttribute(a)!)}"]` : "").find(Boolean) ||
         (active.matches('input[name="visibility"]') ? `input[name="visibility"][value="${(active as HTMLInputElement).value}"]` : null)
     : null;
   draw(false);
@@ -588,6 +760,7 @@ export async function showPlaces(next: Route, focus = true): Promise<void> {
     sheetOpen = false;
     draft = null;
     draftError = null;
+    creating = null;
   }
   const mine = ++generation;
   draw(focus);

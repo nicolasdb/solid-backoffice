@@ -5,7 +5,7 @@ vi.mock("../../src/lib/auth", () => ({
   authFetch: (input: RequestInfo | URL, init?: RequestInit) => current.fetch(input, init),
 }));
 
-const { listFolder, effectiveAccess, readFile } = await import("../../src/lib/files");
+const { listFolder, effectiveAccess, readFile, createFolder, createFile, uploadFile, saveFile } = await import("../../src/lib/files");
 const aclLib = await import("../../src/lib/acl");
 const { readAccess, forgetAclLocations } = aclLib;
 const { forgetReads } = await import("../../src/lib/read");
@@ -125,5 +125,37 @@ describe("who can read it (C2)", () => {
     const root = await getAccess(amina.pod, amina.webId);
     await expect(removeOwnRules(amina.pod, root.etag)).rejects.toThrow(/root/);
     expect((await getAccess(amina.pod, amina.webId)).inherited).toBe(false);
+  });
+});
+
+/** Slice C3: new folders, new files, uploads and saves on a real server. */
+describe("writing files (C3)", () => {
+  const work = amina.pod + "work/";
+
+  it("creates a folder and a file, and never over one already there", async () => {
+    expect(await createFolder(amina.pod, "work")).toBe(work);
+    await expect(createFolder(amina.pod, "work")).rejects.toMatchObject({ code: "exists" });
+    const url = await createFile(work, "plan é.md", "# Plan\n");
+    expect(url).toBe(work + "plan%20%C3%A9.md");
+    const items = await listFolder(work);
+    expect(items.map((i) => [i.name, i.type])).toEqual([["plan é.md", "text/markdown"]]);
+    await expect(createFile(work, "plan é.md", "other")).rejects.toMatchObject({ code: "exists" });
+    expect((await readFile(url)).text).toBe("# Plan\n");
+  });
+
+  it("uploads a file from the device with its type", async () => {
+    const url = await uploadFile(work, new File([new Uint8Array([1, 2, 3])], "data.bin", { type: "application/octet-stream" }));
+    const file = await readFile(url);
+    expect(file.kind).toBe("other");
+    expect(file.blob!.size).toBe(3);
+  });
+
+  it("saves over the version opened, and refuses when someone saved in between", async () => {
+    const url = work + "plan%20%C3%A9.md";
+    const opened = await readFile(url);
+    const other = await readFile(url);
+    await saveFile(url, "# Plan, mine\n", opened.etag, opened.contentType);
+    await expect(saveFile(url, "# Plan, theirs\n", other.etag, other.contentType)).rejects.toMatchObject({ code: "conflict" });
+    expect((await readFile(url)).text).toBe("# Plan, mine\n");
   });
 });

@@ -1,7 +1,10 @@
 /**
- * Your pod as files and folders (slice C): listings, file contents, and
- * which rules apply where. Reads for showing go through read.ts (ADR 007);
- * nothing here writes.
+ * Your pod as files and folders (slice C): listings, file contents, which
+ * rules apply where, and the writes of new folders, new files, uploads and
+ * saves. Reads for showing go through read.ts (ADR 007). Every write is
+ * conditional: a new item is created only if nothing is there yet
+ * (`If-None-Match: *`), a save only if the file is still the version that
+ * was opened (`If-Match`), so nobody's change is erased unseen.
  *
  * A folder's listing is its container document: `ldp:contains` for what is
  * inside, and on Community Solid Server `dct:modified`, `stat:size` and the
@@ -13,7 +16,7 @@ import { Parser } from "n3";
 import { authFetch } from "./auth";
 import { readTurtle } from "./read";
 import { readAccess, type ResourceAccess } from "./acl";
-import type { ConditionalError } from "./conditional";
+import { writeIfMatch, type ConditionalError } from "./conditional";
 
 const LDP = "http://www.w3.org/ns/ldp#";
 const DCT_MODIFIED = "http://purl.org/dc/terms/modified";
@@ -198,4 +201,113 @@ export async function downloadFile(url: string, content?: FileContent): Promise<
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(href), 0);
+}
+
+/* ── Writes (C3) ───────────────────────────────────────────────────────── */
+
+export interface FileError extends Error {
+  code: "bad-name" | "exists" | "conflict" | "write-failed";
+  status?: number;
+}
+
+function fileError(code: FileError["code"], message: string, status?: number): FileError {
+  return Object.assign(new Error(message), { code, status });
+}
+
+/**
+ * Why a name cannot be used, or null. Names become one path segment, so no
+ * slash; `.acl` and `.meta` are the server's own documents beside each item.
+ */
+export function nameProblem(raw: string): string | null {
+  const name = raw.trim();
+  if (!name) return "Give it a name.";
+  if (name.includes("/")) return "A name cannot contain a slash.";
+  if (name === "." || name === "..") return "That name is taken by the folder itself.";
+  if (/\.(acl|meta)$/i.test(name)) return "Names ending in .acl or .meta belong to the server.";
+  if (name.length > 200) return "That name is too long.";
+  return null;
+}
+
+/** The address of a new item in `folderUrl`. */
+export function childUrl(folderUrl: string, name: string, isFolder: boolean): string {
+  return folderUrl + encodeURIComponent(name.trim()) + (isFolder ? "/" : "");
+}
+
+/** The media type a new file gets from its name. */
+export function typeFor(name: string): string {
+  const ext = name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? "";
+  const types: Record<string, string> = {
+    md: "text/markdown",
+    markdown: "text/markdown",
+    txt: "text/plain",
+    json: "application/json",
+    jsonld: "application/ld+json",
+    ttl: "text/turtle",
+    html: "text/html",
+    csv: "text/csv",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    pdf: "application/pdf",
+  };
+  return types[ext] ?? (ext ? "application/octet-stream" : "text/plain");
+}
+
+/** PUT that creates, never replaces: 412 when something is already there. */
+async function createOnly(url: string, body: BodyInit, contentType: string): Promise<void> {
+  const res = await authFetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": contentType, "If-None-Match": "*" },
+    body,
+  });
+  // 412: If-None-Match found something. 409: CSS 7 refuses a PUT on an
+  // existing folder, or a folder where a file of that name is (and back).
+  if (res.status === 412 || res.status === 409) {
+    throw fileError("exists", `${nameOf(url)} is already there. Choose another name.`, res.status);
+  }
+  if (!res.ok) throw fileError("write-failed", `Could not create ${nameOf(url)} (${res.status}).`, res.status);
+}
+
+export async function createFolder(parentUrl: string, name: string): Promise<string> {
+  const problem = nameProblem(name);
+  if (problem) throw fileError("bad-name", problem);
+  const url = childUrl(parentUrl, name, true);
+  await createOnly(url, "", "text/turtle");
+  return url;
+}
+
+export async function createFile(parentUrl: string, name: string, body = ""): Promise<string> {
+  const problem = nameProblem(name);
+  if (problem) throw fileError("bad-name", problem);
+  const url = childUrl(parentUrl, name, false);
+  await createOnly(url, body, typeFor(name));
+  return url;
+}
+
+/** One file from the device, under its own name; never over an existing one. */
+export async function uploadFile(parentUrl: string, file: File): Promise<string> {
+  const problem = nameProblem(file.name);
+  if (problem) throw fileError("bad-name", `${file.name}: ${problem}`);
+  const url = childUrl(parentUrl, file.name, false);
+  await createOnly(url, file, file.type || typeFor(file.name));
+  return url;
+}
+
+/**
+ * Saves text over the version that was opened. A 412 means someone changed
+ * the file since: nothing is written, and the editor says so.
+ */
+export async function saveFile(url: string, text: string, etag: string | null, contentType: string): Promise<void> {
+  if (!etag) throw fileError("conflict", `${nameOf(url)} came without a version tag, so it cannot be saved safely.`);
+  try {
+    await writeIfMatch(url, text, etag, contentType);
+  } catch (err) {
+    const status = (err as ConditionalError).status;
+    if (status === 412) {
+      throw fileError("conflict", `Someone changed ${nameOf(url)} since you opened it. Nothing was saved; your text is still here.`, 412);
+    }
+    throw fileError("write-failed", `Could not save ${nameOf(url)} (${status ?? "no answer"}).`, status);
+  }
 }

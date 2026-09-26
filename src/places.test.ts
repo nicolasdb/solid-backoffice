@@ -376,3 +376,115 @@ describe("C2 — who can read it", () => {
     expect(app.querySelector("#access .is-warn")!.textContent).toMatch(/no words for/);
   });
 });
+
+describe("C3 — writing files", () => {
+  const type = (selector: string, value: string) => {
+    const el = app.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
+    el.value = value;
+    el.dispatchEvent(new Event("input"));
+  };
+
+  it("creates a folder only where nothing is yet, and refuses a name with a slash", async () => {
+    await mount("projects/");
+    await reading;
+    app.querySelector<HTMLButtonElement>("#new-folder")!.click();
+    expect(document.activeElement!.id).toBe("new-name");
+
+    type("#new-name", "a/b");
+    app.querySelector<HTMLFormElement>("#create-form")!.requestSubmit();
+    await until(() => app.querySelector("#create-form .error"));
+    expect(app.querySelector("#create-form .error")!.textContent).toMatch(/slash/);
+    expect(writes).toHaveLength(0);
+
+    type("#new-name", "ideas");
+    app.querySelector<HTMLFormElement>("#create-form")!.requestSubmit();
+    await until(() => writes.length);
+    expect(writes[0]).toMatchObject({ method: "PUT", url: POD + "projects/ideas/", ifNoneMatch: "*" });
+  });
+
+  it("creates a file and opens it in the editor", async () => {
+    await mount("projects/");
+    await reading;
+    app.querySelector<HTMLButtonElement>("#new-file")!.click();
+    type("#new-name", "plan.md");
+    app.querySelector<HTMLFormElement>("#create-form")!.requestSubmit();
+    await until(() => location.hash === "#/p/projects/plan.md");
+    expect(writes[0]).toMatchObject({ method: "PUT", url: POD + "projects/plan.md", ifNoneMatch: "*", body: "# plan\n" });
+    await showPlaces({ name: "places", path: "projects/plan.md" });
+    expect(app.querySelector<HTMLTextAreaElement>("#source")!.value).toBe("# plan\n");
+  });
+
+  it("uploads each file under its own name, never over one already there", async () => {
+    await mount("projects/");
+    await reading;
+    const input = app.querySelector<HTMLInputElement>("#upload-input")!;
+    Object.defineProperty(input, "files", {
+      value: [new File(["x"], "new.txt", { type: "text/plain" }), new File(["y"], "readme.md", { type: "text/markdown" })],
+    });
+    input.dispatchEvent(new Event("change"));
+    await until(() => document.querySelector(".toast"));
+    expect(writes.map((w) => [w.url, w.ifNoneMatch])).toEqual([
+      [POD + "projects/new.txt", "*"],
+      [POD + "projects/readme.md", "*"],
+    ]);
+    expect(pod[POD + "projects/readme.md"].body).toContain("# Projects");
+    expect(document.querySelector(".toast")!.textContent).toMatch(/1 of 2 uploaded.*readme\.md is already there/);
+  });
+
+  it("edits beside the preview and saves only over the version opened", async () => {
+    await mount("projects/readme.md");
+    await reading;
+    app.querySelector<HTMLButtonElement>("#edit")!.click();
+    expect(app.querySelector(".editor")!.classList.contains("is-side")).toBe(true);
+    expect(app.querySelector<HTMLButtonElement>("#editor-save")!.disabled).toBe(true);
+
+    type("#source", "# Projects, renamed");
+    expect(app.querySelector<HTMLElement>("#unsaved")!.hidden).toBe(false);
+    app.querySelector<HTMLButtonElement>("#editor-save")!.click();
+    await until(() => document.querySelector(".toast"));
+    expect(writes[0]).toMatchObject({ method: "PUT", url: POD + "projects/readme.md", ifMatch: '"m"', body: "# Projects, renamed" });
+    expect(app.querySelector<HTMLElement>("#unsaved")!.hidden).toBe(true);
+  });
+
+  it("writes nothing over someone else's change, keeps your text, and lets you choose", async () => {
+    await mount("projects/readme.md");
+    await reading;
+    app.querySelector<HTMLButtonElement>("#edit")!.click();
+    type("#source", "mine");
+    pod[POD + "projects/readme.md"] = { body: "theirs", type: "text/markdown", etag: '"theirs"' };
+    app.querySelector<HTMLButtonElement>("#editor-save")!.click();
+    await until(() => app.querySelector("#save-over"));
+    expect(pod[POD + "projects/readme.md"].body).toBe("theirs");
+    expect(app.querySelector<HTMLTextAreaElement>("#source")!.value).toBe("mine");
+
+    app.querySelector<HTMLButtonElement>("#save-over")!.click();
+    await until(() => pod[POD + "projects/readme.md"].body === "mine");
+    expect(writes.at(-1)!.ifMatch).toBe('"theirs"');
+  });
+
+  it("keeps unsaved text while you look elsewhere, and asks before closing it", async () => {
+    await mount("projects/readme.md");
+    await reading;
+    app.querySelector<HTMLButtonElement>("#edit")!.click();
+    type("#source", "half written");
+    await open("projects/");
+    await open("projects/readme.md");
+    expect(app.querySelector<HTMLTextAreaElement>("#source")!.value).toBe("half written");
+
+    app.querySelector<HTMLButtonElement>("#editor-close")!.click();
+    expect(app.querySelector("#discard")).toBeTruthy();
+    app.querySelector<HTMLButtonElement>("#keep-editing")!.click();
+    expect(app.querySelector<HTMLTextAreaElement>("#source")!.value).toBe("half written");
+    app.querySelector<HTMLButtonElement>("#editor-close")!.click();
+    app.querySelector<HTMLButtonElement>("#discard")!.click();
+    expect(app.querySelector("#source")).toBeNull();
+    expect(app.querySelector(".preview h1")!.textContent).toBe("Projects");
+    expect(writes).toHaveLength(0);
+  });
+
+  it("offers Edit only for text it can show", async () => {
+    await mount("projects/logo.png");
+    await reading;
+    expect(app.querySelector("#edit")).toBeNull();
+  });
+});

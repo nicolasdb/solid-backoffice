@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockFetch = vi.fn();
 vi.mock("./auth", () => ({ authFetch: (...args: unknown[]) => mockFetch(...args) }));
 
-const { parseListing, parentOf, nameOf, kindOf, effectiveAccess, readFile, PREVIEW_LIMIT } = await import("./files");
+const { parseListing, parentOf, nameOf, kindOf, effectiveAccess, readFile, PREVIEW_LIMIT, nameProblem, childUrl, typeFor, createFolder, createFile, uploadFile, saveFile } =
+  await import("./files");
 const { readAccess, forgetAclLocations } = await import("./acl");
 const { forgetReads } = await import("./read");
 
@@ -25,7 +26,7 @@ const LISTING = `@prefix dc: <http://purl.org/dc/terms/>.
 <> ldp:contains <readme.md>, <Notes%2010.txt>, <notes%202.txt>, <drafts/>.`;
 
 const res = (status: number, body = "", headers: Record<string, string> = {}) =>
-  new Response(status === 304 || status === 204 ? null : body, { status, headers });
+  new Response(status === 304 || status === 204 || status === 205 ? null : body, { status, headers });
 const aclHead = (acl: string) => res(200, "", { Link: `<${acl}>; rel="acl"` });
 const ownAcl = (target: string, extra = "") =>
   `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
@@ -134,5 +135,56 @@ describe("a file's contents", () => {
   it("says why a file cannot be read", async () => {
     mockFetch.mockResolvedValueOnce(res(403));
     await expect(readFile(POD + "x.md")).rejects.toMatchObject({ status: 403 });
+  });
+});
+
+describe("writing files (C3)", () => {
+  const sentTo = (i: number) => mockFetch.mock.calls[i] as [string, RequestInit];
+  const headers = (i: number) => sentTo(i)[1].headers as Record<string, string>;
+
+  it("refuses names that are not one path segment or belong to the server", () => {
+    expect(nameProblem("  ")).toMatch(/name/);
+    expect(nameProblem("a/b")).toMatch(/slash/);
+    expect(nameProblem("..")).toBeTruthy();
+    expect(nameProblem("notes.md.acl")).toMatch(/server/);
+    expect(nameProblem("x.meta")).toMatch(/server/);
+    expect(nameProblem("Notes été.md")).toBeNull();
+    expect(childUrl(POD, "Notes été.md", false)).toBe(POD + "Notes%20%C3%A9t%C3%A9.md");
+    expect(childUrl(POD, "drafts", true)).toBe(POD + "drafts/");
+  });
+
+  it("types a new file from its name", () => {
+    expect(typeFor("a.md")).toBe("text/markdown");
+    expect(typeFor("a.JSON")).toBe("application/json");
+    expect(typeFor("README")).toBe("text/plain");
+    expect(typeFor("a.bin")).toBe("application/octet-stream");
+  });
+
+  it("creates folders and files only where nothing is yet", async () => {
+    mockFetch.mockResolvedValueOnce(res(201)).mockResolvedValueOnce(res(201)).mockResolvedValueOnce(res(412));
+    expect(await createFolder(POD, "drafts")).toBe(POD + "drafts/");
+    expect(await createFile(POD, "idea.md", "# Idea")).toBe(POD + "idea.md");
+    expect(headers(0)["If-None-Match"]).toBe("*");
+    expect(headers(1)).toMatchObject({ "If-None-Match": "*", "Content-Type": "text/markdown" });
+    await expect(createFile(POD, "idea.md")).rejects.toMatchObject({ code: "exists" });
+    await expect(createFolder(POD, "a/b")).rejects.toMatchObject({ code: "bad-name" });
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("uploads a file under its own name and type", async () => {
+    mockFetch.mockResolvedValueOnce(res(201));
+    const file = new File(["png"], "logo.png", { type: "image/png" });
+    expect(await uploadFile(POD, file)).toBe(POD + "logo.png");
+    expect(headers(0)).toMatchObject({ "If-None-Match": "*", "Content-Type": "image/png" });
+    expect(sentTo(0)[1].body).toBe(file);
+  });
+
+  it("saves over the version opened, and says so when someone changed it", async () => {
+    mockFetch.mockResolvedValueOnce(res(205)).mockResolvedValueOnce(res(412));
+    await saveFile(POD + "a.md", "new", '"v1"', "text/markdown");
+    expect(headers(0)["If-Match"]).toBe('"v1"');
+    await expect(saveFile(POD + "a.md", "newer", '"v1"', "text/markdown")).rejects.toMatchObject({ code: "conflict" });
+    await expect(saveFile(POD + "a.md", "x", null, "text/markdown")).rejects.toMatchObject({ code: "conflict" });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
