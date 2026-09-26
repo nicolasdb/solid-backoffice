@@ -142,7 +142,9 @@ toasts and screen-reader announcements after each write.
   2026). Desktop: tabs at the top (Home, one per collective you run, Places
   once C exists), your collectives in the wide column and a compact "You"
   checklist beside them. Phone: the same tabs as a bottom bar. The other
-  two options (a side rail; a home of cards) are kept on the canvas.
+  two options (a side rail; a home of cards), and the stacked collective
+  screen, were removed from the canvas on 26 Sep 2026. The canvas now
+  shows the screens as built, in the light theme (the app's default).
 - **Landing**: the solid-dash pattern, drawn invited and not invited. The
   closing diagram shows the ladder as groups of groups: you, HyperScope,
   and a network of four collectives with 3 to 5 members each.
