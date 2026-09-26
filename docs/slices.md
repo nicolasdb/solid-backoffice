@@ -37,8 +37,8 @@ still `make vps-deploy`.
    reads start at once (`load()`, `loadRun()`); a tab switch draws from the
    last load and reads again behind it; display reads revalidate with
    `If-None-Match` (`src/lib/read.ts`, CSS 7 answers 304). Memory only.
-   Measured with `test/pods/speed.test.ts`. Left: finding a resource's
-   `.acl` costs a HEAD before the GET, one round on every share check.
+   Measured with `test/pods/speed.test.ts`. The HEAD before each `.acl`
+   read is now asked once per session (C1, `aclLocation`).
    `src/lib/read.ts` and the rules are carried back to solid-kit (ADR 007).
 4. **C · Places**, in six slices (C1 browse → C6 technical rules, below),
    drawn on the canvas desktop and phone. Next: C1. Then D (with People
@@ -144,15 +144,22 @@ editor from `src/lib/acl.ts`, and following (J7,
 [explanation/following.md](explanation/following.md)) as a read-only reader
 for addresses others share with you. Every screen reads as
 [reading pods quickly](explanation/reading-pods.md) says (solid-kit ADR 007).
-Each slice below is usable on its own and is run live before the next.
+Each slice below is usable on its own. Decided 26 Sep 2026: C1–C6 are
+built in one run, each with its automated tests, and run live together at
+the end ([manual tests](manual-tests.md), "C · Places").
 
-- **C1 · Browse your pod.** The Places tab and its route; "My pod" in the
+- **C1 · Browse your pod** · built, live test pending. The Places tab and its route; "My pod" in the
   side list; a folder's items with path, name, last modified (`dct:modified`
   from the listing) and whether it has rules of its own; a file opens in
   Preview (Markdown, text, JSON, image); download for the rest. Read only.
   "Who can read it" fills in as each item's rules arrive, never holding the
   list back; where each `.acl` lives is kept in memory (it costs a HEAD).
-  New: `src/lib/files.ts` (listing, reading).
+  New: `src/lib/files.ts` (listing, reading), `src/places.ts`,
+  `src/ui/markdown.ts` (marked, then DOMPurify: a pod's Markdown is
+  untrusted). As built: routes `#/p/<path>` (percent-encoded, as in the
+  URL); a move between folders redraws Places only, the collectives are
+  not read again; share checks read each `.acl`'s location from memory
+  (`readAccess`), which closes L5's last open item.
 - **C2 · Who can read it.** Only me / anyone with the link / named people
   ("Can read" = Read, "Can edit" = Read + Append + Write; Control never
   granted from the screen); chips filling in a collective's members, one

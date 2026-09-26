@@ -28,6 +28,7 @@ vi.mock("./pod", async (importOriginal) => ({
 vi.mock("./acl", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./acl")>()),
   getAccess: async () => ({ agents: [], inherited }),
+  readAccess: async () => ({ agents: [], inherited }),
   setAgentAccess: async (url: string, _o: string, agent: string, modes: string[]) =>
     step(`acl ${url} ${agent} ${modes.join(",") || "none"}`),
 }));

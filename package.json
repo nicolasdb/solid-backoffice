@@ -27,6 +27,8 @@
     "@fontsource/newsreader": "^5.3.0",
     "@inrupt/solid-client": "^3.0.0",
     "@inrupt/solid-client-authn-browser": "^5.0.0",
+    "dompurify": "^3.4.16",
+    "marked": "^18.0.14",
     "n3": "^1.26.0"
   }
 }

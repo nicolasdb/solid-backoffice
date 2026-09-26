@@ -4,14 +4,14 @@
  * a bar at the bottom. One `<nav>`, restyled by CSS, so there is one list of
  * links for keyboards and screen readers whatever the width.
  *
- * Tabs: Home, then one per collective you run or belong to, then Places,
- * which is shown as coming (slice C) and is not a link. Past three
+ * Tabs: Home, then one per collective you run or belong to, then Places
+ * (your pod and what you follow, slice C). Past three
  * collectives, the rest go under "More", so the phone bar never holds more
  * than five items.
  */
 import { bindThemeButton, renderThemeButton } from "./theme";
 import { APP_NAME } from "./config";
-import { routeHref, type Route } from "./router";
+import { isPlaces, routeHref, type Route } from "./router";
 import { esc } from "./ui/patterns";
 
 export interface TabCollective {
@@ -59,7 +59,7 @@ export function tabsFor(collectives: TabCollective[], route: Route): Tab[] {
       badge: hidden.reduce((n, c) => n + (c.badge ?? 0), 0) || undefined,
     });
   }
-  tabs.push({ label: "Places", icon: "places", href: null, current: false, soon: true });
+  tabs.push({ label: "Places", icon: "places", href: routeHref({ name: "places", path: "" }), current: isPlaces(route) });
   return tabs;
 }
 

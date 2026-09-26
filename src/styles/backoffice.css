@@ -820,3 +820,163 @@ button.link-button:hover { color: var(--text-primary); text-decoration: underlin
   .landing-links { gap: var(--space-4); }
   #to-how { display: none; }
 }
+
+/* ── Places (slice C): places, the folder, the item ─────────────────────
+   Desktop: a side list, the list in the middle, the item's panel on the
+   right. Phone: a place picker, the list as blocks, the panel as a sheet. */
+
+.places-grid {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@media (min-width: 64rem) {
+  .places-grid { grid-template-columns: 14rem minmax(0, 1fr) 20rem; }
+  .places-grid.is-file { grid-template-columns: 14rem minmax(0, 1fr); }
+}
+
+.places-side { display: flex; flex-direction: column; gap: var(--space-6); }
+.places-group { display: flex; flex-direction: column; gap: var(--space-1); }
+.places-group .label-mono { padding: 0 var(--space-3) var(--space-1); }
+
+.place {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.place:hover { color: var(--text-primary); background: var(--surface-recessed); }
+.place.is-current { color: var(--text-primary); background: var(--accent-soft); }
+.place.is-action { color: var(--accent); }
+
+.place-picker { display: none; max-width: none; }
+.place-picker select {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-recessed);
+  color: var(--text-primary);
+}
+
+.places-main { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.places-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.places-title-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; min-width: 0; }
+
+.crumbs { overflow-wrap: anywhere; }
+.crumbs a { color: var(--text-secondary); text-decoration: none; }
+.crumbs a:hover { color: var(--text-primary); text-decoration: underline; }
+.crumbs [aria-current] { color: var(--text-primary); font-weight: 600; }
+
+a.button-link {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-small);
+  text-decoration: none;
+}
+a.button-link:hover { background: var(--surface-recessed); }
+
+table.items { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
+table.items th {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label, 0.08em);
+  color: var(--text-tertiary);
+  text-align: left;
+  padding: 0 var(--space-3) var(--space-2);
+  border-bottom: var(--border-width) solid var(--border);
+}
+table.items td {
+  padding: var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  vertical-align: middle;
+}
+table.items tr.is-selected td { background: var(--accent-soft); }
+table.items .item-name { display: flex; align-items: center; gap: var(--space-2); overflow-wrap: anywhere; }
+table.items .item-name a { color: var(--text-primary); text-decoration: none; }
+table.items .item-name a:hover { text-decoration: underline; }
+table.items .row-actions { text-align: right; }
+.item-icon { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--text-tertiary); stroke-width: 1.8; }
+
+.places-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.panel-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.panel-head h2 { margin: 0; font-size: var(--text-h3); flex: 1; min-width: 0; }
+.panel-block { display: flex; flex-direction: column; gap: var(--space-2); }
+.panel-block p { margin: 0; }
+.sheet-close { display: none; }
+
+.preview {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  padding: var(--space-6);
+  min-width: 0;
+  overflow: auto;
+}
+.preview.prose { max-width: 48rem; }
+.preview.prose h1 { font-family: var(--font-heading); font-weight: 400; margin-top: 0; }
+.preview.prose img { max-width: 100%; }
+.preview.source { margin: 0; font-family: var(--font-mono); font-size: var(--text-small); line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.preview.source code { background: none; padding: 0; }
+.preview.image { margin: 0; text-align: center; }
+.preview.image img { max-width: 100%; height: auto; }
+
+.file-status {
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+.file-status p { margin: 0; }
+
+@media (max-width: 40rem) {
+  .places-side { display: none; }
+  .place-picker { display: flex; }
+
+  table.items thead { display: none; }
+  table.items, table.items tbody, table.items tr, table.items td { display: block; }
+  table.items tr { position: relative; padding: var(--space-3) 0; border-bottom: var(--border-width) solid var(--border-subtle); }
+  table.items td { padding: 2px 0; border: none; }
+  table.items td[data-label="Rules"]:empty { display: none; }
+  table.items .row-actions { position: absolute; top: var(--space-2); right: 0; }
+
+  .places-panel { display: none; }
+  .places-panel.is-open {
+    display: flex;
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 20;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  }
+  .sheet-close { display: inline-flex; }
+  .preview { padding: var(--space-4); }
+}

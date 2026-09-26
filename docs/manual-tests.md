@@ -387,3 +387,31 @@ browser's developer tools on the Network tab, filtered to the pod's host.
 passes: faster on the first load, each tab appears at once. 2–5 deferred
 (not run yet): the 304s and the provider's CORS for `If-None-Match`, a
 change from another window, typing kept, and switching accounts.
+
+---
+
+## C · Places, on the live pod
+
+Written as each of C1–C6 is built; **run together once C is complete**
+(decided 26 Sep 2026). `npm run test:pods` covers the reads and writes on
+CSS 7 and `src/places.test.ts` the screen; this pass covers what they cannot:
+the provider, a real browser, a phone, both themes.
+
+### C1 · Browse your pod
+
+1. Open **Places**. "My pod" is current in the side list; the root's
+   folders come first, then files, each with its last modified date.
+2. "Who can read it" fills in row by row after the list appears; the list
+   never waits for it. `inbox/` reads "You · anyone signed in can leave a
+   message" with an **Own** pill; a folder without rules of its own says
+   **From parent**.
+3. Open a folder, then go back with the browser's Back button: the folder
+   seen before appears at once. On the Network tab, its listing answers
+   **304** and no `HEAD` is sent again for items already seen.
+4. Open a Markdown file: it shows as a page (Preview), not as source. Open
+   a JSON file (indented), an image, and a file with no preview: Download
+   saves it with its name.
+5. Click `···` on a row: the panel shows its name, its rules and where they
+   come from. On a phone (≤ 40rem): the place picker replaces the side
+   list, rows are blocks, and the panel opens as a sheet with Close.
+6. Both themes: nothing unreadable in the table, the panel or a preview.

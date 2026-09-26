@@ -9,7 +9,11 @@
  *   neil        newcomer: an account and nothing else
  *   ines        applicant: declared HyperScope, has an inbox, sent an as:Join
  *   outsider    signed in, unrelated
- *   network     a second collective, for J6
+ *   network     a second collective, for J6; shares shared/ with amina (C5)
+ *
+ * Amina's pod also holds files for Places (slice C): projects/ follows the
+ * pod root's rules, projects/drafts/ has its own (HyperScope's agent reads),
+ * projects/public.md is public, private.txt has its own owner-only rules.
  */
 import type { Session } from "@inrupt/solid-client-authn-node";
 import { createPerson, signIn, type Person } from "./accounts";
@@ -20,7 +24,7 @@ export const ROLES = ["hyperscope", "hsagent", "amina", "neil", "ines", "outside
 export type Role = (typeof ROLES)[number];
 export type Cast = Record<Role, Person>;
 
-async function put(s: Session, url: string, body: string, type = "text/turtle"): Promise<void> {
+async function put(s: Session, url: string, body: string | Uint8Array<ArrayBuffer>, type = "text/turtle"): Promise<void> {
   const res = await s.fetch(url, { method: "PUT", headers: { "Content-Type": type }, body });
   if (!res.ok) throw new Error(`PUT ${url}: ${res.status} ${await res.text()}`);
 }
@@ -83,6 +87,11 @@ async function setUpInbox(s: Session, person: Person): Promise<void> {
   await patchProfile(s, person.webId, `<${person.webId}> <http://www.w3.org/ns/ldp#inbox> <${person.pod}inbox/>.`);
 }
 
+/** A 1×1 transparent PNG. */
+const PNG = Uint8Array.from(atob(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+), (c) => c.charCodeAt(0));
+
 export async function createCast(base: string): Promise<Cast> {
   const cast = {} as Cast;
   for (const role of ROLES) cast[role] = await createPerson(base, role);
@@ -97,6 +106,10 @@ export async function createCast(base: string): Promise<Cast> {
 
   const net = await as("network");
   await setUpCollective(net, cast.network, "Fablab network", "network", cast.network.webId, {});
+  await put(net, cast.network.pod + "shared/guide.md", "# Fablab guide\n\nHow the network works.\n", "text/markdown");
+  await put(net, cast.network.pod + "shared/.acl", acl("./", cast.network.webId, true, [
+    `acl:agent <${cast.amina.webId}>; acl:mode acl:Read`,
+  ]));
   await net.logout();
 
   const amina = await as("amina");
@@ -108,6 +121,21 @@ export async function createCast(base: string): Promise<Cast> {
   await put(amina, shared + ".acl", acl("./", cast.amina.webId, true, [
     `acl:agent <${cast.hsagent.webId}>; acl:mode acl:Read`,
   ]));
+  const projects = cast.amina.pod + "projects/";
+  await put(amina, projects + "readme.md", "# Projects\n\nWhat Amina works on.\n", "text/markdown");
+  await put(amina, projects + "data.json", '{"projects":2}', "application/json");
+  await put(amina, projects + "notes.txt", "Plain notes.\n", "text/plain");
+  await put(amina, projects + "logo.png", PNG, "image/png");
+  await put(amina, projects + "public.md", "# Public\n", "text/markdown");
+  await put(amina, projects + "public.md.acl", acl("public.md", cast.amina.webId, false, [
+    "acl:agentClass <http://xmlns.com/foaf/0.1/Agent>; acl:mode acl:Read",
+  ]));
+  await put(amina, projects + "drafts/idea.md", "# Idea\n", "text/markdown");
+  await put(amina, projects + "drafts/.acl", acl("./", cast.amina.webId, true, [
+    `acl:agent <${cast.hsagent.webId}>; acl:mode acl:Read`,
+  ]));
+  await put(amina, cast.amina.pod + "private.txt", "Only me.\n", "text/plain");
+  await put(amina, cast.amina.pod + "private.txt.acl", acl("private.txt", cast.amina.webId, false, []));
   await amina.logout();
 
   const ines = await as("ines");

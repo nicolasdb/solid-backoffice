@@ -53,6 +53,8 @@ one changes, change the other. Never point it at the real provider.
 - `src/lib/acl.ts` — WAC, per solid-kit ADR 003: parsed with a real Turtle
   parser, written as hand-written Turtle, conditional writes, and a refusal
   (never a rewrite) when an `.acl` holds something it cannot represent.
+  `getAccess` is a write's base (always fresh); `readAccess` is for showing
+  (the `.acl`'s location from memory, the document through `read.ts`).
 - `src/lib/collective.ts` — ADR 006, member side: config, profile and roster
   parsing, the membership state table, `as:Join` / `as:Announce`.
 - `src/lib/admin.ts` — ADR 006, collective side: read the inbox, check each
@@ -79,6 +81,12 @@ one changes, change the other. Never point it at the real provider.
   collective you belong to: sharing, leaving, its members and agent),
   `src/admin.ts` (the one you run); `src/steps.ts` holds the pieces they
   share. No role, progress or tab state is stored.
+- `src/places.ts` — Places (slice C): your pod as a file browser, mounted
+  into its own frame by `onboarding.ts` (`#/p/<path>`, `#/f`), with its
+  own memory of listings, rules and files (ADR 007), forgotten at
+  sign-out. `src/lib/files.ts` lists folders, reads files and finds which
+  rules apply (`effectiveAccess`); `src/ui/markdown.ts` renders a pod's
+  Markdown through DOMPurify, never raw.
 - `src/lib/read.ts` — display reads with an in-memory ETag cache
   (`If-None-Match`, 304 hands back the kept body); writes never use it.
   Forgotten at sign-out, with the last load.

@@ -29,6 +29,8 @@ let runs: typeof COLLECTIVE | null = null;
 let rosterEntries: { webId: string; nick: string | null }[] | null = null;
 /** Holds readOwnProfile until opened, to look at the screen while the pods are being read. */
 let profileGate: Promise<void> | null = null;
+let profileReads = 0;
+const places: string[] = [];
 
 vi.mock("./lib/auth", () => ({ authFetch: vi.fn() }));
 vi.mock("./lib/pod", () => ({
@@ -40,6 +42,7 @@ vi.mock("./lib/pod", () => ({
 vi.mock("./lib/acl", () => ({
   isValidWebId: (v: string) => v.startsWith("https://"),
   getAccess: async () => ({ agents: agentGrants }),
+  readAccess: async () => ({ agents: agentGrants }),
   setAgentAccess: async (url: string, _o: string, agent: string, modes: string[]) =>
     void calls.push(`acl ${url} ${agent} ${modes.join(",")}`),
   setAuthenticatedAccess: async (url: string, _o: string, modes: string[]) =>
@@ -50,6 +53,7 @@ vi.mock("./lib/collective", async (importOriginal) => {
   return {
     ...actual,
     readOwnProfile: async () => {
+      profileReads++;
       if (profileGate) await profileGate;
       return profile;
     },
@@ -86,6 +90,14 @@ vi.mock("./lib/admin", async (importOriginal) => ({
     profile: webId === WEBID ? { name: "Neil", memberOf: [], delegates: [], inbox: null } : null,
     problem: null,
   }),
+}));
+
+vi.mock("./places", () => ({
+  placesFrame: () => `<div id="places"></div>`,
+  mountPlaces: (_el: HTMLElement, route: { path: string }, ctx: { names: Map<string, string> }) =>
+    void places.push(`mount ${route.path} ${[...ctx.names.values()].join(",")}`),
+  showPlaces: async (route: { path: string }) => void places.push(`show ${route.path}`),
+  forgetPlaces: () => void places.push("forget"),
 }));
 
 const { renderMembership } = await import("./onboarding");
@@ -125,6 +137,8 @@ beforeEach(() => {
   configStatus = null;
   runs = null;
   profileGate = null;
+  profileReads = 0;
+  places.length = 0;
   sessionStorage.clear();
   invitedTo(COLLECTIVE.configUrl);
 });
@@ -469,5 +483,30 @@ describe("L5 — switching tabs", () => {
     release();
     await after;
     expect(app.textContent).toContain("Changed by a button");
+  });
+});
+
+describe("C1 — Places inside the shell", () => {
+  it("mounts Places in its own frame, with names for the agents it knows", async () => {
+    profile = { ...profile, memberOf: [COLLECTIVE.group] };
+    listed = true;
+    const app = await render("#/p/");
+    expect(places).toEqual(["mount  HyperScope's agent"]);
+    expect(app.querySelector('.tab[aria-current="page"]')!.textContent).toContain("Places");
+  });
+
+  it("moves between folders without reading the collectives again", async () => {
+    const app = await render("#/p/");
+    const reads = profileReads;
+    window.history.replaceState(null, "", "/#/p/projects/");
+    await renderMembership(app, WEBID, POD, () => {}, true);
+    expect(places.at(-1)).toBe("show projects/");
+    expect(profileReads).toBe(reads);
+  });
+
+  it("forgets what Places read at sign-out", async () => {
+    const app = await render("#/p/");
+    app.querySelector<HTMLButtonElement>("#logout")!.click();
+    expect(places).toContain("forget");
   });
 });

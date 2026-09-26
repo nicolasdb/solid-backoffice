@@ -26,6 +26,7 @@
 import { Parser, type Quad } from "n3";
 import { authFetch } from "./auth";
 import { readWithEtag, writeIfMatch, type ConditionalError } from "./conditional";
+import { readTurtle } from "./read";
 
 const ACL = "http://www.w3.org/ns/auth/acl#";
 const RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
@@ -251,17 +252,44 @@ export function serializeAcl(
   return blocks.join("\n\n") + "\n";
 }
 
-/** Finds the resource's ACL and reads it, with its ETag. */
-export async function getAccess(resourceUrl: string, ownerWebId: string): Promise<ResourceAccess> {
+/**
+ * Where each resource's `.acl` lives, from its `Link: rel="acl"` header. The
+ * location of a resource's ACL does not change, so it is asked once per
+ * session (a HEAD is a round trip on every share check otherwise). Whether
+ * the `.acl` exists is never kept: that is read each time. Memory only.
+ */
+const aclLocations = new Map<string, string>();
+
+/** The `.acl` address of a resource; `fresh` asks the server even if known. */
+export async function aclLocation(resourceUrl: string, fresh = false): Promise<string> {
+  const known = aclLocations.get(resourceUrl);
+  if (known && !fresh) return known;
   const head = await authFetch(resourceUrl, { method: "HEAD" });
   if (!head.ok) {
+    aclLocations.delete(resourceUrl);
     const err = new Error(`Could not reach ${resourceUrl} (${head.status}).`) as ConditionalError;
     err.status = head.status;
     throw err;
   }
   const aclUrl = aclUrlFromLink(head.headers.get("link"), resourceUrl);
   if (!aclUrl) throw new Error(`${resourceUrl} advertises no access-control document.`);
+  aclLocations.set(resourceUrl, aclUrl);
+  return aclUrl;
+}
 
+/** Forgets the ACL locations of a resource and everything under it (after a delete or move). */
+export function forgetAclLocations(prefix?: string): void {
+  if (prefix === undefined) return aclLocations.clear();
+  for (const url of [...aclLocations.keys()]) if (url.startsWith(prefix)) aclLocations.delete(url);
+}
+
+/**
+ * Finds the resource's ACL and reads it, with its ETag: the base of a write.
+ * Always asks the server where the ACL is and reads it without a kept copy
+ * (conditional.ts, invariant 1).
+ */
+export async function getAccess(resourceUrl: string, ownerWebId: string): Promise<ResourceAccess> {
+  const aclUrl = await aclLocation(resourceUrl, true);
   try {
     const { text, etag } = await readWithEtag(aclUrl);
     return { ...parseAcl(text, aclUrl, resourceUrl, ownerWebId), aclUrl, etag, inherited: false };
@@ -271,6 +299,23 @@ export async function getAccess(resourceUrl: string, ownerWebId: string): Promis
     }
     throw err;
   }
+}
+
+/**
+ * The same, for showing: the ACL's location from memory and the document
+ * revalidated through read.ts (ADR 007). Never the base of a write.
+ */
+export async function readAccess(resourceUrl: string, ownerWebId: string): Promise<ResourceAccess> {
+  const aclUrl = await aclLocation(resourceUrl);
+  const res = await readTurtle(aclUrl);
+  if (res.status === 404) return { ...emptyRules(), aclUrl, etag: null, inherited: true };
+  if (!res.ok) {
+    const err = new Error(`Could not read ${aclUrl} (${res.status}).`) as ConditionalError;
+    err.status = res.status;
+    throw err;
+  }
+  const rules = parseAcl(await res.text(), aclUrl, resourceUrl, ownerWebId);
+  return { ...rules, aclUrl, etag: res.headers.get("etag"), inherited: false };
 }
 
 /**

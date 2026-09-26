@@ -32,7 +32,7 @@ import {
   type MembershipState,
 } from "./collective";
 import { updateDocument } from "./conditional";
-import { getAccess, isValidWebId, setAgentAccess } from "./acl";
+import { getAccess, isValidWebId, readAccess, setAgentAccess } from "./acl";
 import { exists, slugify } from "./pod";
 
 const RDF_TYPE = NS.rdf + "type";
@@ -401,7 +401,7 @@ export async function readMembers(
   const people = entries.then((members) => Promise.all(members.map((entry) => readPerson(entry.webId))));
   const [members, access, persons, inbox] = await Promise.all([
     entries,
-    getAccess(collective.roster, owner),
+    readAccess(collective.roster, owner),
     people,
     messages,
   ]);

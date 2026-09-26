@@ -53,5 +53,8 @@ because each read on someone else's pod lands in their access log: the
 overview shows the title and excerpt kept on your own pod from your last
 visit, and reads the address only when you open it.
 
-Still one round too many: finding a resource's `.acl` takes a HEAD before
-the GET, on every share check. It could be kept in memory for display reads.
+Where a resource's `.acl` lives (its `Link: rel="acl"` header, a HEAD) is
+asked once per session and kept in memory (`aclLocation` in
+`src/lib/acl.ts`); whether the `.acl` exists, and what it says, is read
+every time. Screens read through `readAccess`; a write still asks both
+afresh (`getAccess`).

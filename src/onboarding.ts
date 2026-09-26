@@ -10,7 +10,7 @@
  * A tab switch draws from the last load first and reads behind it (L5).
  */
 import { describePodError, exists, isAuthError } from "./lib/pod";
-import { getAccess } from "./lib/acl";
+import { readAccess } from "./lib/acl";
 import { setUpNewcomer } from "./lib/newcomer";
 import { forgetReads } from "./lib/read";
 import {
@@ -25,12 +25,14 @@ import {
   type MembershipState,
 } from "./lib/collective";
 import { focusView } from "./ui/a11y";
+import { busy } from "./ui/typing";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
 import { bindRun, loadRun, renderRunView, type RunView } from "./admin";
 import { pendingInvite, setInvite, takeNewcomer } from "./invite";
 import { bindHome, renderHomeView } from "./home";
 import { bindMember, renderMemberView, loadRoster } from "./member";
-import { currentRoute, onRouteChange, replaceWithHome, routeHref } from "./router";
+import { currentRoute, isPlaces, onRouteChange, replaceWithHome, routeHref } from "./router";
+import { forgetPlaces, mountPlaces, placesFrame, showPlaces } from "./places";
 import { bindShell, renderShell, tabsFor, type TabCollective } from "./shell";
 import { declared } from "./steps";
 
@@ -148,7 +150,7 @@ async function unadvertised(podUrl: string): Promise<string | null> {
 /** Whether the folder's own ACL grants the agent Read. Missing folder: no. */
 async function grantsRead(folderUrl: string, webId: string, agent: string): Promise<boolean> {
   try {
-    const access = await getAccess(folderUrl, webId);
+    const access = await readAccess(folderUrl, webId);
     return access.agents.some((a) => a.webId === agent && a.modes.includes("read"));
   } catch (err) {
     if ((err as { status?: number }).status === 404) return false;
@@ -192,6 +194,7 @@ export async function renderMembership(
     stopRouting = null;
     last = null;
     forgetReads();
+    forgetPlaces();
     // The sign-in screen has no tabs; leave no route in the address.
     history.replaceState(null, "", location.pathname + location.search);
     onLogout();
@@ -225,6 +228,12 @@ export async function renderMembership(
   };
 
   const kept = fromMemory && !newcomer && last?.webId === webId ? last : null;
+  // Inside Places, a move between folders redraws Places only: the tabs and
+  // the collectives stay as they are, and nothing about them is read again.
+  if (kept && isPlaces(currentRoute()) && app.querySelector("#places")) {
+    await showPlaces(currentRoute());
+    return;
+  }
   if (kept) {
     await draw(kept.data, kept.rosters, false);
     // Behind the drawn tab: read the pods again, redraw only on a change.
@@ -299,6 +308,11 @@ async function compose(
     }
     body = renderMemberView(view, memberIndex, roster, webId);
     bind = () => bindMember(app, view, memberIndex, ctx);
+  } else if (isPlaces(route)) {
+    body = placesFrame();
+    const names = agentNames(data);
+    const placesRoute = route;
+    bind = () => mountPlaces(app.querySelector<HTMLElement>("#places")!, placesRoute, { webId, podUrl, names });
   } else if (route.name === "more") {
     body = renderMoreView(tabCollectives);
     bind = () => {};
@@ -314,13 +328,16 @@ async function compose(
   return { tabs: tabsFor(tabCollectives, route), body, bind };
 }
 
-/** Someone is typing or has typed: a quiet redraw would lose it. */
-function busy(app: HTMLElement): boolean {
-  const active = document.activeElement;
-  if (active && app.contains(active) && active.matches("input, textarea, select")) return true;
-  return [...app.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea")].some(
-    (field) => field.value !== field.defaultValue
-  );
+/** WebIDs the app can put a name on, for "who can read it". */
+function agentNames(data: Loaded): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const c of [...(data.run ? [data.run.collective] : []), ...data.collectives.map((v) => v.collective)]) {
+    names.set(c.agent, `${c.name}'s agent`);
+  }
+  for (const m of data.run?.members ?? []) {
+    if (m.profile?.name) names.set(m.webId, m.profile.name);
+  }
+  return names;
 }
 
 /** A collective is named by its config.ttl or by its group IRI (`…/config.ttl#name`). */

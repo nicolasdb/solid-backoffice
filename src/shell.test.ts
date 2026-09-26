@@ -4,11 +4,17 @@ import { renderShell, tabsFor, type TabCollective } from "./shell";
 const c = (n: number): TabCollective => ({ name: `C${n}`, address: `https://pod.example/c${n}/config.ttl` });
 
 describe("the tabs", () => {
-  it("has Home, one tab per collective, and Places shown as coming", () => {
+  it("has Home, one tab per collective, and Places", () => {
     const tabs = tabsFor([c(1), c(2)], { name: "home" });
     expect(tabs.map((t) => t.label)).toEqual(["Home", "C1", "C2", "Places"]);
     expect(tabs[0].current).toBe(true);
-    expect(tabs.at(-1)).toMatchObject({ href: null, soon: true });
+    expect(tabs.at(-1)).toMatchObject({ href: "#/p/", current: false });
+  });
+
+  it("marks Places on your pod and on what you follow", () => {
+    for (const route of [{ name: "places", path: "a/" }, { name: "following" }, { name: "followed", address: "https://x.example/" }] as const) {
+      expect(tabsFor([], route).filter((t) => t.current).map((t) => t.label)).toEqual(["Places"]);
+    }
   });
 
   it("marks the collective whose tab is open", () => {
@@ -23,13 +29,13 @@ describe("the tabs", () => {
     expect(tabs.find((t) => t.label === "More")).toMatchObject({ current: true, badge: 2 });
   });
 
-  it("renders Places as text, not a link, so it goes nowhere", () => {
+  it("renders Places as a link, and marks the tab that is open", () => {
     const html = renderShell({ webId: "https://pod.example/me#me", name: "Neil", tabs: tabsFor([], { name: "home" }), body: "" });
     const box = document.createElement("div");
     box.innerHTML = html;
     const places = [...box.querySelectorAll(".tab")].find((t) => t.textContent!.includes("Places"))!;
-    expect(places.tagName).toBe("SPAN");
-    expect(places.getAttribute("aria-disabled")).toBe("true");
+    expect(places.tagName).toBe("A");
+    expect(places.getAttribute("href")).toBe("#/p/");
     expect(box.querySelector('[aria-current="page"]')!.textContent).toContain("Home");
   });
 });
