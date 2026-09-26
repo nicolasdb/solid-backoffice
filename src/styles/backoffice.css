@@ -820,10 +820,3 @@ button.link-button:hover { color: var(--text-primary); text-decoration: underlin
   .landing-links { gap: var(--space-4); }
   #to-how { display: none; }
 }
-
-/* focusView's ring on a heading only for keyboard users (trackInputModality):
-   a browser rings a programmatically focused heading on page load too, which
-   reads as a stray selection box to a mouse user. Candidate for solid-kit. */
-:root[data-input="pointer"] [tabindex="-1"]:focus-visible {
-  outline: none;
-}

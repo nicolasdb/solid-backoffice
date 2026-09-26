@@ -19,13 +19,20 @@
   border: 0;
 }
 
-/* Focus lands on headings via focusView(); the ring is the only signal that
-   the view changed, so it must not be suppressed. */
+/* Focus lands on headings via focusView(); for a keyboard user the ring is the
+   only signal that the view changed, so it must not be suppressed. */
 h1:focus-visible,
 h2:focus-visible,
 [data-view-title]:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
+}
+
+/* A browser also rings a programmatically focused heading on page load, which
+   reads as a stray selection box to a mouse user: hide it for them only
+   (trackInputModality sets data-input). */
+:root[data-input="pointer"] [tabindex="-1"]:focus-visible {
+  outline: none;
 }
 
 /* ── Concept card ─────────────────────────────────────────────────────────── */
