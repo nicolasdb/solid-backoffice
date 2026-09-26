@@ -743,6 +743,11 @@ ${entries}`;
     app.querySelector<HTMLButtonElement>("#favourite")!.click();
     await until(() => pod[LIST].body!.includes("favourite"));
     await until(() => app.querySelector("#favourite")?.getAttribute("aria-pressed") === "true");
+    expect(document.querySelector(".toast")!.textContent).toContain("Added to your favourites.");
+    expect(app.querySelector("#favourite")!.textContent).toBe("Remove from favourites");
+    app.querySelector<HTMLButtonElement>("#favourite")!.click();
+    await until(() => app.querySelector("#favourite")?.getAttribute("aria-pressed") === "false");
+    expect(document.querySelector(".toast")!.textContent).toContain("Removed from your favourites.");
   });
 });
 

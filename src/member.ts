@@ -18,7 +18,7 @@ import { readPerson, readRoster } from "./lib/admin";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { bindButton } from "./bind";
-import { stateLabel, statePill } from "./steps";
+import { bindCopy, copyable, stateLabel, statePill } from "./steps";
 import type { CollectiveView, ViewContext } from "./onboarding";
 
 export interface RosterMember {
@@ -85,7 +85,7 @@ function membersCard(collective: Collective, roster: RosterMember[] | null, webI
             <span class="avatar" aria-hidden="true">${esc(initial(who))}</span>
             <div>
               <strong>${esc(who)}${m.webId === webId ? ` <span class="meta">(you)</span>` : ""}</strong>
-              <span class="meta" title="${esc(m.webId)}">${esc(shortWebId(m.webId))}</span>
+              ${copyable(m.webId, "WebID copied.", shortWebId(m.webId))}
             </div>
             ${m.nick ? `<span class="label-mono">${esc(m.nick)}</span>` : ""}
           </li>`;
@@ -170,6 +170,7 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
 export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ctx: ViewContext): void {
   const { webId, rerender, profile } = ctx;
   const { collective, folderUrl } = view;
+  bindCopy(app);
 
   const resend = app.querySelector<HTMLButtonElement>(`#resend-${i}`);
   if (resend) {

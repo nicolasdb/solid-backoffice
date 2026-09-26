@@ -1287,7 +1287,12 @@ function bindFollowing(): void {
   const entry = following?.find((f) => f.address === address);
   if (!entry) return;
   frame.querySelector("#favourite")?.addEventListener("click", async () => {
-    await setFavourite(ctx!.podUrl, address, !entry.favourite).catch((err) => toast(describePodError(err)));
+    const favourite = !entry.favourite;
+    const saved = await setFavourite(ctx!.podUrl, address, favourite).then(
+      () => true,
+      (err) => (toast(describePodError(err)), false),
+    );
+    if (saved) toast(favourite ? "Added to your favourites." : "Removed from your favourites.");
     await reload();
     frame?.querySelector<HTMLElement>("#favourite")?.focus();
   });

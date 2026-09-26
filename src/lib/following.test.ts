@@ -76,6 +76,12 @@ describe("following an address", () => {
     expect(mockFetch.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
   });
 
+  it("takes an address pasted without https:// as https", async () => {
+    mockFetch.mockResolvedValueOnce(res(404)).mockResolvedValueOnce(res(403));
+    await expect(follow(POD, X.replace(/^https:\/\//, ""))).rejects.toMatchObject({ code: "unreadable" });
+    expect(mockFetch.mock.calls.map(([url]) => String(url))).toContain(X);
+  });
+
   it("refuses what is not an address", async () => {
     await expect(follow(POD, "javascript:alert(1)")).rejects.toMatchObject({ code: "bad-address" });
     await expect(follow(POD, "not a url")).rejects.toMatchObject({ code: "bad-address" });

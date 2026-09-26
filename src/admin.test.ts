@@ -157,6 +157,14 @@ describe("You run", () => {
     expect(copied).toContain(`?collective=${COLLECTIVE.configUrl}`);
   });
 
+  it("copies a member's whole WebID from the members table, like the invitation link", async () => {
+    let copied = "";
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t: string) => void (copied = t) }, configurable: true });
+    render().querySelector<HTMLButtonElement>("[data-member] [data-copy]")!.click();
+    await tick();
+    expect(copied).toBe(AMINA);
+  });
+
   it("gives the invitation link on localhost too, saying it works only on this computer", () => {
     const head = render().querySelector(".run-head")!;
     expect(head.querySelector<HTMLElement>("[data-copy]")!.dataset.copy).toContain(`?collective=${COLLECTIVE.configUrl}`);

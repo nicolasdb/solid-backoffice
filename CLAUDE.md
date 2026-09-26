@@ -102,7 +102,9 @@ one changes, change the other. Never point it at the real provider.
   `src/raw-rules.ts` (C6) edits an item's own `.acl` by hand, desktop only:
   two taps, refused unless it parses and you keep Control.
 - `src/ui/address.ts` — addresses on screen without your provider's host
-  (`…/neil/profile/card#me`); full WebIDs to copy are D's.
+  (`…/neil/profile/card#me`). A whole WebID is copied with a click on the
+  members lists (`copyable` in `src/steps.ts`, like the invitation link);
+  the people screen is D's.
 - `src/lib/read.ts` — display reads with an in-memory ETag cache
   (`If-None-Match`, 304 hands back the kept body); writes never use it.
   Forgotten at sign-out, with the last load.

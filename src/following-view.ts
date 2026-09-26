@@ -183,7 +183,7 @@ export function renderFollowed(view: OpenedView, when: (d: Date | null) => strin
         ${
           onEntry
             ? `<div class="actions">
-                 <button class="ghost small" type="button" id="favourite" aria-pressed="${entry!.favourite}">Favourite</button>
+                 <button class="ghost small" type="button" id="favourite" aria-pressed="${entry!.favourite}">${entry!.favourite ? "Remove from favourites" : "Favourite"}</button>
                  <button class="ghost small" type="button" id="unfollow">Unfollow</button>
                </div>`
             : entry

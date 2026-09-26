@@ -2,7 +2,7 @@
  * Pieces shared by the home screen and a collective's tab.
  */
 import type { MembershipState } from "./lib/collective";
-import { esc } from "./ui/patterns";
+import { esc, toast } from "./ui/patterns";
 
 /**
  * A finished step folds to its title: still one click away, no longer in the
@@ -58,4 +58,33 @@ export function statePill(state: MembershipState): string {
     : state === "pending"
       ? `<span class="pill is-wait">Pending</span>`
       : `<span class="pill">Not joined</span>`;
+}
+
+/** Copy icon: Bootstrap Icons "copy" (MIT). */
+const COPY_ICON = `<svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/></svg>`;
+
+/**
+ * Text that copies itself when clicked. `shown` is what is on screen when it
+ * is shorter than what is copied (a WebID shown as ".../neil/profile/card#me").
+ */
+export function copyable(text: string, copied: string, shown?: string): string {
+  const face = shown === undefined ? `<code>${esc(text)}</code>` : `<span class="meta">${esc(shown)}</span>`;
+  return `<button type="button" class="copyable" data-copy="${esc(text)}" data-copied="${esc(copied)}" title="Copy ${esc(text)}">${face}${COPY_ICON}<span class="visually-hidden">Copy</span></button>`;
+}
+
+/** Wires every copyable inside `root`. */
+export function bindCopy(root: HTMLElement): void {
+  root.querySelectorAll<HTMLButtonElement>("[data-copy]:not([data-copy-bound])").forEach((button) => {
+    button.dataset.copyBound = "";
+    button.addEventListener("click", async () => {
+      const text = button.dataset.copy!;
+      try {
+        await navigator.clipboard.writeText(text);
+        toast(button.dataset.copied ?? "Copied.");
+      } catch {
+        // No clipboard (permission, insecure context): show it to copy by hand.
+        toast(`Copy this: ${text}`);
+      }
+    });
+  });
 }

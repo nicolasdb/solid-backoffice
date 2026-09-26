@@ -28,6 +28,7 @@ import { describePodError } from "./lib/pod";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { bindButton, bindForm, run } from "./bind";
+import { bindCopy, copyable } from "./steps";
 
 interface Request {
   message: InboxMessage;
@@ -205,7 +206,7 @@ function renderMember(member: MemberView, i: number, collective: Collective, own
   return `
     <tr data-member data-search="${esc(searchText(member))}">
       <td data-label="Member">
-        ${name ? `<strong>${esc(name)}</strong><br>` : ""}<span class="meta" title="${esc(member.webId)}">${esc(shortWebId(member.webId))}</span>
+        ${name ? `<strong>${esc(name)}</strong><br>` : ""}${copyable(member.webId, "WebID copied.", shortWebId(member.webId))}
       </td>
       <td data-label="Short name">${member.nick ? `<span class="label-mono">${esc(member.nick)}</span>` : "—"}</td>
       <td data-label="Both sides">
@@ -267,14 +268,6 @@ export function invitationLink(collective: Collective): string {
   // encoded. searchParams.get reads both forms back the same.
   const address = encodeURIComponent(collective.configUrl).replace(/%3A/gi, ":").replace(/%2F/gi, "/");
   return `${url.href}?collective=${address}`;
-}
-
-/** Copy icon: Bootstrap Icons "copy" (MIT). */
-const COPY_ICON = `<svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/></svg>`;
-
-/** Text that copies itself when clicked. */
-function copyable(text: string, copied: string): string {
-  return `<button type="button" class="copyable" data-copy="${esc(text)}" data-copied="${esc(copied)}" title="Copy"><code>${esc(text)}</code>${COPY_ICON}<span class="visually-hidden">Copy</span></button>`;
 }
 
 /**
@@ -358,18 +351,7 @@ export function renderRunView(view: RunView): string {
 export function bindRun(app: HTMLElement, view: RunView, rerender: () => void): void {
   const { collective, owner } = view;
 
-  app.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const text = button.dataset.copy!;
-      try {
-        await navigator.clipboard.writeText(text);
-        toast(button.dataset.copied ?? "Copied.");
-      } catch {
-        // No clipboard (permission, insecure context): show it to copy by hand.
-        toast(`Copy this: ${text}`);
-      }
-    });
-  });
+  bindCopy(app);
 
   app.querySelectorAll<HTMLButtonElement>("[data-jump]").forEach((button) => {
     button.addEventListener("click", () => {

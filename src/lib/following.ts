@@ -198,7 +198,9 @@ function followError(code: FollowError["code"], message: string, status?: number
 
 /** Follows an address, kept only once your WebID could read it. */
 export async function follow(podUrl: string, raw: string, now = new Date()): Promise<Followed> {
-  const address = raw.trim();
+  // An address pasted without its scheme ("pod.example/shared/") is taken as https.
+  const typed = raw.trim();
+  const address = /^[a-z][a-z0-9+.-]*:\/\//i.test(typed) || !typed ? typed : `https://${typed}`;
   let parsed: URL;
   try {
     parsed = new URL(address);
