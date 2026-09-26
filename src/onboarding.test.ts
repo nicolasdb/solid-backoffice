@@ -375,6 +375,14 @@ describe("layout A — tabs", () => {
     expect(places).toContain("mount  ");
   });
 
+  it("lands on Pods once the invitation's collective is joined, and forgets the invitation", async () => {
+    profile.memberOf = [COLLECTIVE.group];
+    listed = true;
+    await render();
+    expect(window.location.hash).toBe("#/p/");
+    expect(sessionStorage.getItem("solid-backoffice.invite")).toBeNull();
+  });
+
   it("puts a dot on the avatar while your name or inbox is missing", async () => {
     let app = await render("#/c");
     expect(app.querySelector(".avatar-dot")).not.toBeNull();
@@ -384,11 +392,11 @@ describe("layout A — tabs", () => {
     expect(app.querySelector(".avatar-dot")).toBeNull();
   });
 
-  it("keeps sharing and leaving on the collective's tab, joining on home", async () => {
+  it("keeps sharing and leaving on the collective, joining on the list", async () => {
     profile.inbox = POD + "inbox/";
     profile.memberOf = [COLLECTIVE.group];
     listed = true;
-    const home = await render();
+    const home = await render("#/c");
     expect(home.querySelector("#publish-0")).toBeNull();
     expect(home.querySelector(`a[href="${tab(COLLECTIVE)}"]`)).not.toBeNull();
     const member = await render(tab(COLLECTIVE));

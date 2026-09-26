@@ -136,8 +136,10 @@ export async function load(webId: string, podUrl: string): Promise<Loaded> {
   const [{ run, runError }, unadvertisedInbox, all] = await Promise.all([runLoad, inboxCheck, views]);
 
   // An invitation to the collective you run is not an invitation: a
-  // collective never joins itself.
-  if (run && invited && (invited === run.collective.group || invited === run.collective.configUrl)) {
+  // collective never joins itself. One to a collective your profile already
+  // declares has done its job: it no longer decides where sign-in lands.
+  const invitedTo = (c: Collective) => invited === c.group || invited === c.configUrl;
+  if (invited && ((run && invitedTo(run.collective)) || all.some((v) => invitedTo(v.collective) && declared(v.state)))) {
     setInvite(null);
   }
   const collectives = all.filter((c) => c.collective.group !== run?.collective.group);
