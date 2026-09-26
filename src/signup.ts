@@ -12,6 +12,7 @@
  * page signs the person in, and the home screen sets their name and inbox from
  * the record left here (`invite.ts`).
  */
+import { bindThemeButton, renderThemeButton } from "./theme";
 import { loginWithIdentifier } from "./lib/auth";
 import { AccountError, createAccount, emailProblem, passwordProblem, podAddress, usernameProblem } from "./lib/css-account";
 import { slugify } from "./lib/pod";
@@ -52,6 +53,7 @@ export function renderWelcome(app: HTMLElement, options: WelcomeOptions): void {
     : "";
 
   app.innerHTML = `
+    ${renderThemeButton("theme-corner")}
     <main class="screen stack">
       <h1 data-view-title>${esc(heading)}</h1>
       ${intro}
@@ -66,6 +68,7 @@ export function renderWelcome(app: HTMLElement, options: WelcomeOptions): void {
       }
     </main>`;
 
+  bindThemeButton(app);
   app.querySelector("#switch-mode")?.addEventListener("click", () =>
     renderWelcome(app, { provider, mode: mode === "signup" ? "signin" : "signup" })
   );

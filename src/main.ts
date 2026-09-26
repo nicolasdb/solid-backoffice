@@ -19,10 +19,12 @@ import { renderError, renderPending } from "./ui/patterns";
 import { renderMembership } from "./onboarding";
 import { captureInvite } from "./invite";
 import { renderWelcome } from "./signup";
+import { applyTheme, storedTheme } from "./theme";
 import "./styles/backoffice.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 trackInputModality();
+applyTheme(storedTheme());
 
 /** Escapes text before it goes into innerHTML — WebIDs and errors are inputs. */
 function esc(value: string): string {

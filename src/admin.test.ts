@@ -149,6 +149,14 @@ describe("You run", () => {
     expect(head.textContent).toContain("1 member");
   });
 
+  it("copies the address when it is clicked", async () => {
+    let copied = "";
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t: string) => void (copied = t) }, configurable: true });
+    render().querySelector<HTMLButtonElement>(".run-head [data-copy]")!.click();
+    await tick();
+    expect(copied).toBe(COLLECTIVE.configUrl);
+  });
+
   it("offers no invitation link on localhost, where it would invite nobody", () => {
     expect(render().querySelector("#copy-invite")).toBeNull();
   });
@@ -163,7 +171,11 @@ describe("You run", () => {
     find.dispatchEvent(new Event("input"));
     expect(visible()).toEqual(["Amina"]);
 
-    find.value = "pod.example/ines";
+    find.value = "pod.example";
+    find.dispatchEvent(new Event("input"));
+    expect(visible()).toEqual([]);
+
+    find.value = "/ines/";
     find.dispatchEvent(new Event("input"));
     expect(visible()).toEqual(["Inès"]);
 

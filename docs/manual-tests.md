@@ -283,7 +283,13 @@ Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
    or address. Phone: "Requests · Members · Other" chips scroll to each
    section without changing the address; each member is a block. Home keeps
    only the summary card. Then run steps 3, 5 and 6 of slices A and B above
-   on this screen.
+   on this screen. Clicking the address copies it.
+   **Run 26 Sep 2026**, desktop: layout fine; the filter matched every row
+   (all members share the host) and now searches name, short name and path.
+3. **Theme switch.** The icon left of the avatar (and in the welcome
+   screen's corner) goes same-as-device → light → dark. The choice survives
+   a reload; in a private window it lasts until the reload. Both themes read
+   well on every tab.
 
 ### J1 — a new account from an invitation (the end-to-end run)
 

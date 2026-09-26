@@ -9,6 +9,7 @@
  * collectives, the rest go under "More", so the phone bar never holds more
  * than five items.
  */
+import { bindThemeButton, renderThemeButton } from "./theme";
 import { APP_NAME } from "./config";
 import { routeHref, type Route } from "./router";
 import { esc } from "./ui/patterns";
@@ -94,6 +95,7 @@ export function renderShell({ webId, name, tabs, body }: ShellOptions): string {
         <span class="brand"><span class="brand-mark" aria-hidden="true"></span>${esc(APP_NAME)}</span>
         <nav class="tabs" aria-label="Main">${tabs.map(renderTab).join("")}</nav>
         <div class="account">
+          ${renderThemeButton()}
           <span class="avatar" aria-hidden="true">${esc(initial(who))}</span>
           <span class="account-name" title="${esc(webId)}">${esc(who)}</span>
           <button id="logout" class="ghost small">Sign out</button>
@@ -105,6 +107,7 @@ export function renderShell({ webId, name, tabs, body }: ShellOptions): string {
 
 export function bindShell(app: HTMLElement, onLogout: () => void): void {
   app.querySelector("#logout")?.addEventListener("click", onLogout);
+  bindThemeButton(app);
 }
 
 function initial(text: string): string {

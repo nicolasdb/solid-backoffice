@@ -181,10 +181,25 @@ function shortFolder(folder: string, webId: string): string {
   }
 }
 
+/**
+ * What "Find a member" matches: name, short name, and the WebID's path. Not
+ * the host: members often share a provider, and "nico" would then match
+ * everyone on pod.nicolasdb.eu.
+ */
+function searchText(member: MemberView): string {
+  let path = member.webId;
+  try {
+    path = new URL(member.webId).pathname;
+  } catch {
+    // Not a URL: search it whole.
+  }
+  return [member.profile?.name ?? "", member.nick ?? "", path].join(" ").toLowerCase();
+}
+
 function renderMember(member: MemberView, i: number, collective: Collective, owner: string): string {
   const name = member.profile?.name;
   return `
-    <tr data-member>
+    <tr data-member data-search="${esc(searchText(member))}">
       <td data-label="Member">
         ${name ? `<strong>${esc(name)}</strong><br>` : ""}<span class="meta" title="${esc(member.webId)}">${esc(shortWebId(member.webId))}</span>
       </td>
@@ -283,12 +298,14 @@ export function renderRunView(view: RunView): string {
       <div class="stack">
         <p class="eyebrow">You run</p>
         <h1 class="display" data-view-title>${esc(collective.name)}</h1>
-        <p class="meta">Address to give people: <code>${esc(collective.configUrl)}</code></p>
+        <p class="meta">Address to give people:
+          <button type="button" class="copyable" data-copy="${esc(collective.configUrl)}" data-copied="Address copied."
+                  title="Copy the address"><code>${esc(collective.configUrl)}</code><span class="copy-hint" aria-hidden="true">Copy</span></button></p>
       </div>
       <div class="actions">
         ${requests.length ? `<span class="pill is-wait">${requests.length} ${requests.length === 1 ? "request" : "requests"}</span>` : ""}
         <span class="pill">${esc(runSummary(view).split(" · ")[0])}</span>
-        ${link ? `<button id="copy-invite" class="ghost small" data-link="${esc(link)}">Copy the invitation link</button>` : ""}
+        ${link ? `<button id="copy-invite" class="ghost small" data-copy="${esc(link)}" data-copied="Invitation link copied.">Copy the invitation link</button>` : ""}
       </div>
     </header>
 
@@ -327,17 +344,17 @@ export function renderRunView(view: RunView): string {
 export function bindRun(app: HTMLElement, view: RunView, rerender: () => void): void {
   const { collective, owner } = view;
 
-  const copy = app.querySelector<HTMLButtonElement>("#copy-invite");
-  copy?.addEventListener("click", async () => {
-    const link = copy.dataset.link!;
-    try {
-      await navigator.clipboard.writeText(link);
-      announce("Invitation link copied.");
-      toast("Invitation link copied.");
-    } catch {
-      // No clipboard (permission, insecure context): show it to copy by hand.
-      toast(`Copy this link: ${link}`);
-    }
+  app.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const text = button.dataset.copy!;
+      try {
+        await navigator.clipboard.writeText(text);
+        toast(button.dataset.copied ?? "Copied.");
+      } catch {
+        // No clipboard (permission, insecure context): show it to copy by hand.
+        toast(`Copy this: ${text}`);
+      }
+    });
   });
 
   app.querySelectorAll<HTMLButtonElement>("[data-jump]").forEach((button) => {
@@ -354,7 +371,7 @@ export function bindRun(app: HTMLElement, view: RunView, rerender: () => void): 
     const query = find.value.trim().toLowerCase();
     let shown = 0;
     app.querySelectorAll<HTMLElement>("[data-member]").forEach((row) => {
-      const match = !query || row.textContent!.toLowerCase().includes(query) || (row.querySelector("[title]")?.getAttribute("title") ?? "").toLowerCase().includes(query);
+      const match = !query || row.dataset.search!.includes(query);
       row.hidden = !match;
       if (match) shown++;
     });
