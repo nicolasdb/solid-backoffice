@@ -195,6 +195,24 @@ toasts and screen-reader announcements after each write.
     from your last visit, so the list reads nothing from other pods (each
     read may land in their access log). Opening one reads it again.
 
+- **Pods, the iceberg** (26 Sep 2026, after the first live look at C):
+  the tab is renamed **Pods** (your pod, and the pods you follow). What
+  is seen first is what is safe; each step down asks one more deliberate
+  move. The same shape orders what gets built and polished first:
+  1. *See* (the tip, always on screen, reads only): the list, who can read
+     each item in a few words with where it comes from, preview, download,
+     following.
+  2. *Change what is yours* (one click to open, one to confirm): new,
+     upload, edit and save, who can read it, rename, move.
+  3. *Dig* (two deliberate steps): delete, giving one item its own rules
+     or restoring it, the technical rules by hand.
+  Found on the first look and changed: no side panel by default (the list
+  is the page, the preview full width); `···` opens a summary first, and
+  "Change" the editor; a file that follows its folder offers "change it on
+  the folder" (usual) or "give it its own rules" (exception); the
+  technical rules sit at the bottom of Change, on the `.acl` where the
+  rules live; Delete is set apart.
+
 The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
 (a Claude Design canvas, private to its owner).
 
