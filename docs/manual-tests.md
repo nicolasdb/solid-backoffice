@@ -308,6 +308,12 @@ Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
    "Your membership" says which short name the roster gives you. As a
    `test-` account that has asked but is not accepted yet: "Members" says it
    opens once HyperScope accepts you, and nothing says "refused".
+   Paste HyperScope's invitation link into "Join another collective" as
+   `nicolasdb`: "You already belong to HyperScope." (as `hyperscope-HQ`:
+   "You run HyperScope").
+
+**Run record, 26 Sep 2026.** Steps 1–5 run live on test.nicolasdb.eu,
+desktop and phone, both themes, including the pending A/B steps 3, 5 and 6.
 
 ### J1 — a new account from an invitation (the end-to-end run)
 

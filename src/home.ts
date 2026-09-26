@@ -68,6 +68,16 @@ export function renderHomeView(data: Loaded): string {
     </div>`;
 }
 
+/** What to say when the collective someone looks up is one they already have. */
+export function alreadyJoined(found: Collective, data: Loaded): string | null {
+  if (data.run?.collective.group === found.group) return `You run ${found.name}: it has its own tab.`;
+  const mine = data.collectives.find((c) => c.collective.group === found.group);
+  if (!mine) return null;
+  if (mine.state === "member") return `You already belong to ${found.name}.`;
+  if (mine.state === "pending") return `You have already asked to join ${found.name}; the answer comes to your inbox.`;
+  return null;
+}
+
 export function bindHome(app: HTMLElement, data: Loaded, ctx: ViewContext): void {
   const { webId, podUrl, rerender } = ctx;
   const { profile, unadvertisedInbox, collectives, broken } = data;
@@ -116,7 +126,15 @@ export function bindHome(app: HTMLElement, data: Loaded, ctx: ViewContext): void
     const address = collectiveFromInput((form.elements.namedItem("address") as HTMLInputElement).value);
     if (!isValidWebId(address)) throw new Error("An invitation link or a collective's address starts with https:// and has no spaces.");
     // Load it now, so a wrong address fails here, next to the field.
-    await loadCollective(address);
+    const found = await loadCollective(address);
+    // One you already run or belong to: say so, instead of a silent re-render.
+    const already = alreadyJoined(found, data);
+    if (already) {
+      toast(already);
+      announce(already);
+      form.reset();
+      return;
+    }
     setInvite(address);
   }, rerender);
 

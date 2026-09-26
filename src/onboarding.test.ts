@@ -347,6 +347,19 @@ describe("layout A — tabs", () => {
     expect(app.textContent).not.toMatch(/refused/i);
   });
 
+  it("says so when a member looks up a collective they already belong to", async () => {
+    sessionStorage.clear();
+    profile.memberOf = [COLLECTIVE.group];
+    listed = true;
+    const app = await render();
+    const input = app.querySelector<HTMLInputElement>("#find-form input[name=address]")!;
+    input.value = `https://backoffice.example/?collective=${COLLECTIVE.configUrl}`;
+    app.querySelector<HTMLFormElement>("#find-form")!.requestSubmit();
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+    expect(document.body.textContent).toContain("You already belong to HyperScope.");
+    expect(sessionStorage.getItem("solid-backoffice.invite")).toBeNull();
+  });
+
   it("goes home when the tab's collective is not one you belong to", async () => {
     const app = await render(tab(COLLECTIVE));
     expect(window.location.hash).toBe("#/");

@@ -75,8 +75,9 @@ collective's words from its public `config.ttl`, its own slogan and
 description when set; Newsreader self-hosted); live check next. **L4 built**
 (a member's tab lists the roster as the member reads it, "(you)" marked, and
 the collective's agent; before acceptance, "once accepted", never
-"refused"); live check next. That completes the layout pass's code; it is
-done when the "Layout pass" section of manual-tests.md has been run live.
+"refused"). **Layout pass done: every step of its manual-tests section run
+live, 26 Sep 2026**, desktop and phone. Found then: looking up a collective
+you already belong to re-rendered silently; it now says so.
 
 **The invitation link (26 Sep 2026)** looked wrong because testing ran on
 localhost, where the tab showed the bare `config.ttl` address instead. It now
