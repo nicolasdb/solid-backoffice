@@ -72,8 +72,11 @@ desktop and phone on test.nicolasdb.eu). **L2 built** (the collective's own
 screen: requests beside a members table, a filter, the invitation link to
 copy); live check next. **L3 built** (the landing: generic, or the invited
 collective's words from its public `config.ttl`, its own slogan and
-description when set; Newsreader self-hosted); live check next. L4 (members
-and agent on a member's tab) after.
+description when set; Newsreader self-hosted); live check next. **L4 built**
+(a member's tab lists the roster as the member reads it, "(you)" marked, and
+the collective's agent; before acceptance, "once accepted", never
+"refused"); live check next. That completes the layout pass's code; it is
+done when the "Layout pass" section of manual-tests.md has been run live.
 
 **The invitation link (26 Sep 2026)** looked wrong because testing ran on
 localhost, where the tab showed the bare `config.ttl` address instead. It now

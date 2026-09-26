@@ -104,3 +104,20 @@ describe("the collective refuses a request (slice B)", () => {
     });
   });
 });
+
+/**
+ * Layout L4: a member's tab lists the roster as the member reads it. Amina is
+ * a member from the cast; Neil has asked and nothing more, so the roster
+ * refuses him, which the screen shows as "once accepted", never "refused".
+ */
+describe("a member's view of the roster (layout L4)", () => {
+  it("lets an accepted member read the roster, and refuses someone who has only asked", async () => {
+    await actAs("amina");
+    const hs = await loadCollective(cast.hyperscope.pod + "config.ttl");
+    const { members } = await admin.readRoster(hs);
+    expect(members.map((m) => m.webId)).toContain(cast.amina.webId);
+
+    await actAs("neil");
+    await expect(admin.readRoster(hs)).rejects.toThrow(/\((401|403)\)/);
+  });
+});

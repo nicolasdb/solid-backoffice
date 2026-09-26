@@ -23,7 +23,6 @@
     # The WebID members grant Read to when they share. Never a group.
     hs:agent <agents/agent#me> ;
     # Optional: replace the invited welcome page's title and paragraph
-    # (how-to/invite-people.md).
     # schema:slogan "[The collective's title for newcomers]" ;
     # schema:description "[One paragraph: what joining means]" ;
     # Reserved: what a member's profile must contain, as a SHACL shape.

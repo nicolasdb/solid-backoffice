@@ -25,6 +25,8 @@ let failInbox = false;
 let inboxFolderExists = false;
 let configStatus: number | null = null;
 let runs: typeof COLLECTIVE | null = null;
+/** What readRoster returns to this member; null: it refuses (not a member yet). */
+let rosterEntries: { webId: string; nick: string | null }[] | null = null;
 
 vi.mock("./lib/auth", () => ({ authFetch: vi.fn() }));
 vi.mock("./lib/pod", () => ({
@@ -70,7 +72,15 @@ vi.mock("./lib/admin", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./lib/admin")>()),
   readInbox: async () => [],
   readMembers: async () => [],
-  readRoster: async () => ({ members: [], nicks: new Map() }),
+  readRoster: async () => {
+    if (!rosterEntries) throw new Error("Could not read the roster (403).");
+    return { members: rosterEntries, nicks: new Map(rosterEntries.map((e) => [e.webId, e.nick ?? ""])) };
+  },
+  readPerson: async (webId: string) => ({
+    webId,
+    profile: webId === WEBID ? { name: "Neil", memberOf: [], delegates: [], inbox: null } : null,
+    problem: null,
+  }),
 }));
 
 const { renderMembership } = await import("./onboarding");
@@ -103,6 +113,7 @@ beforeEach(() => {
   calls.length = 0;
   profile = { name: "Neil", memberOf: [], delegates: [], inbox: null };
   listed = null;
+  rosterEntries = [];
   agentGrants = [];
   failInbox = false;
   inboxFolderExists = false;
@@ -283,6 +294,7 @@ describe("slice A — the member's side of the handshake", () => {
   it("treats an unreadable roster as pending, not as refused", async () => {
     profile.memberOf = [COLLECTIVE.group];
     listed = null;
+  rosterEntries = [];
     const app = await render(tab(COLLECTIVE));
     expect(app.textContent).toContain("Waiting for the collective to accept it.");
     expect(app.querySelector("#resend-0")).not.toBeNull();
@@ -311,6 +323,28 @@ describe("layout A — tabs", () => {
     expect(member.querySelector("[data-view-title]")!.textContent).toBe("HyperScope");
     expect(member.querySelector("#publish-0")).not.toBeNull();
     expect(member.querySelector("#leave-0")).not.toBeNull();
+  });
+
+  it("shows a member the roster, marking them, and the collective's agent", async () => {
+    profile.memberOf = [COLLECTIVE.group];
+    listed = true;
+    const AMINA = "https://pod.example/amina/profile/card#me";
+    rosterEntries = [{ webId: WEBID, nick: "neil" }, { webId: AMINA, nick: "amina" }];
+    const app = await render(tab(COLLECTIVE));
+    const roster = [...app.querySelectorAll(".roster li strong")].map((s) => s.textContent!.trim());
+    expect(roster).toEqual(["Neil (you)", "amina"]);
+    expect(app.textContent).toContain("Its roster lists you as neil.");
+    expect(app.textContent).toContain(COLLECTIVE.agent);
+  });
+
+  it("tells someone who has asked that the roster opens once accepted, never that they were refused", async () => {
+    profile.memberOf = [COLLECTIVE.group];
+    listed = null;
+    rosterEntries = null;
+    const app = await render(tab(COLLECTIVE));
+    expect(app.querySelector(".roster")).toBeNull();
+    expect(app.textContent).toContain("once HyperScope accepts you");
+    expect(app.textContent).not.toMatch(/refused/i);
   });
 
   it("goes home when the tab's collective is not one you belong to", async () => {

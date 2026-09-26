@@ -76,7 +76,7 @@ one changes, change the other. Never point it at the real provider.
   render, then shows the tab the hash names (`src/router.ts`) inside
   `src/shell.ts` (layout A: tabs on top, a bottom bar on a phone). Tabs:
   `src/home.ts` (your collectives, joining, "You"), `src/member.ts` (a
-  collective you belong to: sharing, leaving), `src/admin.ts` (the one you
+  collective you belong to: sharing, leaving, its members and agent), `src/admin.ts` (the one you
   run). No role, progress or tab state is stored.
 
 **Starting a session: read `docs/slices.md` first** ("Where we are" and the

@@ -4,21 +4,111 @@
  * because it is what a member comes back for, then the membership itself with
  * a quiet Leave.
  *
+ * Beside them (L4): the collective's members, from its roster, which a
+ * member may read once accepted; and its agent, the one WebID the folder is
+ * shared with. An unreadable roster is "not yet", never "refused".
+ *
  * Orders of writes are unchanged from the checklist they came from, and
  * pinned in src/onboarding.test.ts: folder, grant, then announce.
  */
 import { ensureContainer } from "./lib/pod";
 import { setAgentAccess } from "./lib/acl";
-import { buildAnnounce, buildJoin, profileEdits, sendToInbox, updateOwnProfile } from "./lib/collective";
+import { buildAnnounce, buildJoin, profileEdits, sendToInbox, updateOwnProfile, type Collective } from "./lib/collective";
+import { readPerson, readRoster } from "./lib/admin";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { bindButton } from "./bind";
 import { stateLabel, statePill } from "./steps";
 import type { CollectiveView, ViewContext } from "./onboarding";
 
-export function renderMemberView(view: CollectiveView, i: number): string {
+export interface RosterMember {
+  webId: string;
+  nick: string | null;
+  /** From their profile; null when it cannot be read. */
+  name: string | null;
+}
+
+/**
+ * The roster as this member reads it, with each member's name from their
+ * profile. `null` when it cannot be read: before acceptance only members may
+ * read it, so that is the normal case for someone who has just asked.
+ */
+export async function loadRoster(collective: Collective): Promise<RosterMember[] | null> {
+  let entries;
+  try {
+    entries = (await readRoster(collective)).members;
+  } catch {
+    return null;
+  }
+  return Promise.all(
+    entries.map(async (entry) => ({ ...entry, name: (await readPerson(entry.webId)).profile?.name ?? null }))
+  );
+}
+
+/** A WebID shortened to host and path, the way people recognise a pod. */
+function shortWebId(webId: string): string {
+  try {
+    const url = new URL(webId);
+    return url.host + url.pathname.replace(/profile\/card$/, "");
+  } catch {
+    return webId;
+  }
+}
+
+function initial(text: string): string {
+  const letter = text.match(/[\p{L}\p{N}]/u);
+  return letter ? letter[0].toUpperCase() : "?";
+}
+
+function membersCard(collective: Collective, roster: RosterMember[] | null, webId: string, pending: boolean): string {
+  const name = esc(collective.name);
+  if (!roster) {
+    return `
+      <section class="step">
+        <div class="step-head"><h2>Members</h2></div>
+        <p class="meta">${
+          pending
+            ? `You can see who belongs once ${name} accepts you: only members can read its roster.`
+            : `${name}'s roster cannot be read from here yet: accepting you may not be finished on its side.`
+        }</p>
+      </section>`;
+  }
+  return `
+    <section class="step">
+      <div class="step-head"><h2>Members</h2><span class="pill">${roster.length}</span></div>
+      <ul class="roster">
+        ${roster
+          .map((m) => {
+            const who = m.name ?? m.nick ?? shortWebId(m.webId);
+            return `
+          <li>
+            <span class="avatar" aria-hidden="true">${esc(initial(who))}</span>
+            <div>
+              <strong>${esc(who)}${m.webId === webId ? ` <span class="meta">(you)</span>` : ""}</strong>
+              <span class="meta" title="${esc(m.webId)}">${esc(shortWebId(m.webId))}</span>
+            </div>
+            ${m.nick ? `<span class="label-mono">${esc(m.nick)}</span>` : ""}
+          </li>`;
+          })
+          .join("")}
+      </ul>
+      <p class="meta">From ${name}'s roster, which members can read.</p>
+    </section>`;
+}
+
+function agentCard(collective: Collective): string {
+  return `
+    <section class="step is-quiet">
+      <div class="step-head"><h2>Its agent</h2></div>
+      <p class="meta"><code>${esc(collective.agent)}</code></p>
+      <p class="meta">The only one your folder is shared with. It reads; it never writes on your pod.</p>
+    </section>`;
+}
+
+export function renderMemberView(view: CollectiveView, i: number, roster: RosterMember[] | null, webId: string): string {
   const { collective, state, folderUrl, published } = view;
   const name = esc(collective.name);
+  const nick = roster?.find((m) => m.webId === webId)?.nick ?? null;
 
   const sharing = `
     <section class="step">
@@ -48,7 +138,9 @@ export function renderMemberView(view: CollectiveView, i: number): string {
   const membership = `
     <section class="step is-quiet">
       <div class="step-head"><h2>Your membership</h2></div>
-      <p class="lead">${esc(stateLabel(state, collective.name))}</p>
+      <p class="lead">${esc(stateLabel(state, collective.name))}${
+        state === "member" && nick ? ` Its roster lists you as <span class="label-mono">${esc(nick)}</span>.` : ""
+      }</p>
       <p class="actions">
         ${state === "pending" ? `<button id="resend-${i}" class="ghost">Send the request again</button>` : ""}
         <button id="leave-${i}" class="ghost">Leave ${name}</button>
@@ -71,6 +163,7 @@ export function renderMemberView(view: CollectiveView, i: number): string {
     </header>
     <div class="member-grid">
       <div class="stack">${sharing}${membership}</div>
+      <aside class="stack">${membersCard(collective, roster, webId, state === "pending")}${agentCard(collective)}</aside>
     </div>`;
 }
 

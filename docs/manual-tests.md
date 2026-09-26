@@ -302,6 +302,12 @@ Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
    create form first. Add `schema:slogan "…"` to HyperScope's `config.ttl`,
    reload: its text replaces "Your work stays yours."; remove it again. Titles are in Newsreader
    (serif), not Georgia. Both themes.
+5. **L4, a member's tab.** As `nicolasdb`, HyperScope's tab: beside Sharing
+   and Your membership, "Members" lists the roster (nicolasdb marked
+   "(you)", each with a short name) and "Its agent" shows the agent's WebID.
+   "Your membership" says which short name the roster gives you. As a
+   `test-` account that has asked but is not accepted yet: "Members" says it
+   opens once HyperScope accepts you, and nothing says "refused".
 
 ### J1 — a new account from an invitation (the end-to-end run)
 

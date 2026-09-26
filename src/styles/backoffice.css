@@ -302,6 +302,19 @@ button.small {
 }
 
 /* Phone: the tabs move to a bar at the bottom, within thumb reach. */
+/* A member's view of the roster (L4). */
+.roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.roster li { display: flex; align-items: center; gap: var(--space-3); }
+.roster li > div { display: flex; flex-direction: column; min-width: 0; flex: 1; overflow-wrap: anywhere; }
+
 /* ── The collective's own screen (layout L2) ─────────────────────────────── */
 
 .run-head {

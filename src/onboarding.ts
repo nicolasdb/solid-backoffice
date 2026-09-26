@@ -27,7 +27,7 @@ import { esc, renderError, renderPending, toast } from "./ui/patterns";
 import { bindRun, loadRun, renderRunView, type RunView } from "./admin";
 import { pendingInvite, setInvite, takeNewcomer } from "./invite";
 import { bindHome, renderHomeView } from "./home";
-import { bindMember, renderMemberView } from "./member";
+import { bindMember, renderMemberView, loadRoster } from "./member";
 import { currentRoute, onRouteChange, replaceWithHome, routeHref } from "./router";
 import { bindShell, renderShell, tabsFor, type TabCollective } from "./shell";
 import { declared } from "./steps";
@@ -215,7 +215,9 @@ export async function renderMembership(
     bind = () => bindRun(app, run, rerender);
   } else if (memberIndex >= 0) {
     const view = data.collectives[memberIndex];
-    body = renderMemberView(view, memberIndex);
+    const roster = await loadRoster(view.collective);
+    if (mine !== renderCount) return;
+    body = renderMemberView(view, memberIndex, roster, webId);
     bind = () => bindMember(app, view, memberIndex, ctx);
   } else if (route.name === "more") {
     body = renderMoreView(tabCollectives);
