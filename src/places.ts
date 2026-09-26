@@ -55,7 +55,7 @@ import { renderMarkdown } from "./ui/markdown";
 import { busy } from "./ui/typing";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
 import { accessSentence, bindAccess, labelOf, loadDraft, renderAccess, rulesOf, type Draft, type Group } from "./access-panel";
-import { podLabel, trimAddress } from "./ui/address";
+import { podLabel, webIdName } from "./ui/address";
 import { bindRules, rawDirty, renderRules, startRaw, type RawEdit } from "./raw-rules";
 
 export type { Group };
@@ -169,7 +169,7 @@ export function whoCanRead(rules: Pick<AccessRules, "agents" | "public" | "authe
   if (rules.authenticated.includes("read")) return "Anyone signed in";
   const readers = rules.agents.filter((a) => a.modes.includes("read"));
   const parts = ["You"];
-  if (readers.length === 1) parts.push(names.get(readers[0].webId) ?? trimAddress(readers[0].webId, ctx?.podUrl ?? ""));
+  if (readers.length === 1) parts.push(names.get(readers[0].webId) ?? webIdName(readers[0].webId));
   else if (readers.length > 1) parts.push(`${readers.length} people`);
   if (rules.public.includes("append")) parts.push("anyone can leave a message");
   else if (rules.authenticated.includes("append")) parts.push("anyone signed in can leave a message");
@@ -511,13 +511,13 @@ function renderMenu(): string {
     <div class="menu-scrim" id="menu-scrim"></div>
     <div class="item-menu" role="dialog" aria-labelledby="menu-title" id="item-menu" style="--menu-top: ${menu.top}px; --menu-left: ${menu.left}px">
       <div class="menu-sec">
-        <div class="menu-head"><h2 id="menu-title" tabindex="-1">${esc(name)}</h2><button class="ghost small" type="button" id="menu-close">Close</button></div>
+        <div class="menu-head"><h2 id="menu-title" tabindex="-1">${esc(name)}</h2><button class="ghost small" type="button" id="menu-close" aria-label="Close">✕</button></div>
         <p class="meta">${esc(facts.join(" · "))}</p>
       </div>
       <div class="menu-sec">
         <span class="label-mono">Who can access it</span>
         ${who}
-        <button class="small" type="button" id="change-access"${d ? "" : " disabled"}>Change who can access it</button>
+        <button class="ghost small" type="button" id="change-access"${d ? "" : " disabled"}>Change who can access it</button>
       </div>
       <div class="menu-sec">${renderActions(url, changes.change, changeEnv())}</div>
     </div>`;

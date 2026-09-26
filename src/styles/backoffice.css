@@ -946,25 +946,24 @@ table.items td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .columns-menu p { margin: 0; }
 
 .menu-scrim { position: fixed; inset: 0; z-index: 25; }
-.item-menu { top: var(--menu-top); left: var(--menu-left); width: 22rem; max-width: calc(100vw - 2rem); overflow-wrap: anywhere; }
-.menu-sec { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-bottom: var(--border-width) solid var(--border-subtle); }
+.item-menu { top: var(--menu-top); left: var(--menu-left); width: 20rem; max-width: calc(100vw - 2rem); overflow-wrap: anywhere; }
+.menu-sec { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-bottom: var(--border-width) solid var(--border-subtle); }
 .menu-sec:last-child { border-bottom: 0; }
 .menu-sec p { margin: 0; }
-.menu-sec > button { align-self: flex-start; }
-.menu-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.menu-sec > button { align-self: flex-start; margin-top: var(--space-1); }
+.menu-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .menu-head h2 { margin: 0; font-size: var(--text-body); font-weight: 600; min-width: 0; }
-.menu-actions { display: flex; flex-direction: column; margin: 0 calc(-1 * var(--space-5)); }
-.menu-actions.is-apart { margin-top: var(--space-2); padding-top: var(--space-2); border-top: var(--border-width) solid var(--border-subtle); }
+/* Rename, Move, then Delete at the far end: one row. */
+.menu-row { display: flex; align-items: center; gap: var(--space-1); margin: 0 calc(-1 * var(--space-2)); }
+.menu-actions { display: flex; gap: var(--space-1); }
+.menu-actions.is-apart { margin-left: auto; }
 button.menu-item {
-  min-height: 40px;
-  padding: 0 var(--space-5);
+  min-height: 36px;
+  padding: 0 var(--space-2);
   border: 0;
-  border-radius: 0;
   background: transparent;
   color: var(--text-primary);
   font-size: var(--text-body);
-  text-align: left;
-  justify-content: flex-start;
 }
 button.menu-item:hover { background: var(--surface-recessed); }
 button.menu-item.is-warn { color: var(--warn); }

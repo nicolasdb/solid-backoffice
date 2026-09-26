@@ -143,6 +143,12 @@ describe("moving a folder with what is inside and its rules (C4)", () => {
     expect(log.filter((l) => l.startsWith("PUT") || l.startsWith("DELETE"))).toEqual([]);
   });
 
+  it("renames a file to a name that starts with its own (README to README.md)", async () => {
+    await move(POD + "projects/drafts/idea.md", POD + "projects/drafts/idea.md.txt", OWNER, POD);
+    expect(store.has(POD + "projects/drafts/idea.md.txt")).toBe(true);
+    expect(store.has(POD + "projects/drafts/idea.md")).toBe(false);
+  });
+
   it("renames a file within its folder, rules included", async () => {
     await move(POD + "projects/drafts/secret.txt", POD + "projects/drafts/private.txt", OWNER, POD);
     expect(store.get(POD + "projects/drafts/private.txt.acl")!.body).toContain("<./private.txt>");

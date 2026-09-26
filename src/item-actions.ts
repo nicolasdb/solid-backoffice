@@ -55,14 +55,14 @@ export function renderActions(url: string, change: Change | null, env: ChangeEnv
   const name = nameOf(url).replace(/\/$/, "");
   const busy = Boolean(change?.progress);
   // Delete sits apart from the rest: it cannot be undone (the iceberg's deep part).
-  const buttons = `
+  const buttons = `<div class="menu-row">
     <div class="menu-actions">
       <button class="menu-item" type="button" data-change="rename"${busy ? " disabled" : ""}>Rename</button>
       <button class="menu-item" type="button" data-change="move"${busy ? " disabled" : ""}>Move</button>
     </div>
     <div class="menu-actions is-apart">
       <button class="menu-item is-warn" type="button" data-change="delete"${busy ? " disabled" : ""}>Delete…</button>
-    </div>`;
+    </div></div>`;
   if (!change || change.url !== url) return buttons;
 
   const status = change.progress ? `<p class="meta" role="status">${esc(change.progress)}</p>` : "";

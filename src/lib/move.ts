@@ -144,7 +144,7 @@ export async function move(from: string, to: string, owner: string, podUrl: stri
   if (reason) throw moveError("refused", reason);
   if (from.endsWith("/") !== to.endsWith("/")) throw moveError("refused", "A folder stays a folder, and a file a file.");
   if (to === from) throw moveError("refused", "That is where it already is.");
-  if (to.startsWith(from)) throw moveError("refused", "A folder cannot go inside itself.");
+  if (from.endsWith("/") && to.startsWith(from)) throw moveError("refused", "A folder cannot go inside itself.");
   if (await exists(to)) throw moveError("exists", `${nameOf(to)} is already there. Choose another name.`);
   const parent = parentOf(to);
   if (parent && !(await exists(parent))) throw moveError("refused", `The folder ${nameOf(parent)} does not exist.`);

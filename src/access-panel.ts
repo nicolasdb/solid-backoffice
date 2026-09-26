@@ -30,7 +30,7 @@ import {
   type Mode,
 } from "./lib/acl";
 import { effectiveAccess, nameOf, parentOf, type Effective } from "./lib/files";
-import { trimAddress } from "./ui/address";
+import { trimAddress, webIdName } from "./ui/address";
 import { readTurtle } from "./lib/read";
 import { describePodError } from "./lib/pod";
 import { esc } from "./ui/patterns";
@@ -132,7 +132,7 @@ export function labelOf(webId: string, env: AccessEnv): string {
     const found = [...g.members, ...g.left].find((m) => m.webId === webId && m.label !== webId);
     if (found) return found.label;
   }
-  return trimAddress(webId, env.podUrl);
+  return webIdName(webId);
 }
 
 /** "Can read", "Can edit", or the modes as written. */
@@ -201,7 +201,7 @@ function renderChips(draft: Draft, env: AccessEnv): string {
       return `
         <div class="chips">
           <span class="meta">Fill in from ${esc(g.name)}'s members:</span>
-          ${people.map((m) => `<button class="chip" type="button" data-add="${esc(m.webId)}">${esc(labelOf(m.webId, env) === trimAddress(m.webId, env.podUrl) ? m.label : labelOf(m.webId, env))}</button>`).join("")}
+          ${people.map((m) => `<button class="chip" type="button" data-add="${esc(m.webId)}">${esc(labelOf(m.webId, env) === webIdName(m.webId) ? m.label : labelOf(m.webId, env))}</button>`).join("")}
         </div>`;
     })
     .join("");

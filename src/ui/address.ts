@@ -22,3 +22,22 @@ export function trimAddress(address: string, podUrl: string): string {
 export function podLabel(podUrl: string): string {
   return trimAddress(podUrl, podUrl);
 }
+
+/**
+ * A person by name when nothing better is known: the pod's folder in
+ * "…/nicolas_claude/profile/card#me", or the first part of the host when the
+ * pod is the whole domain. The full WebID is for the people screen (slice D).
+ */
+export function webIdName(webId: string): string {
+  let url: URL;
+  try {
+    url = new URL(webId);
+  } catch {
+    return webId;
+  }
+  const parts = url.pathname.split("/").filter(Boolean);
+  const profile = parts.indexOf("profile");
+  if (profile > 0) return decodeURIComponent(parts[profile - 1]);
+  if (profile === 0 || parts.length === 0) return url.hostname.split(".")[0];
+  return decodeURIComponent(parts[parts.length - 1]).replace(/\.[a-z]+$/i, "");
+}

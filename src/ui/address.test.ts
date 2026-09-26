@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { podLabel, trimAddress } from "./address";
+import { podLabel, trimAddress, webIdName } from "./address";
 
 const POD = "https://pod.example/amina/";
 
@@ -17,5 +17,12 @@ describe("trimAddress", () => {
   it("names your pod by its last part, or its host when it is the whole domain", () => {
     expect(podLabel(POD)).toBe("…/amina/");
     expect(podLabel("https://neil.example/")).toBe("neil.example/");
+  });
+
+  it("names a person by their pod's folder, or the host's first part", () => {
+    expect(webIdName("https://pod.example/nicolas_claude/profile/card#me")).toBe("nicolas_claude");
+    expect(webIdName("https://neil.example/profile/card#me")).toBe("neil");
+    expect(webIdName("https://id.example/people/sam.ttl#me")).toBe("sam");
+    expect(webIdName("not an address")).toBe("not an address");
   });
 });
