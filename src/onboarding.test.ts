@@ -218,7 +218,7 @@ describe("slice A — the member's side of the handshake", () => {
   it("folds finished steps to their title", async () => {
     profile.inbox = POD + "inbox/";
     const app = await render();
-    const inbox = [...app.querySelectorAll("details.step")].find((d) => d.textContent!.includes("Your inbox"));
+    const inbox = [...app.querySelectorAll("details.you-row")].find((d) => d.textContent!.includes("Your inbox"));
     expect(inbox).toBeTruthy();
     expect(inbox!.hasAttribute("open")).toBe(false);
   });

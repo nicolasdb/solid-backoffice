@@ -228,7 +228,7 @@ export async function renderMembership(
       replaceWithHome();
       route = { name: "home" };
     }
-    body = renderHomeView(data);
+    body = renderHomeView(data, webId);
     bind = () => bindHome(app, data, ctx);
   }
 

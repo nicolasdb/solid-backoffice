@@ -71,10 +71,69 @@
 }
 
 /* "You run", "You", "You belong to": the roles read at sign-in. */
+/* A section's name on Home: a small mono label, as drawn (layout A). */
 .section-title {
-  font-size: var(--text-h2);
   margin: var(--space-6) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
 }
+
+/* "Join another collective": the field and its button on one line. */
+.find-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.find-row .field { flex: 1 1 18rem; max-width: none; }
+
+/* "You": one card, one line per step; open a line to change it. */
+.you-card {
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+}
+
+.you-row + .you-row { border-top: var(--border-width) solid var(--border-subtle); }
+
+.you-row > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  min-height: 48px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.you-row > summary::-webkit-details-marker { display: none; }
+.you-title { flex: 1; }
+.you-value {
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-meta);
+  color: var(--text-tertiary);
+}
+
+.you-row .dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--accent);
+}
+
+.you-row .dot.is-done { background: var(--accent); }
+.you-row .dot.is-todo { border-color: var(--text-tertiary); border-style: dashed; }
+.you-body { padding: 0 var(--space-4) var(--space-4); }
+.you-body .field { max-width: none; }
 
 /* A finished step folds to its title (see step() in src/onboarding.ts). */
 details.step > summary {

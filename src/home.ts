@@ -26,7 +26,29 @@ import { routeHref } from "./router";
 import { declared, stateLabel, statePill, step } from "./steps";
 import type { CollectiveView, Loaded, ViewContext } from "./onboarding";
 
-export function renderHomeView(data: Loaded): string {
+/**
+ * One line of the "You" checklist (layout A, as drawn): a dot, what it is,
+ * and its value. Open it to change it. A step still to do starts open, so its
+ * action is in sight.
+ */
+function youRow(title: string, done: boolean, value: string, body: string, optional = false): string {
+  const dot = done ? "is-done" : "is-todo";
+  const status = value || (done ? "Done" : optional ? "Optional" : "To do");
+  return `
+    <details class="you-row step-host${done ? " is-done" : ""}"${done || optional ? "" : " open"}>
+      <summary>
+        <span class="dot ${dot}" aria-hidden="true"></span>
+        <span class="you-title">${esc(title)}</span>
+        <span class="you-value">${esc(status)}</span>
+      </summary>
+      <div class="you-body stack">
+        ${body}
+        <p class="step-error error" role="alert" hidden></p>
+      </div>
+    </details>`;
+}
+
+export function renderHomeView(data: Loaded, webId: string): string {
   const { run, runError, profile, unadvertisedInbox, collectives, broken, other } = data;
   const joined = collectives.map((c, i) => [c, i] as const).filter(([c]) => declared(c.state));
   const notJoined = collectives.map((c, i) => [c, i] as const).filter(([c]) => !declared(c.state));
@@ -57,13 +79,16 @@ export function renderHomeView(data: Loaded): string {
 
       <aside class="stack home-aside" aria-labelledby="you-title">
         <h2 class="section-title" id="you-title">You</h2>
+        <div class="you-card">
+          ${stepName(profile)}
+          ${stepInbox(profile, unadvertisedInbox)}
+          ${stepAgent(profile, run?.collective ?? null)}
+        </div>
+        <p class="meta">Signed in as <code>${esc(webId)}</code></p>
         <p class="meta">
           Everything here is written on your own pod, except the short messages
           sent to a collective's inbox. You can undo each step.
         </p>
-        ${stepName(profile)}
-        ${stepAgent(profile, run?.collective ?? null)}
-        ${stepInbox(profile, unadvertisedInbox)}
       </aside>
     </div>`;
 }
@@ -252,18 +277,20 @@ function renderBroken(entry: Loaded["broken"][number]): string {
 
 function stepFindCollective(first: boolean): string {
   return `
-    <section class="step">
+    <section class="step is-quiet">
       <div class="step-head">
         <h3>${first ? "Join a collective" : "Join another collective"}</h3>
       </div>
       <p class="lead">
         Paste the invitation link the collective sent you.
       </p>
-      <form id="find-form" class="field">
-        <label for="address">Invitation link (or the collective's address)</label>
-        <input id="address" name="address" type="url"
-               placeholder="https://…?collective=…" required />
-        <div><button type="submit" class="ghost">Look it up</button></div>
+      <form id="find-form" class="find-row">
+        <div class="field">
+          <label for="address">Invitation link (or the collective's address)</label>
+          <input id="address" name="address" type="url"
+                 placeholder="https://…?collective=…" required />
+        </div>
+        <button type="submit" class="ghost">Look it up</button>
       </form>
       <p class="step-error error" role="alert" hidden></p>
     </section>`;
@@ -272,9 +299,10 @@ function stepFindCollective(first: boolean): string {
 /* ── You ───────────────────────────────────────────────────────────────── */
 
 function stepName(profile: MemberDeclaration): string {
-  return step(
+  return youRow(
     "Your name",
     Boolean(profile.name),
+    profile.name ?? "",
     `<p class="lead">The name your collectives show next to your work.</p>
      <form id="name-form" class="field">
        <label for="name">Name</label>
@@ -306,9 +334,10 @@ function stepAgent(profile: MemberDeclaration, run: Collective | null): string {
         <button class="ghost" data-remove-agent="${esc(agent)}">Remove</button></li>`
     )
     .join("");
-  return step(
+  return youRow(
     "Your agent",
     profile.delegates.length > 0,
+    "",
     `<p class="lead">
        If an AI agent works for you, say so here, so that what it writes is
        credited to you. This gives it no access to anything.
@@ -326,17 +355,19 @@ function stepAgent(profile: MemberDeclaration, run: Collective | null): string {
 
 function stepInbox(profile: MemberDeclaration, unadvertised: string | null): string {
   if (profile.inbox) {
-    return step(
+    return youRow(
       "Your inbox",
       true,
+      "",
       `<p class="lead">Collectives answer your requests here.</p>
        <p><code>${esc(profile.inbox)}</code></p>`
     );
   }
   if (unadvertised) {
-    return step(
+    return youRow(
       "Your inbox",
       false,
+      "",
       `<p class="lead">
          You already have <code>${esc(unadvertised)}</code>, but your profile does
          not say it is your inbox, so nobody can find it. Using it lets anyone
@@ -345,9 +376,10 @@ function stepInbox(profile: MemberDeclaration, unadvertised: string | null): str
        <p><button id="make-inbox">Use this inbox</button></p>`
     );
   }
-  return step(
+  return youRow(
     "Your inbox",
     false,
+    "",
     `<p class="lead">
        A folder where anyone signed in can leave you a message but not read
        the others. Collectives answer your requests here.
