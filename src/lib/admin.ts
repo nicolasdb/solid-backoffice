@@ -411,8 +411,9 @@ export async function readMembers(
     nick: entry.nick,
     state: memberState(persons[i], collective.group),
     canReadRoster: readers.has(entry.webId) || entry.webId === owner,
-    announced: inbox
-      .filter((m) => m.type === "Announce" && m.actor === entry.webId && m.object)
-      .map((m) => m.object!),
+    // Sharing twice sends two announcements: one folder is listed once.
+    announced: [
+      ...new Set(inbox.filter((m) => m.type === "Announce" && m.actor === entry.webId && m.object).map((m) => m.object!)),
+    ],
   }));
 }

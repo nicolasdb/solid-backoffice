@@ -390,10 +390,10 @@ pre.source code { background: none; padding: 0; }
 .join-row .step-title { margin: 0; font-size: var(--text-body); font-weight: 600; }
 
 /* One collective opened: the path is the heading, what to copy on the right. */
-.path-head { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-6); }
+.view-head.path-head { flex-direction: row; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3) var(--space-6); }
 .path-head .crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); font-size: var(--text-h4); }
 .path-head .crumbs h1 { display: inline; margin: 0; font-size: inherit; font-weight: 600; }
-.path-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); min-width: 0; max-width: 100%; }
+.path-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); min-width: 0; max-width: 32rem; text-align: right; }
 .path-side p { margin: 0; overflow-wrap: anywhere; }
 
 @media (min-width: 64rem) {
