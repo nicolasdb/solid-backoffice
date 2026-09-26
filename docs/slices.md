@@ -73,6 +73,11 @@ screen: requests beside a members table, a filter, the invitation link to
 copy); live check next. L3 (the landing), L4 (members and agent on a
 member's tab) after.
 
+**Deferred (26 Sep 2026): the invitation link does not work live** (copied
+from the collective's tab, opened or pasted into "Join another collective").
+Symptoms not written down yet; look at it with L3, whose invited landing
+starts from that link.
+
 The `dev` branch deploys to test.nicolasdb.eu (`.github/workflows/ci.yml`);
 push there to try a slice on a phone.
 
