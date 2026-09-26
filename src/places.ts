@@ -387,10 +387,10 @@ function renderRow(item: Item): string {
   const on = menu?.url === item.url || drawer === item.url;
   return `
     <tr data-url="${esc(item.url)}"${on ? ' class="is-selected"' : ""}>
-      <td class="item-name">
+      <td><span class="item-name">
         <svg class="item-icon" viewBox="0 0 24 24" aria-hidden="true">${icon}</svg>
         <a href="${hrefOf(item.url)}">${esc(item.name)}</a>
-      </td>
+      </span></td>
       ${shown().map((c) => cell(c, item)).join("")}
       <td class="row-actions"><button class="ghost small" type="button" data-menu="${esc(item.url)}" aria-haspopup="dialog" aria-label="More for ${esc(item.name)}">···</button></td>
     </tr>`;

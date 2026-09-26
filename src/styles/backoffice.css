@@ -1018,6 +1018,8 @@ table.items td {
   vertical-align: middle;
 }
 table.items tr.is-selected td { background: var(--accent-soft); }
+/* The flex box sits inside the cell: a td that is itself flex stops being a
+   table cell, and its border no longer lines up with the row's. */
 table.items .item-name { display: flex; align-items: center; gap: var(--space-2); overflow-wrap: anywhere; }
 table.items .item-name a { color: var(--text-primary); text-decoration: none; }
 table.items .item-name a:hover { text-decoration: underline; }
