@@ -385,21 +385,33 @@ export function memberState(person: Person, group: string): MembershipState {
   return person.profile.memberOf.includes(group) ? "member" : "left";
 }
 
-export async function readMembers(collective: Collective, owner: string, messages: InboxMessage[]): Promise<MemberView[]> {
-  const [{ members }, access] = await Promise.all([readRoster(collective), getAccess(collective.roster, owner)]);
+/**
+ * `messages` may still be on its way: only the announced folders need it, so
+ * the profiles are read meanwhile. `roster` is passed when the caller has
+ * already read it, so it is not read twice.
+ */
+export async function readMembers(
+  collective: Collective,
+  owner: string,
+  messages: InboxMessage[] | Promise<InboxMessage[]>,
+  roster?: Promise<ReturnType<typeof parseRosterEntries>>
+): Promise<MemberView[]> {
+  const entries = (roster ?? readRoster(collective)).then((r) => r.members);
+  const people = entries.then((members) => Promise.all(members.map((entry) => readPerson(entry.webId))));
+  const [members, access, persons, inbox] = await Promise.all([
+    entries,
+    getAccess(collective.roster, owner),
+    people,
+    messages,
+  ]);
   const readers = new Set(access.agents.filter((a) => a.modes.includes("read")).map((a) => a.webId));
-  return Promise.all(
-    members.map(async (entry) => {
-      const person = await readPerson(entry.webId);
-      return {
-        ...person,
-        nick: entry.nick,
-        state: memberState(person, collective.group),
-        canReadRoster: readers.has(entry.webId) || entry.webId === owner,
-        announced: messages
-          .filter((m) => m.type === "Announce" && m.actor === entry.webId && m.object)
-          .map((m) => m.object!),
-      };
-    })
-  );
+  return members.map((entry, i) => ({
+    ...persons[i],
+    nick: entry.nick,
+    state: memberState(persons[i], collective.group),
+    canReadRoster: readers.has(entry.webId) || entry.webId === owner,
+    announced: inbox
+      .filter((m) => m.type === "Announce" && m.actor === entry.webId && m.object)
+      .map((m) => m.object!),
+  }));
 }

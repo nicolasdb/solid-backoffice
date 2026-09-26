@@ -70,35 +70,26 @@ export interface Loaded {
  * or typed in. Nothing is assumed.
  */
 export async function load(webId: string, podUrl: string): Promise<Loaded> {
-  const profile = await readOwnProfile(webId);
+  // Every read that does not need another one's answer starts at once: on a
+  // real network each round of waiting costs a round trip (L5, slices.md).
+  const runLoad: Promise<{ run: Loaded["run"]; runError: string | null }> = findRunCollective(podUrl)
+    .then(async (own) => ({ run: own ? await loadRun(own, webId) : null, runError: null }))
+    .catch((err) => ({ run: null, runError: describePodError(err) }));
+  const invited = pendingInvite();
 
-  let run: Loaded["run"] = null;
-  let runError: string | null = null;
+  let profile: MemberDeclaration;
   try {
-    const own = await findRunCollective(podUrl);
-    if (own) run = await loadRun(own, webId);
+    profile = await readOwnProfile(webId);
   } catch (err) {
-    runError = describePodError(err);
+    await runLoad; // never left running behind an error screen
+    throw err;
   }
 
-  // An invitation to the collective you run is not an invitation: a
-  // collective never joins itself.
-  let invite = pendingInvite();
-  if (run && invite && (invite === run.collective.group || invite === run.collective.configUrl)) {
-    setInvite(null);
-    invite = null;
-  }
-
-  let unadvertisedInbox: string | null = null;
-  if (!profile.inbox) {
-    const candidate = new URL("inbox/", podUrl).href;
-    if (await exists(candidate)) unadvertisedInbox = candidate;
-  }
-
-  const addresses = [...profile.memberOf, ...(invite ? [invite] : [])];
+  const inboxCheck = profile.inbox ? Promise.resolve(null) : unadvertised(podUrl);
+  const addresses = [...profile.memberOf, ...(invited ? [invited] : [])];
   const results = await Promise.allSettled(addresses.map((a) => loadCollective(a)));
 
-  const collectives: CollectiveView[] = [];
+  const found: Collective[] = [];
   const broken: Loaded["broken"] = [];
   const other: string[] = [];
   const seen = new Set<string>();
@@ -115,19 +106,41 @@ export async function load(webId: string, podUrl: string): Promise<Loaded> {
       continue;
     }
     const collective = result.value;
-    if (seen.has(collective.group) || collective.group === run?.collective.group) continue;
+    if (seen.has(collective.group)) continue;
     seen.add(collective.group);
-
-    const listed = await isListed(collective, webId);
-    const folderUrl = new URL(collective.bundleFolder, podUrl).href;
-    collectives.push({
-      collective,
-      state: membershipState(profile.memberOf.includes(collective.group), listed),
-      folderUrl,
-      published: await grantsRead(folderUrl, webId, collective.agent),
-    });
+    found.push(collective);
   }
+
+  const views = Promise.all(
+    found.map(async (collective): Promise<CollectiveView> => {
+      const folderUrl = new URL(collective.bundleFolder, podUrl).href;
+      const [listed, published] = await Promise.all([
+        isListed(collective, webId),
+        grantsRead(folderUrl, webId, collective.agent),
+      ]);
+      return {
+        collective,
+        state: membershipState(profile.memberOf.includes(collective.group), listed),
+        folderUrl,
+        published,
+      };
+    })
+  );
+  const [{ run, runError }, unadvertisedInbox, all] = await Promise.all([runLoad, inboxCheck, views]);
+
+  // An invitation to the collective you run is not an invitation: a
+  // collective never joins itself.
+  if (run && invited && (invited === run.collective.group || invited === run.collective.configUrl)) {
+    setInvite(null);
+  }
+  const collectives = all.filter((c) => c.collective.group !== run?.collective.group);
   return { run, runError, profile, unadvertisedInbox, collectives, broken, other };
+}
+
+/** `<pod>/inbox/` when it exists although the profile does not advertise it. */
+async function unadvertised(podUrl: string): Promise<string | null> {
+  const candidate = new URL("inbox/", podUrl).href;
+  return (await exists(candidate)) ? candidate : null;
 }
 
 /** Whether the folder's own ACL grants the agent Read. Missing folder: no. */

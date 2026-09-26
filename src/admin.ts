@@ -52,39 +52,43 @@ export interface RunView {
 }
 
 export async function loadRun(collective: Collective, owner: string): Promise<RunView> {
-  let messages: InboxMessage[] = [];
+  // Everything starts at once; each read waits only for what names it: the
+  // members' profiles for the roster, the requesters' for the inbox.
   let inboxError: string | null = null;
-  try {
-    messages = await readInbox(collective);
-  } catch (err) {
+  const inbox = readInbox(collective).catch((err) => {
     inboxError = describePodError(err);
-  }
+    return [] as InboxMessage[];
+  });
+  const joinsRead = inbox.then((messages) => {
+    const joins = messages.filter((m) => m.type === "Join" && m.actor);
+    return Promise.all(joins.map(async (message) => ({ message, person: await readPerson(message.actor!) })));
+  });
+  const roster = readRoster(collective);
 
   let members: MemberView[] = [];
   let nicks = new Map<string, string>();
   let membersError: string | null = null;
-  try {
-    [members, { nicks }] = await Promise.all([readMembers(collective, owner, messages), readRoster(collective)]);
-  } catch (err) {
-    membersError = describePodError(err);
-  }
+  const membersRead = Promise.all([readMembers(collective, owner, inbox, roster), roster]).then(
+    ([m, r]) => {
+      members = m;
+      nicks = r.nicks;
+    },
+    (err) => {
+      membersError = describePodError(err);
+    }
+  );
+  const [messages, joins] = await Promise.all([inbox, joinsRead, membersRead]);
   const listed = new Set(members.map((m) => m.webId));
 
-  const joins = messages.filter((m) => m.type === "Join" && m.actor);
-  const requests = await Promise.all(
-    joins.map(async (message) => {
-      const person = await readPerson(message.actor!);
-      return {
-        message,
-        person,
-        flags: requestFlags(message, person, collective),
-        listed: listed.has(person.webId),
-        knownNick: nicks.get(person.webId) ?? null,
-      };
-    })
-  );
+  const requests = joins.map(({ message, person }) => ({
+    message,
+    person,
+    flags: requestFlags(message, person, collective),
+    listed: listed.has(person.webId),
+    knownNick: nicks.get(person.webId) ?? null,
+  }));
   const others = messages.filter(
-    (m) => !joins.includes(m) && !(m.type === "Announce" && m.actor && listed.has(m.actor))
+    (m) => !joins.some((j) => j.message === m) && !(m.type === "Announce" && m.actor && listed.has(m.actor))
   );
   return { collective, owner, requests, members, others, inboxError, membersError };
 }
