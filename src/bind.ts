@@ -24,7 +24,8 @@ export function bindForm(
 }
 
 export async function run(button: HTMLButtonElement, action: () => Promise<void>, after: () => void): Promise<void> {
-  const errorLine = button.closest(".step")?.querySelector<HTMLElement>(".step-error");
+  // A card (.step), or a section holding a table (.step-host), shows its own error.
+  const errorLine = button.closest(".step, .step-host")?.querySelector<HTMLElement>(".step-error");
   button.disabled = true;
   if (errorLine) errorLine.hidden = true;
   try {

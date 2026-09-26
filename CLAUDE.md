@@ -59,7 +59,8 @@ one changes, change the other. Never point it at the real provider.
   requester's profile, accept / refuse / remove (order pinned in
   `src/lib/admin.test.ts`), members from both sides. `src/lib/activity.ts`
   writes every AS message; `src/lib/vocab.ts` holds the namespaces.
-- `src/admin.ts` — the "You run" part of the home screen, over `lib/admin.ts`.
+- `src/admin.ts` — the collective you run, its own tab over `lib/admin.ts`:
+  requests beside a members table, other messages, the invitation link.
 - `src/lib/css-account.ts` — **provider-specific**: account, password login
   and pod through the CSS account API (J1). Shown only when
   `SIGNUP_PROVIDER` is set. `test/pods/` creates its whole cast with it.

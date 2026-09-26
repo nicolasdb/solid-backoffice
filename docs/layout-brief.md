@@ -148,6 +148,10 @@ toasts and screen-reader announcements after each write.
   and a network of four collectives with 3 to 5 members each.
   The copy as drawn is approved, desktop and phone.
 - **Collective's own screen: side by side** (requests left, members right).
+  As built (L2): on a phone, chips that scroll to Requests, Members and
+  Other instead of the mockup's tablist (buttons, since the address's
+  fragment belongs to the router); the members table turns into one block
+  per member.
 - **A member's view** (the collective's tab, for a member): as drawn, to try.
   Sharing first, membership below with a quiet Leave; the roster's members
   and the collective's agent beside them. New: members see the roster,

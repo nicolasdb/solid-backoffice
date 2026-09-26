@@ -24,9 +24,9 @@ import {
 } from "./lib/collective";
 import { focusView } from "./ui/a11y";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
-import { bindRun, loadRun, sectionRun, type RunView } from "./admin";
+import { bindRun, loadRun, renderRunView, type RunView } from "./admin";
 import { pendingInvite, setInvite, takeNewcomer } from "./invite";
-import { bindHome, inviteLine, renderHomeView } from "./home";
+import { bindHome, renderHomeView } from "./home";
 import { bindMember, renderMemberView } from "./member";
 import { currentRoute, onRouteChange, replaceWithHome, routeHref } from "./router";
 import { bindShell, renderShell, tabsFor, type TabCollective } from "./shell";
@@ -211,7 +211,7 @@ export async function renderMembership(
 
   if (target && data.run && sameCollective(data.run.collective, target)) {
     const run = data.run;
-    body = renderRunTab(run);
+    body = renderRunView(run);
     bind = () => bindRun(app, run, rerender);
   } else if (memberIndex >= 0) {
     const view = data.collectives[memberIndex];
@@ -239,16 +239,6 @@ export async function renderMembership(
 /** A collective is named by its config.ttl or by its group IRI (`…/config.ttl#name`). */
 function sameCollective(collective: Collective, address: string): boolean {
   return address === collective.configUrl || address === collective.group;
-}
-
-/** The collective you run: its own screen, laid out in slice L2 of the layout pass. */
-function renderRunTab(run: RunView): string {
-  return `
-    <header class="view-head">
-      <p class="eyebrow">You run</p>
-      <div class="view-title"><h1 class="display" data-view-title>${esc(run.collective.name)}</h1></div>
-    </header>
-    <div class="stack run-body">${sectionRun(run, inviteLine(run.collective))}</div>`;
 }
 
 /** The collectives past the tab bar's room. */

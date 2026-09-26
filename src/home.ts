@@ -172,7 +172,6 @@ function runCard(run: RunView): string {
         <span class="label-mono">Collective</span>
       </div>
       <p class="meta">${esc(runSummary(run))}</p>
-      ${inviteLine(collective)}
       <p>${tabLink(collective, `Open ${collective.name}`)}</p>
     </section>`;
 }
@@ -205,27 +204,6 @@ function joinStep(view: CollectiveView, i: number, profile: MemberDeclaration): 
       <button id="join-${i}"${profile.inbox ? "" : " disabled"}>${joinLabel}</button>
       <button class="ghost" data-dismiss="${esc(collective.configUrl)}">Not now</button>
     </p>`);
-}
-
-/**
- * An invitation link only works where the backoffice is reachable by the
- * person receiving it, so none is offered from a development server. The
- * collective's address always works: it can be pasted into any backoffice.
- */
-export function inviteLine(collective: Collective): string {
-  const address = `<p class="meta">Address to give people: <code>${esc(collective.configUrl)}</code></p>`;
-  const link = invitationLink(collective);
-  return link ? `${address}<p class="meta">Invitation link: <code>${esc(link)}</code></p>` : address;
-}
-
-export function invitationLink(collective: Collective): string | null {
-  const { hostname } = window.location;
-  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") return null;
-  const url = new URL(window.location.href);
-  url.search = "";
-  url.hash = "";
-  url.searchParams.set("collective", collective.configUrl);
-  return url.href;
 }
 
 function renderRunError(reason: string): string {

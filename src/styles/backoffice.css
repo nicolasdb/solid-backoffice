@@ -301,6 +301,129 @@ button.small {
 }
 
 /* Phone: the tabs move to a bar at the bottom, within thumb reach. */
+/* ── The collective's own screen (layout L2) ─────────────────────────────── */
+
+.run-head {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-6);
+}
+
+.run-head .stack { gap: var(--space-3); min-width: 0; }
+
+/* Phone only: buttons that scroll to each section. */
+.jump { display: none; }
+
+.chip {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  border: var(--border-width) solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-meta);
+}
+
+.chip span { color: var(--text-tertiary); font-family: var(--font-mono); }
+
+.run-grid {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.run-grid > section { min-width: 0; scroll-margin-top: var(--space-6); }
+.run-grid > section:focus { outline: none; }
+
+.run-others {
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+
+@media (min-width: 64rem) {
+  .run-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .run-requests { grid-column: span 5; }
+  .run-members { grid-column: span 7; }
+  .run-others { grid-column: span 12; }
+}
+
+.run-members-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* theme.css styles url and text inputs; a search field looks the same. */
+.find input {
+  width: 15rem;
+  max-width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}
+
+/* A request's own declarations, each checked or not. */
+.checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.check { display: flex; align-items: flex-start; gap: var(--space-2); overflow-wrap: anywhere; }
+
+.check .dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--accent);
+}
+
+.check .dot.is-done { background: var(--accent); }
+.check .dot.is-todo { border-color: var(--text-tertiary); border-style: dashed; }
+
+table.members {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-meta);
+}
+
+table.members th {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-tertiary);
+  text-align: left;
+  padding: 0 var(--space-3) var(--space-2);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+table.members td {
+  padding: var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  vertical-align: top;
+}
+
+/* A pod address may break anywhere; a short name and a folder path should not. */
+table.members td[data-label="Member"] { overflow-wrap: anywhere; }
+table.members .label-mono,
+table.members td[data-label="Shares"] code { white-space: nowrap; overflow-wrap: normal; }
+
+table.members .row-actions { text-align: right; }
+table.members .row-actions button { margin-top: var(--space-1); }
+
 @media (max-width: 40rem) {
   .app-top { padding-inline: var(--space-4); }
   .account-name { display: none; }
@@ -345,6 +468,34 @@ button.small {
   .screen-wide {
     padding: var(--space-6) var(--space-4) calc(88px + env(safe-area-inset-bottom));
   }
+}
+
+/* The collective's screen on a phone: chips to jump, each member a block. */
+@media (max-width: 40rem) {
+  .jump {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    margin-bottom: var(--space-6);
+  }
+
+  table.members thead { display: none; }
+  table.members, table.members tbody, table.members tr, table.members td { display: block; }
+  table.members tr {
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-width) solid var(--border-subtle);
+  }
+  table.members td { padding: var(--space-1) 0; border: none; }
+  table.members td[data-label]:not([data-label="Member"])::before {
+    content: attr(data-label) " · ";
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  table.members .row-actions { text-align: left; }
+  table.members td[data-label="Shares"] code { white-space: normal; overflow-wrap: anywhere; }
+  .find, .find input { width: 100%; }
 }
 
 /* focusView's ring on a heading only for keyboard users (trackInputModality):

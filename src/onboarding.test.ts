@@ -214,9 +214,9 @@ describe("slice A — the member's side of the handshake", () => {
 
   it("offers no invitation link from a development server, only the address", async () => {
     runs = COLLECTIVE;
-    const app = await render();
+    const app = await render(tab(COLLECTIVE));
     expect(app.textContent).toContain(COLLECTIVE.configUrl);
-    expect(app.textContent).not.toContain("Invitation link");
+    expect(app.querySelector("#copy-invite")).toBeNull();
   });
 
   it("will not send a join request before there is an inbox for the answer", async () => {

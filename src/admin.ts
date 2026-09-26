@@ -91,49 +91,48 @@ export async function loadRun(collective: Collective, owner: string): Promise<Ru
 
 /* ── Rendering ─────────────────────────────────────────────────────────── */
 
-function who(person: Person): string {
-  const name = person.profile?.name;
-  return name
-    ? `<strong>${esc(name)}</strong> <span class="meta"><code>${esc(person.webId)}</code></span>`
-    : `<code>${esc(person.webId)}</code>`;
-}
-
-function section(title: string, label: string, body: string): string {
+function card(title: string, aside: string, body: string): string {
   return `
-    <section class="step">
+    <article class="step">
       <div class="step-head">
-        <h2>${esc(title)}</h2>
-        <span class="label-mono">${esc(label)}</span>
+        <h3>${esc(title)}</h3>
+        ${aside}
       </div>
       ${body}
       <p class="step-error error" role="alert" hidden></p>
-    </section>`;
+    </article>`;
+}
+
+function check(ok: boolean, text: string): string {
+  return `<li class="check"><span class="dot ${ok ? "is-done" : "is-todo"}" aria-hidden="true"></span>${text}</li>`;
 }
 
 function renderRequest(request: Request, i: number, collective: Collective): string {
   const { message, person, flags, listed, knownNick } = request;
   const profile = person.profile;
+  const name = esc(collective.name);
   const facts = profile
-    ? `<ul class="plain-list">
-         <li>Profile says they belong to ${esc(collective.name)}: ${profile.memberOf.includes(collective.group) ? "yes" : "no"}</li>
-         <li>Agents: ${profile.delegates.length ? profile.delegates.map((d) => `<code>${esc(d)}</code>`).join(", ") : "none"}</li>
-         <li>${profile.inbox ? "Has an inbox for the answer." : "No inbox: the answer cannot be sent; tell them another way."}</li>
+    ? `<ul class="checks">
+         ${check(profile.memberOf.includes(collective.group),
+           profile.memberOf.includes(collective.group) ? `Profile says they belong to ${name}` : `Profile does not say they belong to ${name}`)}
+         ${check(!!profile.inbox, profile.inbox ? "Has an inbox for the answer" : "No inbox: the answer cannot be sent; tell them another way")}
+         ${check(profile.delegates.length > 0, `Agents: ${profile.delegates.length ? profile.delegates.map((d) => `<code>${esc(d)}</code>`).join(", ") : "none"}`)}
        </ul>`
     : `<p class="meta">${esc(person.problem ?? "Their profile could not be read.")}</p>`;
+  const sent = message.published ? `<span class="meta">${esc(new Date(message.published).toLocaleDateString())}</span>` : "";
 
-  return section(profile?.name ? `${profile.name} asks to join` : "A request to join", "Request", `
-    <p>${who(person)}</p>
-    ${message.published ? `<p class="meta">Sent ${esc(new Date(message.published).toLocaleString())}</p>` : ""}
+  return card(profile?.name ? `${profile.name} asks to join` : "A request to join", sent, `
+    <p class="meta"><code>${esc(person.webId)}</code></p>
     ${facts}
     ${flags.map((f) => `<p class="error">${esc(f)}</p>`).join("")}
     ${listed ? `<p class="meta">Already on the roster: an earlier acceptance stopped halfway. Accepting again finishes it.</p>` : ""}
     <form id="accept-${i}" class="stack">
-      <label>Short name, used in the collective's folders
-        <input name="nick" value="${esc(knownNick ?? suggestNick(person))}"${knownNick ? " readonly" : ""}
+      <label class="field">Short name, used in the collective's folders
+        <input name="nick" type="text" autocomplete="off" value="${esc(knownNick ?? suggestNick(person))}"${knownNick ? " readonly" : ""}
                pattern="[a-z0-9][a-z0-9\\-]{0,39}" required>
       </label>
       ${knownNick ? `<p class="meta">Kept from before: a short name never changes once used.</p>` : ""}
-      <p>
+      <p class="actions">
         <button type="submit">Accept</button>
         <button type="button" class="ghost" id="refuse-${i}">Refuse</button>
       </p>
@@ -152,20 +151,62 @@ function stateText(member: MemberView, collective: Collective): string {
   }
 }
 
+function statePill(member: MemberView): string {
+  switch (member.state) {
+    case "member": return `<span class="pill is-ok">Member</span>`;
+    case "left": return `<span class="pill is-wait">Left</span>`;
+    default: return `<span class="pill">Unknown</span>`;
+  }
+}
+
+/** A WebID shortened to host and path, the way people recognise a pod. */
+function shortWebId(webId: string): string {
+  try {
+    const url = new URL(webId);
+    return url.host + url.pathname.replace(/profile\/card$/, "");
+  } catch {
+    return webId;
+  }
+}
+
+/** A folder shortened to its path inside the member's pod. */
+function shortFolder(folder: string, webId: string): string {
+  try {
+    const pod = new URL(webId);
+    const url = new URL(folder);
+    const root = pod.pathname.replace(/profile\/card$/, "");
+    return url.host === pod.host && url.pathname.startsWith(root) ? url.pathname.slice(root.length) : folder;
+  } catch {
+    return folder;
+  }
+}
+
 function renderMember(member: MemberView, i: number, collective: Collective, owner: string): string {
+  const name = member.profile?.name;
   return `
-    <li>
-      ${who(member)}${member.nick ? ` <span class="label-mono">${esc(member.nick)}</span>` : ""}
-      <br><span class="meta">${esc(stateText(member, collective))}</span>
-      ${member.announced.map((a) => `<br><span class="meta">Announced <code>${esc(a)}</code> (only their pod can confirm it is still shared)</span>`).join("")}
-      ${
-        member.canReadRoster
-          ? ""
-          : `<br><span class="meta">Cannot read the roster yet: accepting was not finished.</span>
-             <button class="ghost" data-grant="${i}">Let them read it</button>`
-      }
-      ${member.webId === owner ? "" : `<button class="ghost" data-remove="${i}">Remove</button>`}
-    </li>`;
+    <tr data-member>
+      <td data-label="Member">
+        ${name ? `<strong>${esc(name)}</strong><br>` : ""}<span class="meta" title="${esc(member.webId)}">${esc(shortWebId(member.webId))}</span>
+      </td>
+      <td data-label="Short name">${member.nick ? `<span class="label-mono">${esc(member.nick)}</span>` : "—"}</td>
+      <td data-label="Both sides">
+        ${statePill(member)}
+        <span class="visually-hidden">${esc(stateText(member, collective))}</span>
+        ${member.state === "member" ? "" : `<br><span class="meta">${esc(stateText(member, collective))}</span>`}
+      </td>
+      <td data-label="Shares">
+        ${member.announced.length ? member.announced.map((a) => `<code title="${esc(a)}">${esc(shortFolder(a, member.webId))}</code>`).join("<br>") : `<span class="meta">nothing announced</span>`}
+      </td>
+      <td class="row-actions">
+        ${
+          member.canReadRoster
+            ? ""
+            : `<span class="meta">Cannot read the roster yet: accepting was not finished.</span>
+               <button class="ghost small" data-grant="${i}">Let them read it</button>`
+        }
+        ${member.webId === owner ? "" : `<button class="ghost small" data-remove="${i}">Remove</button>`}
+      </td>
+    </tr>`;
 }
 
 function renderOther(message: InboxMessage, i: number): string {
@@ -178,7 +219,7 @@ function renderOther(message: InboxMessage, i: number): string {
     <li>
       <a href="${esc(message.url)}">${esc(message.url)}</a>
       <br><span class="meta">${esc(what)}</span>
-      <button class="ghost" data-delete="${i}">Delete</button>
+      <button class="ghost small" data-delete="${i}">Delete</button>
     </li>`;
 }
 
@@ -191,37 +232,134 @@ export function runSummary(view: RunView): string {
   ].join(" · ");
 }
 
-export function sectionRun(view: RunView, inviteLine: string): string {
+/**
+ * The link that opens the backoffice with this collective's invitation. Not
+ * offered on localhost: a link to someone's own laptop invites nobody.
+ */
+export function invitationLink(collective: Collective): string | null {
+  const { hostname } = window.location;
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") return null;
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("collective", collective.configUrl);
+  return url.href;
+}
+
+/**
+ * The collective's own screen (layout L2): requests beside members on a wide
+ * screen, one above the other on a phone with chips to jump between them.
+ * The chips are buttons, not `#` links: the address's fragment is the router's.
+ */
+export function renderRunView(view: RunView): string {
   const { collective, owner, requests, members, others } = view;
+  const link = invitationLink(collective);
+  const requestCount = view.inboxError ? "?" : String(requests.length);
+  const memberCount = view.membersError ? "?" : String(members.length);
+
+  const requestsBody = view.inboxError
+    ? `<p class="error">${esc(view.inboxError)}</p>`
+    : requests.length
+      ? requests.map((r, i) => renderRequest(r, i, collective)).join("")
+      : `<p class="meta">No request waiting. New ones arrive in the inbox and appear here.</p>`;
+
+  const membersBody = view.membersError
+    ? `<p class="error">${esc(view.membersError)}</p>`
+    : members.length
+      ? `<table class="members">
+           <thead><tr>
+             <th scope="col">Member</th><th scope="col">Short name</th><th scope="col">Both sides</th>
+             <th scope="col">Shares</th><th scope="col"><span class="visually-hidden">Actions</span></th>
+           </tr></thead>
+           <tbody>${members.map((m, i) => renderMember(m, i, collective, owner)).join("")}</tbody>
+         </table>
+         <p class="meta" id="find-none" hidden>No member matches.</p>
+         <p class="meta">"Shares" comes from each member's announcement: only their pod can confirm the folder is still shared.</p>
+         <p class="step-error error" role="alert" hidden></p>`
+      : `<p class="lead">Nobody yet. Accepted requests appear here.</p>`;
+
   return `
-    <h2 class="section-title">You run</h2>
-    <section class="step">
-      <div class="step-head">
-        <h2>${esc(collective.name)}</h2>
-        <span class="label-mono">Collective</span>
+    <header class="view-head run-head">
+      <div class="stack">
+        <p class="eyebrow">You run</p>
+        <h1 class="display" data-view-title>${esc(collective.name)}</h1>
+        <p class="meta">Address to give people: <code>${esc(collective.configUrl)}</code></p>
       </div>
-      <p class="meta">${esc(runSummary(view))}</p>
-      ${inviteLine}
-    </section>
+      <div class="actions">
+        ${requests.length ? `<span class="pill is-wait">${requests.length} ${requests.length === 1 ? "request" : "requests"}</span>` : ""}
+        <span class="pill">${esc(runSummary(view).split(" · ")[0])}</span>
+        ${link ? `<button id="copy-invite" class="ghost small" data-link="${esc(link)}">Copy the invitation link</button>` : ""}
+      </div>
+    </header>
 
-    ${view.inboxError ? section("Requests", "Unreadable", `<p class="error">${esc(view.inboxError)}</p>`) : ""}
-    ${requests.map((r, i) => renderRequest(r, i, collective)).join("")}
+    <nav class="jump" aria-label="Sections">
+      <button type="button" class="chip" data-jump="run-requests">Requests <span>${requestCount}</span></button>
+      <button type="button" class="chip" data-jump="run-members">Members <span>${memberCount}</span></button>
+      <button type="button" class="chip" data-jump="run-others">Other <span>${others.length}</span></button>
+    </nav>
 
-    ${section("Members", String(members.length), view.membersError
-      ? `<p class="error">${esc(view.membersError)}</p>`
-      : members.length
-        ? `<ul class="plain-list">${members.map((m, i) => renderMember(m, i, collective, owner)).join("")}</ul>`
-        : `<p class="lead">Nobody yet. Accepted requests appear here.</p>`)}
+    <div class="run-grid">
+      <section class="run-requests stack" id="run-requests" aria-labelledby="run-requests-title" tabindex="-1">
+        <h2 class="label-mono" id="run-requests-title">Requests · ${requestCount}</h2>
+        ${requestsBody}
+      </section>
 
-    ${others.length ? section("Other messages", String(others.length), `
-      <p class="meta">Messages in the inbox that are not requests. Kept until you delete them.</p>
-      <ul class="plain-list">${others.map(renderOther).join("")}</ul>`) : ""}`;
+      <section class="run-members stack step-host" id="run-members" aria-labelledby="run-members-title" tabindex="-1">
+        <div class="run-members-head">
+          <h2 class="label-mono" id="run-members-title">Members · ${memberCount}</h2>
+          ${members.length > 1 ? `<label class="find"><span class="visually-hidden">Find a member</span>
+            <input id="find-member" type="search" placeholder="Find a member" autocomplete="off"></label>` : ""}
+        </div>
+        ${membersBody}
+      </section>
+
+      <section class="run-others stack step-host" id="run-others" aria-labelledby="run-others-title" tabindex="-1">
+        <h2 class="label-mono" id="run-others-title">Other messages · ${others.length}</h2>
+        <p class="meta">Messages in the inbox that are not requests appear here, and stay until you delete them.</p>
+        ${others.length ? `<ul class="plain-list">${others.map(renderOther).join("")}</ul>` : ""}
+        <p class="step-error error" role="alert" hidden></p>
+      </section>
+    </div>`;
 }
 
 /* ── Wiring ────────────────────────────────────────────────────────────── */
 
 export function bindRun(app: HTMLElement, view: RunView, rerender: () => void): void {
   const { collective, owner } = view;
+
+  const copy = app.querySelector<HTMLButtonElement>("#copy-invite");
+  copy?.addEventListener("click", async () => {
+    const link = copy.dataset.link!;
+    try {
+      await navigator.clipboard.writeText(link);
+      announce("Invitation link copied.");
+      toast("Invitation link copied.");
+    } catch {
+      // No clipboard (permission, insecure context): show it to copy by hand.
+      toast(`Copy this link: ${link}`);
+    }
+  });
+
+  app.querySelectorAll<HTMLButtonElement>("[data-jump]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = app.querySelector<HTMLElement>(`#${button.dataset.jump}`);
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      target?.focus({ preventScroll: true });
+    });
+  });
+
+  // Filters the rows already on screen: nothing is read again.
+  const find = app.querySelector<HTMLInputElement>("#find-member");
+  find?.addEventListener("input", () => {
+    const query = find.value.trim().toLowerCase();
+    let shown = 0;
+    app.querySelectorAll<HTMLElement>("[data-member]").forEach((row) => {
+      const match = !query || row.textContent!.toLowerCase().includes(query) || (row.querySelector("[title]")?.getAttribute("title") ?? "").toLowerCase().includes(query);
+      row.hidden = !match;
+      if (match) shown++;
+    });
+    app.querySelector<HTMLElement>("#find-none")!.hidden = shown > 0;
+  });
 
   view.requests.forEach((request, i) => {
     const name = request.person.profile?.name ?? request.person.webId;

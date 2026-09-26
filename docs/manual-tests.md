@@ -272,6 +272,18 @@ Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
    clear of the gesture bar; nothing hides under it when scrolled to the
    end. Tab through with the keyboard: every tab is reachable, Places is
    skipped. Both themes.
+   **Run 26 Sep 2026** on test.nicolasdb.eu, desktop and phone: tabs fine;
+   the bar stays at the bottom on both tabs (after long addresses were made
+   to wrap); signing in from a tab works (no fragment in the redirect URL).
+2. **L2, the collective's own screen.** As `hyperscope-HQ`, HyperScope's
+   tab: the name, the address, the counts and "Copy the invitation link"
+   (on test.nicolasdb.eu only, not on localhost; paste the copied link in a
+   private window: it opens the invited welcome). Desktop: requests left,
+   members right as a table; "Find a member" narrows it by name, short name
+   or address. Phone: "Requests · Members · Other" chips scroll to each
+   section without changing the address; each member is a block. Home keeps
+   only the summary card. Then run steps 3, 5 and 6 of slices A and B above
+   on this screen.
 
 ### J1 — a new account from an invitation (the end-to-end run)
 

@@ -25,7 +25,7 @@ vi.mock("./lib/admin", async (importOriginal) => ({
   deleteMessage: async (url: string) => void calls.push(`delete ${url}`),
 }));
 
-const { sectionRun, bindRun } = await import("./admin");
+const { renderRunView, bindRun } = await import("./admin");
 type RunView = import("./admin").RunView;
 
 const POD = "https://pod.example/hs/";
@@ -67,7 +67,7 @@ beforeEach(() => {
 function render(): HTMLElement {
   const app = document.createElement("div");
   document.body.replaceChildren(app);
-  app.innerHTML = sectionRun(view, "");
+  app.innerHTML = renderRunView(view);
   bindRun(app, view, () => calls.push("rerender"));
   return app;
 }
@@ -78,7 +78,7 @@ describe("You run", () => {
   it("shows a request with the requester's own declarations and a suggested short name", () => {
     const app = render();
     expect(app.textContent).toContain("Inès asks to join");
-    expect(app.textContent).toContain("Profile says they belong to HyperScope: yes");
+    expect(app.textContent).toContain("Profile says they belong to HyperScope");
     expect(app.querySelector<HTMLInputElement>("#accept-0 input[name=nick]")!.value).toBe("ines");
   });
 
@@ -108,6 +108,7 @@ describe("You run", () => {
     const app = render();
     expect(app.textContent).toContain("Member: both sides agree.");
     expect(app.textContent).toContain("only their pod can confirm");
+    expect(app.querySelector("[data-member] code")!.textContent).toBe("output2/hs/");
     const remove = app.querySelector<HTMLButtonElement>("[data-remove='0']")!;
     remove.click();
     await tick();
@@ -137,5 +138,49 @@ describe("You run", () => {
     const app = render();
     expect(app.textContent).toContain("Could not read the inbox (403).");
     expect(app.textContent).toContain("members: could not be read");
+  });
+
+  it("puts the name, the address and the counts in the header", () => {
+    const app = render();
+    const head = app.querySelector(".run-head")!;
+    expect(head.querySelector("h1")!.textContent).toBe("HyperScope");
+    expect(head.textContent).toContain(COLLECTIVE.configUrl);
+    expect(head.textContent).toContain("1 request");
+    expect(head.textContent).toContain("1 member");
+  });
+
+  it("offers no invitation link on localhost, where it would invite nobody", () => {
+    expect(render().querySelector("#copy-invite")).toBeNull();
+  });
+
+  it("filters the members on screen by name, short name or address", () => {
+    view.members.push({ ...view.members[0], webId: INES, profile: profile("Inès"), nick: "ines", announced: [] });
+    const app = render();
+    const find = app.querySelector<HTMLInputElement>("#find-member")!;
+    const visible = () => [...app.querySelectorAll<HTMLElement>("[data-member]")].filter((r) => !r.hidden).map((r) => r.querySelector("strong")!.textContent);
+
+    find.value = "amin";
+    find.dispatchEvent(new Event("input"));
+    expect(visible()).toEqual(["Amina"]);
+
+    find.value = "pod.example/ines";
+    find.dispatchEvent(new Event("input"));
+    expect(visible()).toEqual(["Inès"]);
+
+    find.value = "nobody";
+    find.dispatchEvent(new Event("input"));
+    expect(visible()).toEqual([]);
+    expect(app.querySelector<HTMLElement>("#find-none")!.hidden).toBe(false);
+  });
+
+  it("jumps between sections with buttons, leaving the address to the router", () => {
+    const app = render();
+    const before = location.hash;
+    const chips = [...app.querySelectorAll<HTMLButtonElement>("[data-jump]")];
+    expect(chips.map((c) => c.textContent!.replace(/\s+/g, " ").trim())).toEqual(["Requests 1", "Members 1", "Other 1"]);
+    Element.prototype.scrollIntoView = () => {};
+    chips[1].click();
+    expect(document.activeElement!.id).toBe("run-members");
+    expect(location.hash).toBe(before);
   });
 });
