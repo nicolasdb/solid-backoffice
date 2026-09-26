@@ -28,6 +28,21 @@ import {
   type Item,
 } from "./lib/files";
 import { bindActions, renderActions, type Change } from "./item-actions";
+import { renderFollowed, renderOverview, type FollowForm, type OpenedView, type SortBy } from "./following-view";
+import {
+  follow,
+  followedFor,
+  readFollowing,
+  recordVisit,
+  setFavourite,
+  sortFollowing,
+  summarise,
+  summaryOfFile,
+  unfollow,
+  changeFollowing,
+  type Followed,
+  type Summary,
+} from "./lib/following";
 import { bindEditor, canEdit, isDirty, renderEditor, renderEditorActions, startEditing, type Editing } from "./editor";
 import { forgetAclLocations, type AccessRules } from "./lib/acl";
 import { describePodError, isAuthError } from "./lib/pod";
@@ -78,6 +93,13 @@ let editing: Editing | null = null;
 let editWhenRead: string | null = null;
 /** The "new folder" / "new file" form in a folder's header. */
 let creating: { kind: "folder" | "file"; error: string | null } | null = null;
+/** What you follow (C5), from your own pod; null until read. */
+let following: Followed[] | null = null;
+let followingError: string | null = null;
+let sortBy: SortBy = "latest";
+let followForm: FollowForm | null = null;
+/** Followed addresses as last opened: a folder's summary, or a file. */
+const opened = new Map<string, { summary?: Summary; file?: FileContent }>();
 /** Rename, move or delete in progress in the panel (C4). */
 const changes: { change: Change | null } = { change: null };
 /** The item whose permissions are being read, so a redraw does not read them twice. */
@@ -104,6 +126,10 @@ export function forgetPlaces(): void {
   editWhenRead = null;
   creating = null;
   changes.change = null;
+  following = null;
+  followingError = null;
+  followForm = null;
+  opened.clear();
   groups = null;
   groupsAsked = false;
   frame = null;
@@ -173,6 +199,11 @@ const KIND_LABEL: Record<string, string> = { markdown: "Markdown", text: "Text",
 
 /* ── Addresses ─────────────────────────────────────────────────────────── */
 
+/** The address on your pod the route names; null on Following's routes. */
+function herePod(): string | null {
+  return route.name === "places" ? urlOf(route.path) : null;
+}
+
 function urlOf(path: string): string {
   return ctx!.podUrl + path;
 }
@@ -211,6 +242,8 @@ export function placesFrame(): string {
 function renderSide(): string {
   const onPod = route.name === "places";
   const pod = shortWebId(ctx!.podUrl);
+  const current = route.name === "followed" ? followedFor(route.address, following ?? [])?.address : null;
+  const followed = sortFollowing(following ?? [], "favourites");
   return `
     <nav class="places-side" aria-label="Places">
       <div class="places-group">
@@ -219,11 +252,24 @@ function renderSide(): string {
           <span>My pod</span><span class="meta">${esc(pod)}</span>
         </a>
       </div>
+      <div class="places-group">
+        <span class="label-mono">Followed</span>
+        ${followed
+          .map((f) => {
+            const on = f.address === current;
+            return `<a class="place${on ? " is-current" : ""}" href="${routeHref({ name: "followed", address: f.address })}"${on ? ' aria-current="page"' : ""}><span>${esc(f.title || nameOf(f.address))}</span><span class="meta">${f.unreadableSince ? "cannot be read now" : "read with your WebID"}</span></a>`;
+          })
+          .join("")}
+        <a class="place is-action${route.name === "following" ? " is-current" : ""}" href="${routeHref({ name: "following" })}"${route.name === "following" ? ' aria-current="page"' : ""}>${followed.length ? "All followed · follow an address" : "+ Follow an address"}</a>
+      </div>
+      <p class="meta places-note">Nobody can list what is shared with you: someone has to send you the address.</p>
     </nav>
     <label class="field place-picker">
       <span class="label-mono">Place</span>
       <select id="place-picker">
         <option value="${routeHref({ name: "places", path: "" })}"${onPod ? " selected" : ""}>My pod · ${esc(pod)}</option>
+        ${followed.map((f) => `<option value="${routeHref({ name: "followed", address: f.address })}"${f.address === current ? " selected" : ""}>${esc(f.title || nameOf(f.address))}</option>`).join("")}
+        <option value="${routeHref({ name: "following" })}"${route.name === "following" ? " selected" : ""}>Followed · follow an address</option>
       </select>
     </label>`;
 }
@@ -405,9 +451,22 @@ function renderFile(url: string): string {
 
 /** The item in the panel: the selected one, else the folder itself; a file shows it only when asked. */
 function panelUrl(): string | null {
-  const url = urlOf((route as { path: string }).path);
+  const url = herePod();
+  if (!url) return null;
   if (url.endsWith("/")) return selected ?? url;
   return selected === url ? url : null;
+}
+
+function openedView(address: string): OpenedView {
+  const seen = opened.get(address);
+  const err = errors.get(address);
+  return {
+    address,
+    entry: following ? followedFor(address, following) : null,
+    summary: seen?.summary ?? null,
+    file: seen?.file ?? null,
+    error: err === undefined ? null : describePodError(err),
+  };
 }
 
 /** Every folder the app has seen, for Move's destinations. */
@@ -433,7 +492,13 @@ function accessEnv() {
 }
 
 function renderPlaces(): string {
-  const url = urlOf((route as { path: string }).path);
+  if (route.name === "following") {
+    return `<div class="places-grid is-file">${renderSide()}${renderOverview(following ? sortFollowing(following, sortBy) : null, followingError, sortBy, followForm, when)}</div>`;
+  }
+  if (route.name === "followed") {
+    return `<div class="places-grid is-file">${renderSide()}${renderFollowed(openedView(route.address), when, renderPreview)}</div>`;
+  }
+  const url = herePod()!;
   const panel = panelUrl();
   const main = url.endsWith("/") ? renderFolder(url) : renderFile(url);
   const side = panel ? renderPanel(panel, url.endsWith("/") ? url : parentOf(url)!) : "";
@@ -450,7 +515,7 @@ function draw(focus: boolean): void {
 
 /** Someone is typing, or has a change to the permissions not saved yet. */
 function inUse(): boolean {
-  return !frame || busy(frame) || Boolean(draft?.dirty) || isDirty(editing) || Boolean(creating) || Boolean(changes.change);
+  return !frame || busy(frame) || Boolean(draft?.dirty) || isDirty(editing) || Boolean(creating) || Boolean(changes.change) || Boolean(followForm);
 }
 
 /** Redraws after a read, unless someone is typing; keeps focus where it was. */
@@ -518,7 +583,8 @@ function patchRules(url: string): void {
   if (cell) cell.innerHTML = rulesCell(url);
   const pill = frame.querySelector<HTMLElement>(`[data-pill="${CSS.escape(url)}"]`);
   if (pill) pill.innerHTML = rulesPill(url);
-  const current = urlOf((route as { path: string }).path);
+  const current = herePod();
+  if (!current) return;
   const inPanel = (selected ?? current) === url || current === url;
   if (inPanel && !inUse()) {
     const panel = frame.querySelector(".places-panel, .file-status");
@@ -610,7 +676,7 @@ function bind(): void {
         selected = null;
         sheetOpen = false;
         draft = null;
-        const here = urlOf((route as { path: string }).path);
+        const here = herePod() ?? "";
         if (here.startsWith(from)) {
           // You were in (or on) what moved: follow it, or go up after a delete.
           location.hash = hrefOf(to ? to + here.slice(from.length) : (parentOf(from) ?? ctx!.podUrl));
@@ -622,12 +688,13 @@ function bind(): void {
   }
   frame.querySelector("#places-retry")?.addEventListener("click", () => void showPlaces(route));
   bindWrites();
+  bindFollowing();
   const download = frame.querySelector<HTMLButtonElement>("#download");
   download?.addEventListener("click", async () => {
     const url = download.dataset.url!;
     download.disabled = true;
     try {
-      await downloadFile(url, files.get(url));
+      await downloadFile(url, files.get(url) ?? opened.get(url)?.file);
     } catch (err) {
       toast(`Could not download ${nameOf(url)}: ${describePodError(err)}`);
     } finally {
@@ -642,8 +709,8 @@ function isPhone(): boolean {
 
 /** New folder, new file, upload (in a folder); the editor (on a file). */
 function bindWrites(): void {
-  if (!frame) return;
-  const here = urlOf((route as { path: string }).path);
+  const here = herePod();
+  if (!frame || !here) return;
 
   const openCreate = (kind: "folder" | "file") => {
     creating = { kind, error: null };
@@ -796,7 +863,7 @@ export function mountPlaces(el: HTMLElement, next: Route, context: PlacesContext
 export async function showPlaces(next: Route, focus = true): Promise<void> {
   if (!frame || !ctx) return;
   const moved = JSON.stringify(next) !== JSON.stringify(route);
-  route = next.name === "places" ? next : { name: "places", path: "" };
+  route = next.name === "places" || next.name === "following" || next.name === "followed" ? next : { name: "places", path: "" };
   if (moved) {
     selected = null;
     sheetOpen = false;
@@ -804,10 +871,132 @@ export async function showPlaces(next: Route, focus = true): Promise<void> {
     draftError = null;
     creating = null;
     changes.change = null;
+    followForm = null;
   }
   const mine = ++generation;
   draw(focus);
+  const list = readFollowingList(mine);
+  if (route.name === "following") return list;
+  if (route.name === "followed") {
+    await list; // which entry it belongs to decides what a visit records
+    return readFollowed(route.address, mine);
+  }
   const url = urlOf(route.path);
   if (url.endsWith("/")) await readFolder(url, mine);
   else await readOne(url, mine);
+  await list;
+}
+
+/* ── Following (C5) ────────────────────────────────────────────────────── */
+
+async function readFollowingList(mine: number): Promise<void> {
+  try {
+    const next = await readFollowing(ctx!.podUrl);
+    if (mine !== generation) return;
+    const changed = JSON.stringify(next) !== JSON.stringify(following);
+    following = next;
+    followingError = null;
+    if (changed) redraw();
+  } catch (err) {
+    if (mine !== generation) return;
+    followingError = describePodError(err);
+    redraw();
+  }
+}
+
+/** Opens a followed address: read it now, and keep what was seen on your pod. */
+async function readFollowed(address: string, mine: number): Promise<void> {
+  const entry = following ? followedFor(address, following) : null;
+  try {
+    const seen = address.endsWith("/") ? { summary: await summarise(address) } : { file: await readFile(address) };
+    if (mine !== generation) return;
+    const before = opened.get(address);
+    opened.set(address, seen);
+    errors.delete(address);
+    if (JSON.stringify(before?.summary ?? before?.file?.etag) !== JSON.stringify(seen.summary ?? seen.file?.etag)) redraw();
+    if (entry && entry.address === address) {
+      const summary = seen.summary ?? summaryOfFile(seen.file!);
+      await recordVisit(ctx!.podUrl, entry, { summary }).catch(() => {});
+    }
+  } catch (err) {
+    if (mine !== generation) return;
+    errors.set(address, err);
+    opened.delete(address);
+    draw(false);
+    if (entry && entry.address === address) await recordVisit(ctx!.podUrl, entry, { unreadable: true }).catch(() => {});
+  }
+}
+
+/** The overview's form and sort, and an opened address's favourite and unfollow. */
+function bindFollowing(): void {
+  if (!frame) return;
+  const reload = async (message?: string, undo?: () => void) => {
+    following = await readFollowing(ctx!.podUrl).catch(() => following);
+    if (message) toast(message, undo ? { undo } : {});
+    draw(false);
+  };
+  frame.querySelector("#follow-open")?.addEventListener("click", () => {
+    followForm = { error: null, pending: false };
+    draw(false);
+    frame?.querySelector<HTMLInputElement>("#follow-address")?.focus();
+  });
+  frame.querySelector("#follow-cancel")?.addEventListener("click", () => {
+    followForm = null;
+    draw(false);
+    frame?.querySelector<HTMLElement>("#follow-open")?.focus();
+  });
+  frame.querySelector<HTMLFormElement>("#follow-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const address = frame!.querySelector<HTMLInputElement>("#follow-address")!.value;
+    followForm = { error: null, pending: true };
+    draw(false);
+    try {
+      const entry = await follow(ctx!.podUrl, address);
+      followForm = null;
+      await reload(`Following ${entry.title}.`);
+    } catch (err) {
+      followForm = { error: describePodError(err), pending: false };
+      draw(false);
+      const input = frame?.querySelector<HTMLInputElement>("#follow-address");
+      if (input) {
+        input.value = address;
+        input.focus();
+      }
+    }
+  });
+  frame.querySelector<HTMLSelectElement>("#follow-sort")?.addEventListener("change", (e) => {
+    sortBy = (e.target as HTMLSelectElement).value as SortBy;
+    draw(false);
+    frame?.querySelector<HTMLElement>("#follow-sort")?.focus();
+  });
+  if (route.name !== "followed") return;
+  const address = route.address;
+  frame.querySelector("#follow-this")?.addEventListener("click", async (e) => {
+    (e.target as HTMLButtonElement).disabled = true;
+    try {
+      const entry = await follow(ctx!.podUrl, address);
+      await reload(`Following ${entry.title}.`);
+    } catch (err) {
+      (e.target as HTMLButtonElement).disabled = false;
+      toast(describePodError(err));
+    }
+  });
+  const entry = following?.find((f) => f.address === address);
+  if (!entry) return;
+  frame.querySelector("#favourite")?.addEventListener("click", async () => {
+    await setFavourite(ctx!.podUrl, address, !entry.favourite).catch((err) => toast(describePodError(err)));
+    await reload();
+    frame?.querySelector<HTMLElement>("#favourite")?.focus();
+  });
+  frame.querySelector("#unfollow")?.addEventListener("click", async () => {
+    try {
+      await unfollow(ctx!.podUrl, address);
+    } catch (err) {
+      toast(describePodError(err));
+      return;
+    }
+    await reload(`Unfollowed ${entry.title}.`, () => {
+      void changeFollowing(ctx!.podUrl, (entries) => (entries.some((f) => f.address === address) ? entries : [...entries, entry])).then(() => reload());
+    });
+  });
 }

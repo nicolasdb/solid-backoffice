@@ -211,3 +211,37 @@ describe("rename, move, delete (C4)", () => {
     await expect(deleteTree(amina.pod + "profile/", amina.pod)).rejects.toMatchObject({ code: "refused" });
   });
 });
+
+/** Slice C5: following what the network shared with Amina, kept on her own pod. */
+describe("following (C5)", () => {
+  const shared = cast.network.pod + "shared/";
+
+  it("follows an address her WebID can read, and refuses one it cannot", async () => {
+    const { follow, readFollowing } = await import("../../src/lib/following");
+    await expect(follow(amina.pod, cast.hyperscope.pod + "inbox/")).rejects.toMatchObject({ code: "unreadable", status: 403 });
+    expect(await readFollowing(amina.pod)).toEqual([]);
+
+    const entry = await follow(amina.pod, shared);
+    expect(entry).toMatchObject({ title: "shared", excerpt: "1 item: guide.md" });
+    expect((await readFollowing(amina.pod)).map((f) => f.address)).toEqual([shared]);
+    await expect(follow(amina.pod, shared)).rejects.toMatchObject({ code: "already" });
+  });
+
+  it("keeps the list private to her", async () => {
+    const list = amina.pod + "settings/following.ttl";
+    expect((await current.fetch(list)).status).toBe(200);
+    await actAs("outsider");
+    expect((await current.fetch(list)).status).toBe(403);
+    expect((await fetch(list)).status).toBe(401);
+  });
+
+  it("keeps what a visit saw, marks a favourite, and unfollows", async () => {
+    const { readFollowing, recordVisit, summarise, setFavourite, unfollow } = await import("../../src/lib/following");
+    const [entry] = await readFollowing(amina.pod);
+    await recordVisit(amina.pod, entry, { summary: { ...(await summarise(shared)), title: "Fablab network" } });
+    await setFavourite(amina.pod, shared, true);
+    expect((await readFollowing(amina.pod))[0]).toMatchObject({ title: "Fablab network", favourite: true });
+    await unfollow(amina.pod, shared);
+    expect(await readFollowing(amina.pod)).toEqual([]);
+  });
+});

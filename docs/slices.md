@@ -195,10 +195,16 @@ the end ([manual tests](manual-tests.md), "C · Places").
   already there, a folder into itself, rules it cannot rewrite, and the
   pod, `profile/`, `inbox/`, `settings/`, `config.ttl`, `membres.ttl`.
   Move offers the folders already opened.
-- **C5 · Following (J7).** Follow an address (kept only once the app could
+- **C5 · Following (J7)** · built, live test pending. Follow an address (kept only once the app could
   read it with your WebID); the list in `settings/following.ttl` on your own
   pod, with a title and excerpt from your last visit, so the overview reads
-  nothing from other pods; open one read only; favourite; unfollow.
+  nothing from other pods; open one read only; favourite; unfollow. As
+  built (`src/lib/following.ts`, `src/following-view.ts`, format in
+  [reference](reference/following-file.md)): written with n3's Writer
+  through `updateDocument`; a visit is kept only when something changed or
+  the last one is an hour old; unfollow can be undone. Differs from the
+  board on purpose: a followed folder's rows show type and size, not each
+  file's first line (one read per file on their pod).
 - **C6 · Technical rules, advanced mode.** The raw `.acl` editable behind
   "Show the technical rules"; Save takes two taps and is refused unless the
   Turtle parses, the owner keeps Control, and nobody changed it meanwhile.

@@ -8,7 +8,7 @@ answer lives.
 |---|---|---|
 | Tutorials | learning by doing | none yet: the first will be a newcomer's first join (J1, built) |
 | How-to guides | a task, for someone who knows what they want | [Set up a collective's pod](how-to/set-up-a-collective.md) · [Invite people](how-to/invite-people.md) · [Deploy the test copy](how-to/deploy-the-test-copy.md) · [Manual tests](manual-tests.md) |
-| Reference | facts to look up | [Collective files](reference/collective-files.md) · [Examples](examples/) |
+| Reference | facts to look up | [Collective files](reference/collective-files.md) · [The following file](reference/following-file.md) · [Examples](examples/) |
 | Explanation | why it works this way | [Membership](explanation/membership.md) · [Sharing with a collective](explanation/sharing.md) · [Following](explanation/following.md) · [Reading pods quickly](explanation/reading-pods.md) |
 
 Also here: [FAQ](faq.md) · [Journeys](journeys.md) · [Slices](slices.md)

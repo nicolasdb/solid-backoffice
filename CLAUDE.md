@@ -92,7 +92,9 @@ one changes, change the other. Never point it at the real provider.
   (C3): Preview first, saves with `If-Match`, unsaved text in memory only.
   `src/lib/move.ts` (C4) moves, renames and deletes, contents and rules
   included: copy, check, then delete (order pinned in `move.test.ts`);
-  `src/item-actions.ts` is its part of the panel.
+  `src/item-actions.ts` is its part of the panel. `src/lib/following.ts`
+  (C5) keeps what you follow in `settings/following.ttl`, so the list
+  (`src/following-view.ts`) reads nothing from other pods.
 - `src/lib/read.ts` — display reads with an in-memory ETag cache
   (`If-None-Match`, 304 hands back the kept body); writes never use it.
   Forgotten at sign-out, with the last load.

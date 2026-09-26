@@ -551,3 +551,88 @@ describe("C4 — rename, move, delete", () => {
     expect(app.querySelector(".places-panel")!.textContent).toMatch(/Your pod itself cannot be moved or deleted/);
   });
 });
+
+describe("C5 — following", () => {
+  const X = "https://other.example/xavier/shared/";
+  const LIST = POD + "settings/following.ttl";
+  const followingTtl = (entries: string) => `@prefix hs: <https://pod.nicolasdb.eu/hyperscope/vocab#>. @prefix schema: <http://schema.org/>. @prefix dct: <http://purl.org/dc/terms/>.
+${entries}`;
+  const xavier = `<#x> a hs:Followed; schema:url <${X}>; dct:title "Xavier's folder"; schema:abstract "2 items: guide.md, plan.pdf"; dct:modified "2026-09-20T10:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>.`;
+
+  async function go(route: { name: "following" } | { name: "followed"; address: string }): Promise<void> {
+    window.history.replaceState(null, "", "/");
+    reading = mountPlaces(app, route, { webId: WEBID, podUrl: POD, names: new Map(), loadGroups: async () => [] });
+    await reading;
+  }
+
+  beforeEach(() => {
+    pod[LIST] = { body: followingTtl(xavier), etag: '"f1"' };
+    pod[X] = { body: listing(["guide.md", "plan.pdf"]), etag: '"x1"' };
+    pod[X + "guide.md"] = { body: "# Fablab guide\n\nHow it works.", type: "text/markdown", etag: '"g"' };
+  });
+
+  it("lists what you follow from your own pod only, never reading theirs", async () => {
+    await go({ name: "following" });
+    expect(app.querySelector(".fcard")!.textContent).toContain("Xavier's folder");
+    expect(app.querySelector(".fcard")!.textContent).toContain("2 items: guide.md, plan.pdf");
+    expect(requests.filter((r) => !r.includes(POD))).toEqual([]);
+    expect(app.querySelector(".places-side")!.textContent).toContain("Xavier's folder");
+  });
+
+  it("keeps an address only once your WebID could read it", async () => {
+    await go({ name: "following" });
+    app.querySelector<HTMLButtonElement>("#follow-open")!.click();
+    const input = app.querySelector<HTMLInputElement>("#follow-address")!;
+    input.value = "https://other.example/private/";
+    pod["https://other.example/private/"] = { status: 403 };
+    app.querySelector<HTMLFormElement>("#follow-form")!.requestSubmit();
+    await until(() => app.querySelector("#follow-form .error"));
+    expect(app.querySelector("#follow-form .error")!.textContent).toMatch(/cannot read this address \(403\)/);
+    expect(writes).toHaveLength(0);
+
+    app.querySelector<HTMLInputElement>("#follow-address")!.value = X + "guide.md";
+    app.querySelector<HTMLFormElement>("#follow-form")!.requestSubmit();
+    await until(() => writes.length && app.querySelectorAll(".fcard").length === 2);
+    expect(writes[0]).toMatchObject({ method: "PUT", url: LIST, ifMatch: '"f1"' });
+    expect(writes[0].body).toContain("Fablab guide");
+  });
+
+  it("opens a followed folder read only, and says its owner may see the reads", async () => {
+    await go({ name: "followed", address: X });
+    expect(app.querySelector(".pill")!.textContent).toBe("Read only");
+    expect(app.textContent).toMatch(/other\.example may see these reads in its access log/);
+    expect([...app.querySelectorAll(".item-name")].map((c) => c.textContent!.trim())).toEqual(["guide.md", "plan.pdf"]);
+    expect(app.querySelector("#new-folder, #upload, #edit, [data-change]")).toBeNull();
+    // What was seen changed ("2 items" stays, the date moved): kept on your pod.
+    await until(() => writes.length);
+    expect(writes[0]).toMatchObject({ method: "PUT", url: LIST, ifMatch: '"f1"' });
+  });
+
+  it("says an address can no longer be read, and keeps it", async () => {
+    pod[X] = { status: 403 };
+    await go({ name: "followed", address: X });
+    expect(app.querySelector('[role="alert"]')!.textContent).toMatch(/cannot be read now/);
+    await until(() => writes.length);
+    expect(writes[0].body).toContain("unreadableSince");
+    expect(writes[0].body).toContain(X);
+  });
+
+  it("unfollows, with a way to undo it", async () => {
+    await go({ name: "followed", address: X });
+    await until(() => writes.length); // the visit
+    writes.length = 0;
+    app.querySelector<HTMLButtonElement>("#unfollow")!.click();
+    await until(() => document.querySelector(".toast-undo"));
+    expect(pod[LIST].body).not.toContain(X);
+    document.querySelector<HTMLButtonElement>(".toast-undo")!.click();
+    await until(() => pod[LIST].body!.includes(X));
+  });
+
+  it("marks a favourite", async () => {
+    await go({ name: "followed", address: X });
+    await until(() => writes.length);
+    app.querySelector<HTMLButtonElement>("#favourite")!.click();
+    await until(() => pod[LIST].body!.includes("favourite"));
+    await until(() => app.querySelector("#favourite")?.getAttribute("aria-pressed") === "true");
+  });
+});

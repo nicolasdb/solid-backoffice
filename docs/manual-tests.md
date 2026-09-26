@@ -474,3 +474,20 @@ the provider, a real browser, a phone, both themes.
    Move or Delete, and say why.
 5. Close the tab in the middle of moving a large folder, reopen: the
    original is whole (a copy may be left beside it; nothing is lost).
+
+### C5 · Following
+
+1. **Places → Follow an address**, paste an address you cannot read: it is
+   refused and nothing is kept. Paste one shared with you: it appears in
+   the list and in the side list (the phone's place picker).
+2. With the Network tab open, go to **Followed**: the only request is
+   `settings/following.ttl` on your own pod.
+3. Open the followed folder: **Read only**, the note about their access
+   log, no New / Upload / Rename. Open a file inside: its preview, and
+   Download.
+4. Ask its owner to remove your access, then open it: "This cannot be read
+   now"; the list says "Not readable since …" and keeps it.
+5. **Favourite**, then sort by "Favourites first". **Unfollow**, then Undo
+   from the message: it is back.
+6. In a private window as someone else, `settings/following.ttl` answers
+   403 (or 401 signed out).

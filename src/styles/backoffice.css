@@ -1061,3 +1061,32 @@ table.items .row-actions { text-align: right; }
   .editor.is-side .editor-preview { display: none; }
   .editor textarea { min-height: 50vh; }
 }
+
+/* Following (C5): the overview's cards. */
+.places-note { margin-top: auto; padding: 0 var(--space-3); }
+.fcards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.fcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-5);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.fcard:hover { border-color: var(--border); }
+.fcard-title { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.fcard .excerpt { color: var(--text-secondary); font-size: var(--text-small); }
+.fcard .excerpt.is-warn { color: var(--warn); }
+.sort { display: flex; align-items: center; gap: var(--space-2); }
+.sort select {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}

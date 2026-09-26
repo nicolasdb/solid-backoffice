@@ -17,8 +17,19 @@ a shared folder.
 - Open one to see its content and details.
 - Download, mark as favourite, unfollow.
 
-What you follow, and your favourites, are stored on your own pod, so any app
-of yours can read the same list.
+What you follow, and your favourites, are stored on your own pod
+(`settings/following.ttl`, [reference](../reference/following-file.md)), so
+any app of yours can read the same list.
+
+## What it reads, and when
+
+Every read on someone else's pod may land in their access log, so the list
+reads only your own pod: each entry keeps the title and excerpt you saw on
+your last visit. An address is read twice in its life as an entry: once when
+you follow it (to check your WebID can read it; nothing is kept otherwise),
+and each time you open it. Inside a followed folder, rows show each item's
+type and size from the folder's listing, not its first line: that would be
+one more read per file on their pod.
 
 ## What it does not do
 
