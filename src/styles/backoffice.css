@@ -340,3 +340,10 @@ button.small {
     padding: var(--space-6) var(--space-4) calc(88px + env(safe-area-inset-bottom));
   }
 }
+
+/* focusView's ring on a heading only for keyboard users (trackInputModality):
+   a browser rings a programmatically focused heading on page load too, which
+   reads as a stray selection box to a mouse user. Candidate for solid-kit. */
+:root[data-input="pointer"] [tabindex="-1"]:focus-visible {
+  outline: none;
+}

@@ -32,7 +32,7 @@ vi.mock("@inrupt/solid-client", () => ({
   getUrl: (...a: unknown[]) => mockGetUrl(...a),
 }));
 
-const { discoverOidcIssuer } = await import("./auth");
+const { discoverOidcIssuer, redirectUrlFrom } = await import("./auth");
 
 beforeEach(() => {
   mockGetSolidDataset.mockReset();
@@ -84,5 +84,12 @@ describe("discoverOidcIssuer", () => {
 
     expect(message).toMatch(/no solid:oidcIssuer/i);
     expect(message).toMatch(/pod's address/i);
+  });
+});
+
+describe("redirectUrlFrom", () => {
+  it("drops the query string and the fragment, which OIDC refuses", () => {
+    expect(redirectUrlFrom("http://localhost:5173/#/")).toBe("http://localhost:5173/");
+    expect(redirectUrlFrom("https://app.example/x/?code=1&state=2#/c/abc")).toBe("https://app.example/x/");
   });
 });

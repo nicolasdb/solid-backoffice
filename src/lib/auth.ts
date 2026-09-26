@@ -94,15 +94,24 @@ export async function resolveOidcIssuer(identifier: string): Promise<string> {
  * rather than configured, so the app self-registers wherever it is served
  * (Dynamic Client Registration) — localhost and production need no separate
  * setup. The query string is stripped so a second login does not stack
- * redirect parameters.
+ * redirect parameters, and the fragment because OIDC refuses a redirect URL
+ * that has one (an app with hash routes would otherwise never sign in).
  */
 export async function loginWithIdentifier(identifier: string): Promise<void> {
   const oidcIssuer = await resolveOidcIssuer(identifier);
   await session.login({
     oidcIssuer,
-    redirectUrl: window.location.href.split("?")[0],
+    redirectUrl: redirectUrlFrom(window.location.href),
     clientName: APP_NAME,
   });
+}
+
+/** The current address without query string or fragment. */
+export function redirectUrlFrom(href: string): string {
+  const url = new URL(href);
+  url.search = "";
+  url.hash = "";
+  return url.toString();
 }
 
 /**

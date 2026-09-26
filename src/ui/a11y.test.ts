@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { focusView, announce } from "./a11y";
+import { focusView, announce, trackInputModality } from "./a11y";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -94,5 +94,17 @@ describe("announce", () => {
     // Not display:none / hidden, which would remove it from the tree entirely.
     expect(region.className).toBe("visually-hidden");
     expect(region.hasAttribute("hidden")).toBe(false);
+  });
+});
+
+describe("trackInputModality", () => {
+  it("starts as pointer and follows the last input", () => {
+    const root = document.createElement("div");
+    trackInputModality(root);
+    expect(root.dataset.input).toBe("pointer");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab" }));
+    expect(root.dataset.input).toBe("keyboard");
+    document.dispatchEvent(new Event("pointerdown"));
+    expect(root.dataset.input).toBe("pointer");
   });
 });

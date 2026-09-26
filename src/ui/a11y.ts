@@ -63,3 +63,20 @@ export function announce(message: string): void {
   region.textContent = "";
   region.textContent = message;
 }
+
+/**
+ * Records on `<html data-input>` whether the last input was the keyboard or a
+ * pointer, so CSS can show focusView's ring only to someone navigating by
+ * keyboard. Browsers treat a programmatic focus as `:focus-visible` on page
+ * load, which rings the heading for a mouse user who never asked for it; a
+ * screen reader still hears the heading either way.
+ */
+export function trackInputModality(root: HTMLElement = document.documentElement): void {
+  root.dataset.input = "pointer";
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Tab" || e.key === "Enter" || e.key === " " || e.key.startsWith("Arrow")) {
+      root.dataset.input = "keyboard";
+    }
+  }, true);
+  document.addEventListener("pointerdown", () => { root.dataset.input = "pointer"; }, true);
+}

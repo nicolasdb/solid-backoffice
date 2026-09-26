@@ -14,7 +14,7 @@ import "./styles/patterns.css";
 import { completeLogin, logout } from "./lib/auth";
 import { describePodError, getPrimaryPodUrl, isAuthError } from "./lib/pod";
 import { SIGNUP_PROVIDER } from "./config";
-import { focusView } from "./ui/a11y";
+import { focusView, trackInputModality } from "./ui/a11y";
 import { renderError, renderPending } from "./ui/patterns";
 import { renderMembership } from "./onboarding";
 import { captureInvite } from "./invite";
@@ -22,6 +22,7 @@ import { renderWelcome } from "./signup";
 import "./styles/backoffice.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
+trackInputModality();
 
 /** Escapes text before it goes into innerHTML — WebIDs and errors are inputs. */
 function esc(value: string): string {

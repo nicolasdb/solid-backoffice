@@ -158,6 +158,8 @@ export async function renderMembership(
   const logout = () => {
     stopRouting?.();
     stopRouting = null;
+    // The sign-in screen has no tabs; leave no route in the address.
+    history.replaceState(null, "", location.pathname + location.search);
     onLogout();
   };
   stopRouting ??= onRouteChange(rerender);
