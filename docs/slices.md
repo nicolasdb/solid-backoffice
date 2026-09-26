@@ -39,8 +39,7 @@ still `make vps-deploy`.
    `If-None-Match` (`src/lib/read.ts`, CSS 7 answers 304). Memory only.
    Measured with `test/pods/speed.test.ts`. Left: finding a resource's
    `.acl` costs a HEAD before the GET, one round on every share check.
-   `src/lib/read.ts` and the parallel-reads rule go back to solid-kit with
-   the other general fixes.
+   `src/lib/read.ts` and the rules are carried back to solid-kit (ADR 007).
 4. **C · Places**: drawn on the canvas, desktop and phone (file preview and
    editor, following, named people, the technical rules as the advanced
    mode; [layout-brief](layout-brief.md), "Places, second pass"). A few

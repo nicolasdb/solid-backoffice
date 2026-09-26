@@ -1,5 +1,5 @@
 /**
- * Turtle reads for display, revalidated instead of downloaded again (L5).
+ * Turtle reads for display, revalidated instead of downloaded again (ADR 007).
  *
  * Each document read keeps its ETag and body in memory. The next read of the
  * same address asks the server with `If-None-Match`; a 304 hands back the kept

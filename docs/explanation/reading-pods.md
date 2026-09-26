@@ -5,6 +5,9 @@ role or progress. That rule stays. What L5 changed is how the reads are made,
 because on a real network each request costs a round trip, and a chain of
 requests that wait for each other costs one round trip per link. Built and
 run live on 26 Sep 2026: faster on the first load, instant between tabs.
+The rules are solid-kit's
+[ADR 007](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/007-reads-revalidate-never-trust-a-copy.md);
+this page is what they mean here.
 
 ## Three rules, in order of what they save
 

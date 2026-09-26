@@ -10,7 +10,7 @@ ADRs live beside it. This file owns only facts about the backoffice.
 
 The backoffice: accounts, permissions and membership. Built by copying
 `solid-kit` at `b945ab8` (commit `9ed8327` here is the untouched copy), so
-the kit's shell, `src/lib/{auth,pod,conditional,draft}.ts`, `src/ui/` and
+the kit's shell, `src/lib/{auth,pod,conditional,draft,read}.ts`, `src/ui/` and
 `src/styles/{core,theme,patterns}.css` follow the kit's own `CLAUDE.md`.
 Change them here only for a backoffice reason, and carry fixes back to the kit.
 
