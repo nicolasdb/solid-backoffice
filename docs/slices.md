@@ -75,10 +75,10 @@ collective's words from its public `config.ttl`, its own slogan and
 description when set; Newsreader self-hosted); live check next. L4 (members
 and agent on a member's tab) after.
 
-**Deferred (26 Sep 2026): the invitation link does not work live** (copied
-from the collective's tab, opened or pasted into "Join another collective").
-Symptoms not written down yet; look at it with L3, whose invited landing
-starts from that link.
+**The invitation link (26 Sep 2026)** looked wrong because testing ran on
+localhost, where the tab showed the bare `config.ttl` address instead. It now
+always shows the link (`?collective=`), with a note on localhost that it works
+only on that computer.
 
 The `dev` branch deploys to test.nicolasdb.eu (`.github/workflows/ci.yml`);
 push there to try a slice on a phone.

@@ -140,30 +140,30 @@ describe("You run", () => {
     expect(app.textContent).toContain("members: could not be read");
   });
 
-  it("puts the name, the address and the counts in the header", () => {
+  it("puts the name, the invitation link and the counts in the header", () => {
     const app = render();
     const head = app.querySelector(".run-head")!;
     expect(head.querySelector("h1")!.textContent).toBe("HyperScope");
-    expect(head.textContent).toContain(COLLECTIVE.configUrl);
+    expect(head.textContent).toContain(`?collective=${encodeURIComponent(COLLECTIVE.configUrl)}`);
     expect(head.textContent).toContain("1 request");
     expect(head.textContent).toContain("1 member");
   });
 
-  it("copies the address when it is clicked", async () => {
+  it("copies the invitation link when it is clicked", async () => {
     let copied = "";
     Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t: string) => void (copied = t) }, configurable: true });
     render().querySelector<HTMLButtonElement>(".run-head [data-copy]")!.click();
     await tick();
-    expect(copied).toBe(COLLECTIVE.configUrl);
+    expect(copied).toContain(`?collective=${encodeURIComponent(COLLECTIVE.configUrl)}`);
   });
 
-  it("offers no invitation link on localhost, where it would invite nobody, only the address", () => {
+  it("gives the invitation link on localhost too, saying it works only on this computer", () => {
     const head = render().querySelector(".run-head")!;
-    expect(head.querySelector<HTMLElement>("[data-copy]")!.dataset.copy).toBe(COLLECTIVE.configUrl);
-    expect(head.textContent).toContain("served online");
+    expect(head.querySelector<HTMLElement>("[data-copy]")!.dataset.copy).toContain(`?collective=${encodeURIComponent(COLLECTIVE.configUrl)}`);
+    expect(head.textContent).toContain("works only on this computer");
   });
 
-  it("gives the invitation link to copy once served online, and not the address", () => {
+  it("gives the invitation link to copy once served online, with no local note", () => {
     const real = window.location;
     Object.defineProperty(window, "location", { value: new URL("https://test.example/"), configurable: true });
     try {
@@ -171,6 +171,7 @@ describe("You run", () => {
       const copy = head.querySelectorAll<HTMLElement>("[data-copy]");
       expect(copy.length).toBe(1);
       expect(copy[0].dataset.copy).toBe(`https://test.example/?collective=${encodeURIComponent(COLLECTIVE.configUrl)}`);
+      expect(head.textContent).not.toContain("only on this computer");
     } finally {
       Object.defineProperty(window, "location", { value: real, configurable: true });
     }

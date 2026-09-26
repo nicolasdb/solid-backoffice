@@ -19,9 +19,9 @@ https://test.nicolasdb.eu/?collective=https://pod.nicolasdb.eu/hyperscope/config
 ```
 
 You do not have to write it by hand: sign in as the collective, open its tab,
-and click the link under its name to copy it. That line only shows when the
-backoffice is served online; on `localhost` it shows the bare address
-instead, because a link to your own laptop invites nobody.
+and click the link under its name to copy it. On `localhost` the link points
+to your development server, so it works only on that computer (fine for
+trying it in a private window, useless to send).
 
 Send it however you like (mail, chat, a page on your website). What it does:
 
@@ -44,7 +44,9 @@ both are the backoffice's words, written in `src/welcome.ts`:
 > HyperScope invited you. Joining starts with a pod: …
 
 The collective can replace them with its own by adding two lines to its
-`config.ttl`, next to `foaf:name`:
+`config.ttl`, next to `foaf:name`, **and the `@prefix schema:` line at the
+top** (without it the file is no longer valid Turtle, and the backoffice
+refuses the whole collective, naming the missing line):
 
 ```turtle
 @prefix schema: <http://schema.org/> .

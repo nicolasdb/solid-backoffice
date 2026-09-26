@@ -62,6 +62,11 @@ describe("parseCollectiveConfig", () => {
     expect(parseCollectiveConfig(CONFIG, CONFIG_URL)).not.toHaveProperty("slogan");
   });
 
+  it("names the missing prefix line when the file uses one it does not declare", () => {
+    const noPrefix = CONFIG.replace('foaf:name "HyperScope" ;', 'foaf:name "HyperScope" ; schema:slogan "Hi." ;');
+    expect(() => parseCollectiveConfig(noPrefix, CONFIG_URL)).toThrow("@prefix schema: <http://schema.org/> .");
+  });
+
   it("refuses a config with no agent rather than guessing one", () => {
     const noAgent = CONFIG.replace("hs:agent <agents/agent#me> ;", "");
     expect(() => parseCollectiveConfig(noAgent, CONFIG_URL)).toThrow(/hs:agent/);

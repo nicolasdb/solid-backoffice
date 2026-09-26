@@ -247,13 +247,14 @@ export function runSummary(view: RunView): string {
   ].join(" · ");
 }
 
-/**
- * The link that opens the backoffice with this collective's invitation. Not
- * offered on localhost: a link to someone's own laptop invites nobody.
- */
-export function invitationLink(collective: Collective): string | null {
+/** Whether the backoffice runs on this computer, where its links reach nobody else. */
+function isLocal(): boolean {
   const { hostname } = window.location;
-  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") return null;
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+/** The link that opens this backoffice with the collective's invitation. */
+export function invitationLink(collective: Collective): string {
   const url = new URL(window.location.href);
   url.search = "";
   url.hash = "";
@@ -306,12 +307,8 @@ export function renderRunView(view: RunView): string {
       <div class="stack">
         <p class="eyebrow">You run</p>
         <h1 class="display" data-view-title>${esc(collective.name)}</h1>
-        ${
-          link
-            ? `<p class="meta">Invitation link, to send to people: ${copyable(link, "Invitation link copied.")}</p>`
-            : `<p class="meta">Its address: ${copyable(collective.configUrl, "Address copied.")}</p>
-               <p class="meta">The invitation link to send appears once the backoffice is served online, not on localhost.</p>`
-        }
+        <p class="meta">Invitation link, to send to people: ${copyable(link, "Invitation link copied.")}</p>
+        ${isLocal() ? `<p class="meta">This link points to your development server: it works only on this computer.</p>` : ""}
       </div>
       <div class="actions">
         ${requests.length ? `<span class="pill is-wait">${requests.length} ${requests.length === 1 ? "request" : "requests"}</span>` : ""}

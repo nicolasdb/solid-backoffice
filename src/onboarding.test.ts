@@ -212,11 +212,11 @@ describe("slice A — the member's side of the handshake", () => {
     expect(inbox!.hasAttribute("open")).toBe(false);
   });
 
-  it("offers no invitation link from a development server, only the address", async () => {
+  it("says an invitation link from a development server works only on this computer", async () => {
     runs = COLLECTIVE;
     const app = await render(tab(COLLECTIVE));
-    expect(app.textContent).toContain(COLLECTIVE.configUrl);
-    expect(app.textContent).toContain("served online");
+    expect(app.querySelector<HTMLElement>(".run-head [data-copy]")!.dataset.copy).toContain("?collective=");
+    expect(app.textContent).toContain("works only on this computer");
   });
 
   it("will not send a join request before there is an inbox for the answer", async () => {

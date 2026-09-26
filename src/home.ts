@@ -212,7 +212,7 @@ function renderRunError(reason: string): string {
     detail: reason,
     recovery:
       "This account has a config.ttl at its pod root, so it runs a collective, " +
-      "but the file is incomplete. Compare it with docs/reference/collective-files.md.",
+      "but it cannot be used as it is. Compare it with docs/reference/collective-files.md.",
     technical: reason,
   });
 }

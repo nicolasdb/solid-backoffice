@@ -81,8 +81,36 @@ function objectsOf(quads: Quad[], subject: string, predicate: string): string[] 
  * Parses a collective's `config.ttl`. Throws, naming what is missing, rather
  * than filling a default: a guessed agent WebID is a grant to the wrong party.
  */
+/** The prefix line a config.ttl needs for each namespace it may use. */
+const KNOWN_PREFIXES: Record<string, string> = {
+  hs: NS.hs,
+  foaf: NS.foaf,
+  ldp: NS.ldp,
+  schema: NS.schema,
+  org: NS.org,
+  rdf: NS.rdf,
+};
+
+/**
+ * Parse errors say what the parser saw; for a missing prefix, also say the
+ * line that fixes it (typically `schema:` added for the welcome words).
+ */
+function explainParseError(err: unknown, configUrl: string): Error {
+  const message = err instanceof Error ? err.message : String(err);
+  const prefix = /Undefined prefix "(\w+):"/.exec(message)?.[1];
+  const fix = prefix && KNOWN_PREFIXES[prefix]
+    ? ` Add this line at the top of the file: @prefix ${prefix}: <${KNOWN_PREFIXES[prefix]}> .`
+    : "";
+  return new Error(`${configUrl} is not valid Turtle: ${message}.${fix}`);
+}
+
 export function parseCollectiveConfig(turtle: string, configUrl: string, expected?: string): Collective {
-  const quads = parse(turtle, configUrl);
+  let quads: Quad[];
+  try {
+    quads = parse(turtle, configUrl);
+  } catch (err) {
+    throw explainParseError(err, configUrl);
+  }
   const declared = quads
     .filter((q) => q.predicate.value === NS.rdf + "type" && q.object.value === NS.hs + "Collective")
     .map((q) => q.subject.value);
