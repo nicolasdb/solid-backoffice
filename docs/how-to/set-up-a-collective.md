@@ -38,7 +38,7 @@ files and `.acl` documents on its pod.
    opening the invitation link: the collective's card appears, and
    `membres.ttl` stays unreadable.
 7. **Invite** by sending the invitation link, copied from the collective's
-   tab in the backoffice:
+   tab in the backoffice ([invite people](invite-people.md)):
    `https://<backoffice>/?collective=https://<pod>/<collective>/config.ttl`.
    Opened, it shows the invited welcome; pasted into "Join another
    collective" by someone already signed in, it finds the collective.
