@@ -416,8 +416,8 @@ the provider, a real browser, a phone, both themes.
    preview: Download saves it with its name.
 5. `···` on a row: a menu under it (above it on the last rows) with its
    name, Rename, Move and Delete, then who can access it as chips (a name
-   each, what they can do on hover; ✎ can edit). Hovering "Who can access
-   it ⓘ" says where the rules come from ("Its own rules" / "Same as
+   each, what they can do on hover; can edit has a green edge). Hovering
+   "Who can access it" says where the rules come from ("Its own rules" / "Same as
    projects/"). While the rules are read, nothing in the menu moves. Move's
    list of folders reads in both themes. Escape closes it and focus
    returns to `···`. On a phone (≤ 40rem): the pod picker

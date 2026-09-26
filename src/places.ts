@@ -508,7 +508,7 @@ function renderMenu(): string {
         ${renderActions(url, changes.change, changeEnv())}
       </div>
       <div class="menu-sec">
-        <span class="label-mono"${origin ? ` title="${esc(origin)}"` : ""}>Who can access it${origin ? `<span aria-hidden="true"> ⓘ</span><span class="visually-hidden">: ${esc(origin)}</span>` : ""}</span>
+        <span class="label-mono"${origin ? ` title="${esc(origin)}"` : ""}>Who can access it${origin ? `<span class="visually-hidden">: ${esc(origin)}</span>` : ""}</span>
         ${who}
         <button class="ghost small" type="button" id="change-access"${d ? "" : " disabled"}>Change who can access it</button>
       </div>
