@@ -47,7 +47,9 @@
   gap: var(--space-2);
 }
 
-.step code {
+.step code,
+.step a,
+.view-head code {
   overflow-wrap: anywhere;
 }
 
@@ -199,7 +201,11 @@ button.small {
   font-size: var(--text-small);
 }
 
+/* min-width: 0 so a long address wraps instead of widening the page: on a
+   phone a page wider than the screen zooms out and the fixed tab bar drifts
+   off the bottom. */
 .screen-wide {
+  min-width: 0;
   max-width: 80rem;
   margin: 0 auto;
   padding: var(--space-8) var(--space-8) calc(var(--space-12) + env(safe-area-inset-bottom));
