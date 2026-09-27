@@ -47,7 +47,7 @@ vi.mock("./collective", async (importOriginal) => ({
 }));
 
 const admin = await import("./admin");
-const { buildJoin, buildAnnounce } = await import("./activity");
+const { buildJoin, buildAnnounce, buildUndoAnnounce } = await import("./activity");
 const { NS } = await import("./vocab");
 
 const POD = "https://pod.example/hs/";
@@ -83,6 +83,29 @@ describe("parseActivity", () => {
     expect(join.published).toBe("2026-09-25T10:00:00.000Z");
     const ann = admin.parseActivity(buildAnnounce(INES, "https://pod.example/ines/output2/hs/", COLLECTIVE.group), JOIN_URL);
     expect(ann).toMatchObject({ type: "Announce", object: "https://pod.example/ines/output2/hs/", target: COLLECTIVE.group });
+  });
+
+  it("reads a stop-sharing message as an Undo of that folder's announcement", () => {
+    const folder = "https://pod.example/ines/output2/hs/";
+    const undo = admin.parseActivity(buildUndoAnnounce(INES, folder, COLLECTIVE.group), JOIN_URL);
+    expect(undo).toMatchObject({ type: "Undo", actor: INES, object: folder, target: COLLECTIVE.group, problem: null });
+    // An Undo of anything else is not understood: kept as "other".
+    const other = admin.parseActivity(`<> a <${NS.as}Undo>; <${NS.as}actor> <${INES}>; <${NS.as}object> <${folder}>.`, JOIN_URL);
+    expect(other.type).toBe("other");
+  });
+
+  it("lists a folder as shared when its latest message is an announcement: share, stop, share again", () => {
+    const folder = "https://pod.example/ines/output2/hs/";
+    const at = (t: string) => new Date(`2026-09-27T${t}:00Z`);
+    const msg = (turtle: string) => admin.parseActivity(turtle, JOIN_URL);
+    const shared = msg(buildAnnounce(INES, folder, COLLECTIVE.group, at("10:00")));
+    const stopped = msg(buildUndoAnnounce(INES, folder, COLLECTIVE.group, at("11:00")));
+    const again = msg(buildAnnounce(INES, folder, COLLECTIVE.group, at("12:00")));
+    expect(admin.announcedBy([shared], INES)).toEqual([folder]);
+    expect(admin.announcedBy([stopped, shared], INES)).toEqual([]); // order in the inbox does not matter
+    expect(admin.announcedBy([again, stopped, shared], INES)).toEqual([folder]);
+    expect(admin.announcedBy([shared, shared], INES)).toEqual([folder]);
+    expect(admin.announcedBy([shared], "https://pod.example/other#me")).toEqual([]);
   });
 
   it("keeps a message it does not understand, naming its type", () => {

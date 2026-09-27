@@ -53,7 +53,9 @@ Nothing already collected is ever removed, by either side.
 
 - **Delete a file** from your folder: the collective marks it as removed and
   keeps the copies it made.
-- **Stop sharing**: the folder's own rules are deleted; nothing new is
+- **Stop sharing**: the folder's own rules are deleted, then the
+  collective is told (an `as:Undo` of your announcement, ADR 006 §1 step
+  5), so its members table stops listing the folder; nothing new is
   collected; earlier copies stay. "Inherit from parent" is not a rule that
   could be restored, it is the absence of one: without its own `.acl`, the
   server applies the nearest folder above that has rules (`output2/`, or

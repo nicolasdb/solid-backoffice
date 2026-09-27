@@ -273,12 +273,12 @@ Not in C, on purpose:
 - The invitation link is trimmed and copied whole; the drawer closes
   with ✕.
 
-Left open: **Stop sharing tells nobody.** The collective's "Shares"
-column comes from `as:Announce` only, so it keeps the folder after a
-member stops (the note under the table says only their pod can confirm).
-An `as:Undo` of the announcement to the collective's inbox, read by
-`src/lib/admin.ts`, would close it; small, B's side and A's.
-Also left open, each written where it belongs: the pod's default application
+Closed after C (27 Sep 2026): **Stop sharing tells the collective.** It
+revokes, then sends an `as:Undo` of the announcement (described in
+place) to the collective's inbox; "Shares" follows the latest message per
+member and folder (`announcedBy`, `src/lib/admin.ts`), so share, stop and
+share again read right. Added to solid-kit ADR 006 §1 as step 5.
+Left open, each written where it belongs: the pod's default application
 (provider note, D), a rename telling the people it names through their
 inbox ("Your inbox, later", D), editing someone else's pod (J9), and the
 canvas, which does not yet show the menu's links nor the side list

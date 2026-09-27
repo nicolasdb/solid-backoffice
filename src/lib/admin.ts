@@ -48,7 +48,8 @@ function parse(turtle: string, base: string): Quad[] {
 /** One message in an inbox. Messages this app does not understand are kept, as "other". */
 export interface InboxMessage {
   url: string;
-  type: "Join" | "Announce" | "other";
+  /** "Undo": a member stopped sharing; `object` is then the folder the announcement named. */
+  type: "Join" | "Announce" | "Undo" | "other";
   /** The full `rdf:type` IRI, so an unknown message can still be named. */
   rawType: string | null;
   actor: string | null;
@@ -89,19 +90,44 @@ export function parseActivity(turtle: string, url: string): InboxMessage {
   const one = (predicate: string) =>
     quads.find((q) => q.subject.value === subject && q.predicate.value === predicate)?.object.value ?? null;
   const types = quads.filter((q) => q.subject.value === subject && q.predicate.value === RDF_TYPE).map((q) => q.object.value);
-  const known = types.find((t) => t === NS.as + "Join" || t === NS.as + "Announce");
+  const undone = (() => {
+    // An as:Undo understood here undoes an announcement described in place.
+    if (!types.includes(NS.as + "Undo")) return null;
+    const inner = quads.find((q) => q.subject.value === subject && q.predicate.value === NS.as + "object")?.object;
+    if (!inner || inner.termType !== "BlankNode") return null;
+    const of = (p: string) => quads.find((q) => q.subject.equals(inner) && q.predicate.value === p);
+    return quads.some((q) => q.subject.equals(inner) && q.predicate.value === RDF_TYPE && q.object.value === NS.as + "Announce")
+      ? (of(NS.as + "object")?.object.value ?? null)
+      : null;
+  })();
+  const known = undone ? NS.as + "Undo" : types.find((t) => t === NS.as + "Join" || t === NS.as + "Announce");
 
   return {
     url,
-    type: known ? (known.slice(NS.as.length) as "Join" | "Announce") : "other",
+    type: known ? (known.slice(NS.as.length) as "Join" | "Announce" | "Undo") : "other",
     rawType: known ?? types[0] ?? null,
     actor: one(NS.as + "actor"),
-    object: one(NS.as + "object"),
+    object: undone ?? one(NS.as + "object"),
     target: one(NS.as + "target"),
     summary: one(NS.as + "summary"),
     published: one(NS.as + "published"),
     problem: null,
   };
+}
+
+/**
+ * The folders a member shares, from their messages: for each folder, the
+ * latest of its announcements and undos says (share, stop, share again).
+ * Sharing twice sends two announcements: one folder is listed once.
+ */
+export function announcedBy(inbox: InboxMessage[], webId: string): string[] {
+  const latest = new Map<string, InboxMessage>();
+  for (const m of inbox) {
+    if ((m.type !== "Announce" && m.type !== "Undo") || m.actor !== webId || !m.object) continue;
+    const was = latest.get(m.object);
+    if (!was || (m.published ?? "") >= (was.published ?? "")) latest.set(m.object, m);
+  }
+  return [...latest].filter(([, m]) => m.type === "Announce").map(([folder]) => folder);
 }
 
 async function readMessage(url: string): Promise<InboxMessage> {
@@ -411,9 +437,6 @@ export async function readMembers(
     nick: entry.nick,
     state: memberState(persons[i], collective.group),
     canReadRoster: readers.has(entry.webId) || entry.webId === owner,
-    // Sharing twice sends two announcements: one folder is listed once.
-    announced: [
-      ...new Set(inbox.filter((m) => m.type === "Announce" && m.actor === entry.webId && m.object).map((m) => m.object!)),
-    ],
+    announced: announcedBy(inbox, entry.webId),
   }));
 }

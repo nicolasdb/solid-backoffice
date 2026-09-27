@@ -268,6 +268,10 @@ need one too, or accepting is refused before any write.
    Share, `output2/` has its own rules (you, your agent Can edit, not
    public); after Stop sharing, the folder is still not public (open its
    address in a private window).
+8. **The collective hears it** (27 Sep 2026). As the collective, the
+   members table shows the folder under "Shares"; the member stops
+   sharing; reload: the folder is gone from "Shares", and nothing new sits
+   under "Other messages". The member shares again: it is back.
 
 Write down anything the copy got wrong, not just what failed.
 

@@ -13,7 +13,7 @@
  */
 import { routeHref } from "./router";
 import { shareFolder, stopSharing } from "./lib/sharing";
-import { buildAnnounce, buildJoin, profileEdits, sendToInbox, updateOwnProfile, type Collective } from "./lib/collective";
+import { buildAnnounce, buildJoin, buildUndoAnnounce, profileEdits, sendToInbox, updateOwnProfile, type Collective } from "./lib/collective";
 import { readPerson, readRoster } from "./lib/admin";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
@@ -202,9 +202,14 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   const unpublish = app.querySelector<HTMLButtonElement>(`#unpublish-${i}`);
   if (unpublish) {
     bindButton(unpublish, async () => {
+      // Revoke, then tell: the collective's "Shares" is read from these messages.
       await stopSharing(folderUrl, webId, ctx.podUrl, profile.delegates);
+      await sendToInbox(collective.inbox, buildUndoAnnounce(webId, folderUrl, collective.group));
       toast(`${collective.name} can no longer read the folder. Copies it already made stay.`, {
-        undo: () => void shareFolder(folderUrl, webId, ctx.podUrl, collective.agent, profile.delegates).then(rerender),
+        undo: () =>
+          void shareFolder(folderUrl, webId, ctx.podUrl, collective.agent, profile.delegates)
+            .then(() => sendToInbox(collective.inbox, buildAnnounce(webId, folderUrl, collective.group)))
+            .then(rerender),
       });
     }, rerender);
   }

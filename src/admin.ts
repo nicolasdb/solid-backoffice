@@ -90,7 +90,7 @@ export async function loadRun(collective: Collective, owner: string): Promise<Ru
     knownNick: nicks.get(person.webId) ?? null,
   }));
   const others = messages.filter(
-    (m) => !joins.some((j) => j.message === m) && !(m.type === "Announce" && m.actor && listed.has(m.actor))
+    (m) => !joins.some((j) => j.message === m) && !((m.type === "Announce" || m.type === "Undo") && m.actor && listed.has(m.actor))
   );
   return { collective, owner, requests, members, others, inboxError, membersError };
 }
@@ -235,7 +235,9 @@ function renderOther(message: InboxMessage, i: number): string {
     message.problem ??
     (message.type === "Announce"
       ? `An announcement from someone not on the roster${message.object ? `: ${message.object}` : ""}.`
-      : `A message of type ${message.rawType ?? "unknown"}.`);
+      : message.type === "Undo"
+        ? `Someone not on the roster stopped sharing${message.object ? ` ${message.object}` : ""}.`
+        : `A message of type ${message.rawType ?? "unknown"}.`);
   return `
     <li>
       <a href="${esc(message.url)}">${esc(message.url)}</a>
@@ -297,7 +299,7 @@ export function renderRunView(view: RunView): string {
            <tbody>${members.map((m, i) => renderMember(m, i, collective, owner)).join("")}</tbody>
          </table>
          <p class="meta" id="find-none" hidden>No member matches.</p>
-         <p class="meta">"Shares" comes from each member's announcement: only their pod can confirm the folder is still shared.</p>
+         <p class="meta">"Shares" comes from each member's messages (shared, stopped): only their pod can confirm the folder is still shared.</p>
          <p class="step-error error" role="alert" hidden></p>`
       : `<p class="lead">Nobody yet. Accepted requests appear here.</p>`;
 

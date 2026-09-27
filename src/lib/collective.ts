@@ -33,7 +33,7 @@ import { readTurtle } from "./read";
 import { NS } from "./vocab";
 
 export { NS };
-export { buildJoin, buildAnnounce } from "./activity";
+export { buildJoin, buildAnnounce, buildUndoAnnounce } from "./activity";
 
 const FOAF_NAME = NS.foaf + "name";
 const FOAF_MEMBER = NS.foaf + "member";

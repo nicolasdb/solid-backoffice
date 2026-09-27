@@ -97,6 +97,17 @@ describe("members, from both sides", () => {
     expect(amina).toMatchObject({ state: "member", nick: "amina", canReadRoster: true });
     expect(amina.announced).toContain(cast.amina.pod + "output2/hyperscope/");
     expect(members.find((m) => m.webId === cast.ines.webId)).toMatchObject({ state: "member", canReadRoster: true });
+
+    // Amina stops sharing: the Undo reaches the inbox, and the folder leaves "Shares".
+    await actAs("amina");
+    const { buildUndoAnnounce } = await import("../../src/lib/activity");
+    await new Promise((r) => setTimeout(r, 5)); // a later "published"
+    await sendToInbox(hs.inbox, buildUndoAnnounce(cast.amina.webId, cast.amina.pod + "output2/hyperscope/", hs.group));
+    await actAs("hyperscope");
+    const inbox = await admin.readInbox(hs);
+    expect(inbox.some((m) => m.type === "Undo" && m.actor === cast.amina.webId)).toBe(true);
+    const after = await admin.readMembers(hs, owner, inbox);
+    expect(after.find((m) => m.webId === cast.amina.webId)!.announced).toEqual([]);
   });
 
   it("shows a member whose profile no longer declares it as left", async () => {

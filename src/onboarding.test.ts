@@ -80,7 +80,7 @@ vi.mock("./lib/collective", async (importOriginal) => {
     },
     sendToInbox: async (inbox: string, turtle: string) => {
       if (failInbox) throw new Error(`The inbox at ${inbox} refused the message (403).`);
-      calls.push(`inbox ${turtle.includes("Announce") ? "Announce" : "Join"}`);
+      calls.push(`inbox ${turtle.includes("Undo") ? "Undo" : turtle.includes("Announce") ? "Announce" : "Join"}`);
       return null;
     },
   };
@@ -350,7 +350,7 @@ describe("slice A — the member's side of the handshake", () => {
     expect(app.textContent).toContain("does not remove copies already made");
     expect(app.querySelector('a[href="#/p/output2/hyperscope/"]')).not.toBeNull(); // in Pods, signed in: not the raw address
     await click(app, "#unpublish-0");
-    expect(calls).toEqual([`inherit ${POD}output2/hyperscope/`]);
+    expect(calls).toEqual([`inherit ${POD}output2/hyperscope/`, "inbox Undo"]); // revoke, then tell
   });
 
   it("treats an unreadable roster as pending, not as refused", async () => {
