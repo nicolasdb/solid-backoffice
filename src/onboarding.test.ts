@@ -348,6 +348,7 @@ describe("slice A — the member's side of the handshake", () => {
     agentGrants = [{ webId: COLLECTIVE.agent, modes: ["read"] }];
     const app = await render(tab(COLLECTIVE));
     expect(app.textContent).toContain("does not remove copies already made");
+    expect(app.querySelector('a[href="#/p/output2/hyperscope/"]')).not.toBeNull(); // in Pods, signed in: not the raw address
     await click(app, "#unpublish-0");
     expect(calls).toEqual([`inherit ${POD}output2/hyperscope/`]);
   });
@@ -381,6 +382,24 @@ describe("layout A — tabs", () => {
     app = await render();
     expect(window.location.hash).toBe("#/p/");
     expect(places).toContain("mount  ");
+  });
+
+  it("lands where an open link points: Pods for your own pod, read with your WebID otherwise, once", async () => {
+    const opened = (address: string) => {
+      window.history.replaceState(null, "", `/?open=${encodeURIComponent(address)}`);
+      captureInvite();
+      window.history.replaceState(null, "", "/");
+    };
+    opened(`${POD}output2/hyperscope/`);
+    await render();
+    expect(window.location.hash).toBe("#/p/output2/hyperscope/"); // before the invitation waiting
+    expect(sessionStorage.getItem("solid-backoffice.open")).toBeNull();
+    const theirs = "https://pod.example/xavier/shared/";
+    opened(theirs);
+    await render();
+    expect(window.location.hash).toBe(`#/f/${encodeURIComponent(theirs)}`);
+    await render();
+    expect(window.location.hash).toBe("#/c");
   });
 
   it("lands on Pods once the invitation's collective is joined, and forgets the invitation", async () => {

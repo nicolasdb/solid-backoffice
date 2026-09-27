@@ -11,6 +11,7 @@
  * Orders of writes are unchanged from the checklist they came from, and
  * pinned in src/onboarding.test.ts: folder, grant, then announce.
  */
+import { routeHref } from "./router";
 import { shareFolder, stopSharing } from "./lib/sharing";
 import { buildAnnounce, buildJoin, profileEdits, sendToInbox, updateOwnProfile, type Collective } from "./lib/collective";
 import { readPerson, readRoster } from "./lib/admin";
@@ -106,7 +107,7 @@ function agentCard(collective: Collective): string {
 }
 
 export function renderMemberView(view: CollectiveView, i: number, roster: RosterMember[] | null, webId: string): string {
-  const { collective, state, folderUrl, published } = view;
+  const { collective, state, published } = view;
   const name = esc(collective.name);
   const nick = roster?.find((m) => m.webId === webId)?.nick ?? null;
 
@@ -127,7 +128,7 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
       <p class="actions">
         ${
           published
-            ? `<a href="${esc(folderUrl)}">${esc(folderUrl)}</a>
+            ? `<a href="${routeHref({ name: "places", path: collective.bundleFolder })}">Open ${esc(collective.bundleFolder)}</a>
                <button id="unpublish-${i}" class="ghost">Stop sharing</button>`
             : `<button id="publish-${i}">Share the folder</button>`
         }

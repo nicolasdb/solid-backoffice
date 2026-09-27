@@ -281,6 +281,14 @@ protocol, so it shows on any provider. No pod-wide index exists, so it can
 list only the rules visited; how to present that honestly is the first
 thing to settle.
 
+**The pod's default application** (provider note, 27 Sep 2026). A raw
+pod address opened in a browser shows CSS's "Not logged in" page, because
+the sign-in lives in the app. CSS can send browsers asking for HTML to a
+default app: pointed at the backoffice's `?open=<address>`, every pod link
+would open signed in. Server configuration, ops not this repo; the
+backoffice's own `?open=` links already work on any provider
+([following](explanation/following.md#links-that-open-signed-in)).
+
 **Your inbox, later (not scheduled).** The handshake lives in two files:
 `org:memberOf` in your `profile/card`, `foaf:member` in the collective's
 roster. The `as:Accept` / `as:Reject` / `as:Remove` a collective posts to

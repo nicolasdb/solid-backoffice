@@ -74,8 +74,9 @@ one changes, change the other. Never point it at the real provider.
 - `src/signup.ts` — the screen before sign-in: sign in, or create an account
   (invitation → create first), inside the landing of `src/welcome.ts`
   (generic words, or the invited collective's from its public `config.ttl`,
-  read before sign-in). `src/invite.ts` carries the invitation and the
-  new account's name across the provider's sign-in page;
+  read before sign-in). `src/invite.ts` carries the invitation (`?collective=`), an open link
+  (`?open=`, landing in Pods or on the followed view) and the new
+  account's name across the provider's sign-in page;
   `src/lib/newcomer.ts` writes that name and the inbox on the first home
   screen.
 - `src/onboarding.ts` — signed in: reads the pods (`load`: the collective

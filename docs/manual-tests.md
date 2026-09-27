@@ -517,6 +517,13 @@ the provider, a real browser, a phone, both themes.
    from the message: it is back.
 6. In a private window as someone else, `settings/following.ttl` answers
    403 (or 401 signed out).
+7. **Open links** (27 Sep 2026). On a collective's screen, the shared
+   folder's link opens it in Pods, not the raw pod page. In Pods, give a
+   folder to someone by name: "Who can access it" shows "Link to send
+   them", trimmed; copy it. In a private window, open it: the landing,
+   sign in as that person, and you land on the folder read with their
+   WebID, "Follow it" beside it. Open the same link as yourself: it opens
+   in Pods. Paste it into "Follow an address": the folder is followed.
 
 ### C6 · Technical rules, advanced mode
 

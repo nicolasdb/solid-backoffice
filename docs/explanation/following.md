@@ -31,6 +31,26 @@ and each time you open it. Inside a followed folder, rows show each item's
 type and size from the folder's listing, not its first line: that would be
 one more read per file on their pod.
 
+## Links that open signed in
+
+A pod address opened in a browser tab is read by nobody in particular: the
+sign-in lives inside the app, not in a cookie the pod could see, so anything
+that is not public answers "Not logged in". So the backoffice gives two
+kinds of link instead:
+
+- **Inside the app**, a link to something on your own pod opens it in Pods
+  (your shared folder, on a collective's screen).
+- **To send someone**, "Who can access it" offers a link to this backoffice,
+  `…/?open=<address>`. Whoever opens it signs in if needed, then lands on
+  the item read with their WebID, a "Follow it" button beside it; on their
+  own pod, it opens in Pods. It survives the sign-in page the way an
+  invitation does, and pasted into "Follow an address" it follows the
+  address inside.
+
+On our provider, a raw pod address could also send a browser to the
+backoffice: that is the server's "default application", a provider
+setting ([slices, D](../slices.md#d--provider-layer-shown-only-on-our-provider)).
+
 ## What it does not do
 
 It never writes to someone else's pod, and it cannot list what is shared

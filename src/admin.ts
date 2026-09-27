@@ -6,6 +6,7 @@
  * The protocol, and the order of its writes, is in `lib/admin.ts`. This file
  * only decides what to show and which lib call a button makes.
  */
+import { appLink, linkFace } from "./invite";
 import {
   accept,
   grantMemberRead,
@@ -260,21 +261,12 @@ function isLocal(): boolean {
 
 /** The link that opens this backoffice with the collective's invitation. */
 export function invitationLink(collective: Collective): string {
-  const url = new URL(window.location.href);
-  url.search = "";
-  url.hash = "";
-  // ":" and "/" are allowed as they are in a query (RFC 3986), so the address
-  // stays readable; only what would break the link (&, #, +, ?, spaces) is
-  // encoded. searchParams.get reads both forms back the same.
-  const address = encodeURIComponent(collective.configUrl).replace(/%3A/gi, ":").replace(/%2F/gi, "/");
-  return `${url.href}?collective=${address}`;
+  return appLink("collective", collective.configUrl);
 }
 
 /** The invitation link as shown: the app's host, then the config's last two segments. */
 export function invitationFace(link: string): string {
-  const url = new URL(link);
-  const tail = new URL(url.searchParams.get("collective") ?? url.href).pathname.split("/").filter(Boolean).slice(-2).join("/");
-  return `${url.host}/?collective=…/${tail}`;
+  return linkFace(link, "collective");
 }
 
 /**

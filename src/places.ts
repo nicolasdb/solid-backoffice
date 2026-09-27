@@ -60,6 +60,8 @@ import { bindRules, rawDirty, renderRules, startRaw, type RawEdit } from "./raw-
 
 export type { Group };
 import { focusView } from "./ui/a11y";
+import { bindCopy } from "./steps";
+import { openFromInput } from "./invite";
 
 export interface PlacesContext {
   webId: string;
@@ -804,6 +806,7 @@ function bind(): void {
     location.hash = (e.target as HTMLSelectElement).value;
   });
   bindColumns();
+  bindCopy(frame);
   frame.querySelectorAll<HTMLButtonElement>("[data-menu]").forEach((button) =>
     button.addEventListener("click", () => openMenu(button.dataset.menu!, button))
   );
@@ -1250,7 +1253,7 @@ function bindFollowing(): void {
   });
   frame.querySelector<HTMLFormElement>("#follow-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const address = frame!.querySelector<HTMLInputElement>("#follow-address")!.value;
+    const address = openFromInput(frame!.querySelector<HTMLInputElement>("#follow-address")!.value);
     followForm = { error: null, pending: true };
     draw(false);
     try {

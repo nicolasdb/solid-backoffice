@@ -7,14 +7,66 @@
  */
 
 /**
- * An invitation is a link: `…/?collective=<address>`. Call before anything
- * else on startup.
+ * A link to this backoffice carrying one address: `…/?collective=<address>`
+ * (an invitation) or `…/?open=<address>` (something shared with you).
+ * ":" and "/" are allowed as they are in a query (RFC 3986), so the address
+ * stays readable; only what would break the link (&, #, +, ?, spaces) is
+ * encoded. searchParams.get reads both forms back the same.
+ */
+export function appLink(param: "collective" | "open", address: string): string {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  return `${url.href}?${param}=${encodeURIComponent(address).replace(/%3A/gi, ":").replace(/%2F/gi, "/")}`;
+}
+
+/** A link as shown: the app's host, then the address's last two segments. */
+export function linkFace(link: string, param: "collective" | "open"): string {
+  const url = new URL(link);
+  const tail = new URL(url.searchParams.get(param) ?? url.href).pathname.split("/").filter(Boolean).slice(-2).join("/");
+  return `${url.host}/?${param}=…/${tail}`;
+}
+
+/**
+ * An invitation is a link: `…/?collective=<address>`; something shared, `…/?open=<address>`.
+ * Call before anything else on startup.
  */
 const INVITE_KEY = "solid-backoffice.invite";
+const OPEN_KEY = "solid-backoffice.open";
 
 export function captureInvite(): void {
-  const address = new URL(window.location.href).searchParams.get("collective");
+  const params = new URL(window.location.href).searchParams;
+  const address = params.get("collective");
   if (address) setInvite(address);
+  const open = params.get("open");
+  if (open) setOpen(open);
+}
+
+/** What someone pastes to follow: an open link (its `?open=` is the address) or the address itself. */
+export function openFromInput(text: string): string {
+  const trimmed = text.trim();
+  try {
+    return new URL(trimmed).searchParams.get("open") ?? trimmed;
+  } catch {
+    return trimmed;
+  }
+}
+
+export function pendingOpen(): string | null {
+  try {
+    return sessionStorage.getItem(OPEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setOpen(address: string | null): void {
+  try {
+    if (address) sessionStorage.setItem(OPEN_KEY, address);
+    else sessionStorage.removeItem(OPEN_KEY);
+  } catch {
+    /* storage blocked: see the header */
+  }
 }
 
 /**

@@ -29,7 +29,7 @@ import { focusView } from "./ui/a11y";
 import { busy } from "./ui/typing";
 import { renderError, renderPending, toast } from "./ui/patterns";
 import { bindRun, loadRun, renderRunView, type RunView } from "./admin";
-import { pendingInvite, setInvite, takeNewcomer } from "./invite";
+import { pendingInvite, pendingOpen, setInvite, setOpen, takeNewcomer } from "./invite";
 import { bindCollectives, renderCollectivesView } from "./collectives";
 import { bindYou, readSource, renderYouView, youTodo } from "./you";
 import { bindMember, renderMemberView, loadRoster } from "./member";
@@ -269,11 +269,21 @@ export async function renderMembership(
 }
 
 /**
- * Where `#/` lands: Collectives while an invitation waits (joining is the one
- * thing waiting on you), Pods otherwise. The address bar then says which.
+ * Where `#/` lands: what an open link named (in Pods when it is on your pod,
+ * read with your WebID when it is someone else's), then Collectives while an
+ * invitation waits (joining is the one thing waiting on you), Pods otherwise.
+ * The address bar then says which.
  */
-function landing(): Route {
-  const route: Route = pendingInvite() ? { name: "collectives" } : { name: "places", path: "" };
+export function landing(podUrl: string): Route {
+  const open = pendingOpen();
+  setOpen(null);
+  const route: Route = open
+    ? open.startsWith(podUrl)
+      ? { name: "places", path: open.slice(podUrl.length) }
+      : { name: "followed", address: open }
+    : pendingInvite()
+      ? { name: "collectives" }
+      : { name: "places", path: "" };
   replaceRoute(route);
   return route;
 }
@@ -290,7 +300,7 @@ async function compose(
   const ctx: ViewContext = { webId, podUrl, profile: data.profile, rerender };
 
   let route = currentRoute();
-  if (route.name === "home") route = landing();
+  if (route.name === "home") route = landing(podUrl);
   let body: string;
   let bind: () => void;
   const target = route.name === "collective" ? route.address : null;

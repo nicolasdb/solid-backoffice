@@ -34,6 +34,8 @@ import { trimAddress, webIdName } from "./ui/address";
 import { readTurtle } from "./lib/read";
 import { describePodError } from "./lib/pod";
 import { esc } from "./ui/patterns";
+import { appLink, linkFace } from "./invite";
+import { copyable } from "./steps";
 
 export interface Group {
   name: string;
@@ -223,6 +225,15 @@ function renderChips(draft: Draft, env: AccessEnv): string {
     .join("");
 }
 
+/**
+ * The link to send: it opens the item in this backoffice, signed in, because
+ * the item's own address opens in a browser with no sign-in and is refused.
+ */
+function sendLine(url: string): string {
+  const link = appLink("open", url);
+  return `<p class="meta send-link">Link to send them: ${copyable(link, "Link copied. It opens here, signed in.", linkFace(link, "open"))}</p>`;
+}
+
 export function renderAccess(draft: Draft | null, env: AccessEnv, loadError: string | null = null): string {
   if (loadError) return `<div class="panel-block" id="access"><p class="error">${esc(loadError)}</p></div>`;
   if (!draft) return `<div class="panel-block" id="access"><p class="meta">Reading its rules…</p></div>`;
@@ -259,7 +270,8 @@ export function renderAccess(draft: Draft | null, env: AccessEnv, loadError: str
       ${
         showPeople
           ? `<ul class="people">${draft.agents.map((a, i) => renderPerson(a, i, env, locked)).join("")}</ul>
-             ${draft.visibility === "link" && draft.agents.length ? `<p class="meta">Anyone can read it; these people have what their line says.</p>` : ""}`
+             ${draft.visibility === "link" && draft.agents.length ? `<p class="meta">Anyone can read it; these people have what their line says.</p>` : ""}
+             ${sendLine(draft.url)}`
           : ""
       }
       ${
