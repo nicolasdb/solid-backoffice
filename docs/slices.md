@@ -10,15 +10,17 @@ who accepts them, then everyone's daily work.
 test.nicolasdb.eu, and reworked from what that showed (below, under C,
 "Closed"). With it the tabs' third pass and the sharing fixes.
 
-**D · Your agents: built, deployed on test.nicolasdb.eu, live test in
-progress** (27 Sep 2026). Create an agent, connect it to an AI, choose its
+**D · Your agents is closed** (27 Sep 2026, after its main journey ran
+live). Create an agent, connect it to an AI, choose its
 folders, revoke, delete, all on You (below, under D). pocpod0's connector
 now allows test.nicolasdb.eu. **Run live the same day:** an agent created,
 connected in claude.ai, given two folders (read and edit), its connector
-revoked, then deleted and retired (a new "Claude" became `claude-2`). Left
-to run in [manual tests](manual-tests.md) "D · Your agents": 1 (hidden for
-another provider), 2 (the password form when the provider's session has
-ended), 9 (the card's states, the menu), 10 (phone, themes).
+revoked, then deleted and retired (a new "Claude" became `claude-2`).
+Closed with four checks still to run, listed in
+[manual tests](manual-tests.md) "D · Your agents": 1 (hidden for another
+provider), 2 (the password form when the provider's session has ended), 9
+(the card's states, the menu), 10 (phone, themes). A failure there reopens
+D.
 Still open: the agent's document pointing back at its human (no triple
 chosen; ADR material for solid-kit), and the connector keeping the date a
 grant was revoked (pocpod0).
@@ -67,8 +69,9 @@ still `make vps-deploy`.
    `···` opens a menu, "Change who can access it" a drawer, one panel for
    folders and files with Inherit from parent; addresses drop your
    provider's host. The write logic is unchanged. **Closed on 27 Sep
-   2026** after live use (see C, "Closed"). Next: D (with People &
-   apps), then E.
+   2026** after live use (see C, "Closed"). D followed and is closed
+   (27 Sep 2026); People & apps left D (a later entry in Pods' side
+   list). Next: E.
 5. **Tabs, third pass** (26 Sep 2026, [layout-brief](layout-brief.md),
    canvas "Tabs (third pass)"): built the same day. Sign-in lands on Pods
    (Collectives while an invitation waits); two tabs, Pods and
@@ -76,7 +79,8 @@ still `make vps-deploy`.
    under the avatar with `profile/card` shown read only. Used live with C.
 
 In [journeys](journeys.md) terms: J1, J3 and J5's admin side are built;
-J2, J4 and J6 work already; J7 is C, J8 is D.
+J2, J4 and J6 work already; J7 is C; J8 (let an AI use a folder) is D,
+built and run live.
 
 ## A — Member side of the handshake · built
 
@@ -298,7 +302,7 @@ canvas shows all of it (27 Sep 2026, note "Closing C" on the Pods page).
 
 ## D — Provider layer, shown only on our provider
 
-**D1 · Your agents · built 27 Sep 2026, main journey run live**
+**D1 · Your agents · built and closed 27 Sep 2026**
 ([manual tests](manual-tests.md), "D · Your agents"). On You, for our
 provider's WebIDs only: each agent (a linked WebID on your pod other than
 yours) with its connector and the folders whose rules name it; New agent
