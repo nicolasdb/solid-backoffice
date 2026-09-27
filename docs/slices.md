@@ -50,12 +50,14 @@ still `make vps-deploy`.
 
 **Next, in order:**
 
-1. Push solid-kit `f9ad05c` (ADR 006 §5: `config.ttl` is public).
-2. Carry the general fixes back to solid-kit: the redirect URL without a
-   fragment (`redirectUrlFrom`, `src/lib/auth.ts`), focusView's ring for
-   keyboard only (`trackInputModality`, `src/ui/a11y.ts`), and, once
-   settled, `.screen-wide` and the tab bar that moves to the bottom on a
-   phone.
+1. ~~Push solid-kit `f9ad05c`~~ (ADR 006 §5: `config.ttl` is public):
+   pushed.
+2. ~~Carry the general fixes back to solid-kit~~: `redirectUrlFrom`,
+   `trackInputModality` and `.screen-wide` are in the kit. The tab bar
+   that moves to the bottom on a phone stays here: the kit has no tabs.
+   From D (27 Sep 2026): ADR 006 §2 notes the agent's back-link to its
+   human as deferred (solid-kit `39e4836`, to push). D's agent code is
+   provider-specific and stays in this repo.
 3. **L5 · speed**: built, run live on 26 Sep 2026 (faster first load,
    instant tabs; the approach: [reading pods quickly](explanation/reading-pods.md)). Independent
    reads start at once (`load()`, `loadRun()`); a tab switch draws from the
