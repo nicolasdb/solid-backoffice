@@ -265,7 +265,6 @@ function agentCard(a: AgentRow, ctx: Ctx): string {
     <div class="agent-foot">
       <span>${delegate ? "Acts for you" : "Does not act for you"}</span>
       ${copyable(a.webId, "WebID copied.", a.webId.startsWith(ctx.podUrl) ? a.webId.slice(ctx.podUrl.length) : trimAddress(a.webId, ctx.podUrl))}
-      ${live?.createdAt ? `<span>Connector made ${esc(shortDate(live.createdAt))}</span>` : ""}
     </div>`;
 
   let status: string;

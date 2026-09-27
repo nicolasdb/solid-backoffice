@@ -21,9 +21,14 @@ Closed with four checks still to run, listed in
 provider), 2 (the password form when the provider's session has ended), 9
 (the card's states, the menu), 10 (phone, themes). A failure there reopens
 D.
-Still open: the agent's document pointing back at its human (no triple
-chosen; ADR material for solid-kit), and the connector keeping the date a
-grant was revoked (pocpod0).
+Deferred on purpose (27 Sep 2026): **the mini handshake**, the agent's
+document naming its human back (e.g. `prov:actedOnBehalfOf`), so a
+collective could check attribution before crediting you. D's agents live
+on your pod, whose address already says whose they are, and nothing reads
+the triple yet: a solid-kit ADR 006 follow-up once a reader checks
+attribution. **Dates** are not kept on the card: only "last used", which
+tells a forgotten connector; creation, revoke and delete dates belong to
+an access log (Epic 9), if anywhere.
 
 Built and run live: A, B, J1, and the **layout pass** (L1 tabs, L2 the
 collective's own screen, L3 the landing, L4 a member's tab), on
@@ -91,8 +96,8 @@ Not in A, on purpose:
 
 - **Creating an account.** Built later, as J1 (below).
 - **The agent's profile pointing back at its human.** ADR 006 wants both sides.
-  The agent's profile is written when the agent is minted, which is also
-  provider layer.
+  Still deferred after D (27 Sep 2026, see "Where we are"): a later stage,
+  once something checks attribution.
 
 ## Decided since A was built
 
@@ -333,7 +338,7 @@ connector, let it act for you or not, delete. As built
   WebID above the source; steps as "Name · value" with a Done / Optional
   / To do pill); New agent under the agents. **The card, second pass**,
   in the iceberg order: identity line (acts for you, the WebID from the
-  pod, connector made; hidden on a phone), whether an AI can use it now
+  pod; hidden on a phone), whether an AI can use it now
   (connected as its label, last used; revoked; not set up), what it
   reaches as a count only, a warning when connected to nothing, the
   drawer's steps while unfinished, and the next step as the one primary
@@ -361,7 +366,7 @@ provider, so nobody types an agent's WebID by hand.
 
 The CSS account API beyond sign-up (J1 creates the account and the first
 pod): more pods on the same account, mint a WebID for an agent
-(with the back-link to its human), mint and revoke connectors. Then the
+(the back-link to its human deferred, see "Where we are"), mint and revoke connectors. Then the
 Epic 9 access-log viewer. Hidden when the signed-in WebID comes from another
 provider, because none of it is Solid protocol.
 

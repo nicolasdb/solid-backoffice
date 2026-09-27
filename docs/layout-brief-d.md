@@ -240,6 +240,10 @@ connector acting as your own WebID gets owner access. D's step 2 would
 then say "add this URL, sign in, pick the agent" instead of showing a
 minted URL; agent creation and folders stay the same.
 
+Open question 2's back-link (the mini handshake) is deferred to a later
+stage (27 Sep 2026): the agent's address on your pod already says whose it
+is, and nothing reads such a triple yet.
+
 **Built (27 Sep 2026)** from these answers and the canvas, including a
 second pass of the agent's card (canvas "An agent's card, second pass":
 status, count, next step; folders one level down in Choose folders). What
