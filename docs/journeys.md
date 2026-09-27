@@ -14,7 +14,7 @@ the docs, the slices and the tests. Why the app behaves this way:
 | J5 | Leaving or being removed, either side, nothing already collected is deleted | works, both sides; admin side run live 26 Sep 2026 |
 | J6 | A collective joins another collective: J2 signed in as the collective | works |
 | J7 | Following: add any address shared with you, read it with your WebID | slice C5, built, live test pending |
-| J8 | Create an agent WebID and a Claude connector; read the access log | slice D |
+| J8 | Let Claude use a folder: create an agent WebID, connect Claude as it, grant it folders without pasting a WebID; later, read the access log | slice D ([brief](layout-brief-d.md)) |
 | J9 | Working in someone else's pod where they granted you Write (the Xavier case): open it as a place, edit files there, never their rules | to write up; not in C |
 
 The order of writes inside each journey is part of the design: a step that

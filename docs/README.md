@@ -13,7 +13,7 @@ answer lives.
 
 Also here: [FAQ](faq.md) · [Journeys](journeys.md) · [Slices](slices.md)
 (where we are, and what gets built next) · [UX principles](ux-principles.md) (from the kit) ·
-[Layout brief](layout-brief.md) (the layout decisions, and the canvas they were drawn on).
+[Layout brief](layout-brief.md) (the layout decisions, and the canvas they were drawn on) · [slice D's brief](layout-brief-d.md).
 
 Anything that concerns more than this app lives in solid-kit: the
 [atlas](https://github.com/nicolasdb/solid-kit/blob/main/docs/atlas.md) and

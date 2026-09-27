@@ -285,6 +285,12 @@ canvas shows all of it (27 Sep 2026, note "Closing C" on the Pods page).
 
 ## D — Provider layer, shown only on our provider
 
+**Brief:** [layout-brief-d](layout-brief-d.md) (27 Sep 2026), the input
+to D's design session: screens, states, data shapes, the account API as
+CSS documents it, open questions and a proposed order (D1 agents and
+"Let Claude use a folder" … D5 the access log). The access log waits on
+the provider: Epic 9 (server-side capture) is backlog in pocpod0.
+
 Suggesting agents: the "Your agent" step already offers a collective
 account its own `hs:agent`; D adds the WebIDs linked to the account on our
 provider, so nobody types an agent's WebID by hand.
@@ -298,7 +304,8 @@ provider, because none of it is Solid protocol.
 Full WebIDs to copy belong here too: C shows addresses without your
 provider's host (`…/neil/profile/card#me`, `src/ui/address.ts`), which is
 enough to recognise someone but not to paste their WebID elsewhere
-(decided 26 Sep 2026).
+(decided 26 Sep 2026). Done on You: the full WebID is copied with a
+click there.
 
 **D lives on You** (decided 26 Sep 2026, tabs third pass in
 [layout-brief](layout-brief.md)): the page under the avatar, with your

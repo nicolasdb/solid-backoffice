@@ -270,6 +270,8 @@ toasts and screen-reader announcements after each write.
      provider parts only on our provider). People & apps, about others,
      stays a tab of its own.
 
+Slice D has its own brief: [layout-brief-d](layout-brief-d.md).
+
 The mockups: [Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk)
 (a Claude Design canvas, private to its owner).
 
