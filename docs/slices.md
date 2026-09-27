@@ -327,6 +327,20 @@ would open signed in. Server configuration, ops not this repo; the
 backoffice's own `?open=` links already work on any provider
 ([following](explanation/following.md#links-that-open-signed-in)).
 
+**For pocpod0, later (not this repo; 27 Sep 2026).** The provider's
+MCP connector uses claude.ai's "no authentication" type: the random slug
+in its URL is the secret. claude.ai now also offers OAuth (DCR or CIMD)
+and, in beta, a static credential in a request header set by an
+organization Owner ([authentication](https://claude.com/docs/connectors/building/authentication)).
+OAuth would give everyone one URL, each person signing in at
+pod.nicolasdb.eu and picking a linked WebID, with no secret in a URL; the
+connector must then refuse a person's own WebID, or Claude gets owner
+access. A static credential is one key for a whole organization, so it
+fits neither personal agents nor per-person identity. If OAuth lands, D's
+step 2 becomes "add this URL, sign in, pick the agent"; creating agents
+and choosing folders stay as they are
+([brief](layout-brief-d.md#answers-27-sep-2026-drawn-on-the-canvas)).
+
 **Your inbox, later (not scheduled).** The handshake lives in two files:
 `org:memberOf` in your `profile/card`, `foaf:member` in the collective's
 roster. The `as:Accept` / `as:Reject` / `as:Remove` a collective posts to
