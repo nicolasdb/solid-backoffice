@@ -216,6 +216,11 @@ toasts and screen-reader announcements after each write.
   two small copy links, `Link ⧉ · Raw ⧉` (the app link, and the pod address itself for a program or a public file), whole on hover.
   Sharing is not a fourth action button, and not the access panel's job.
   The drawer closes with ✕, like the summary.
+  The side list (27 Sep 2026, not yet on the canvas): the "Followed"
+  heading is a link to the list of all followed (the folder above them);
+  under the entries, a smaller "+ Add an address" opens that list with
+  its form open. The note "Nobody can list what is shared with you" left
+  the side list (it stays on the empty Followed page).
   Second review, the same day: the tip is a file explorer, so the list
   shows name, size (items inside for a folder) and last change, sortable,
   with columns to hide and reorder (kept in the browser, never on the

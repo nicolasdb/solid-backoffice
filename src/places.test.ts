@@ -687,6 +687,23 @@ ${entries}`;
     expect(app.querySelector(".places-side")!.textContent).toContain("Xavier's folder");
   });
 
+  it("side list: the Followed heading opens them all; + Add an address opens the form, from anywhere", async () => {
+    await go({ name: "followed", address: X });
+    const side = app.querySelector(".places-side")!;
+    expect(side.querySelector<HTMLAnchorElement>("a.group-link")!.textContent).toBe("Followed");
+    expect(side.querySelector("a.group-link")!.getAttribute("href")).toBe("#/f");
+    expect(side.querySelector(".places-note")).toBeNull();
+    side.querySelector<HTMLAnchorElement>("#side-add-follow")!.click();
+    await showPlaces({ name: "following" });
+    expect(app.querySelector("#follow-form")).not.toBeNull();
+    expect(app.querySelector("a.group-link")!.getAttribute("aria-current")).toBe("page");
+    // Already there: the form opens without going anywhere.
+    await showPlaces({ name: "following" });
+    app.querySelector<HTMLButtonElement>("#follow-cancel")?.click();
+    app.querySelector<HTMLAnchorElement>("#side-add-follow")!.click();
+    expect(app.querySelector("#follow-form")).not.toBeNull();
+  });
+
   it("with nothing followed yet, shows the form at once, with nothing to cancel", async () => {
     pod[LIST] = { status: 404 };
     await go({ name: "following" });

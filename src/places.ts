@@ -111,6 +111,8 @@ let following: Followed[] | null = null;
 let followingError: string | null = null;
 let sortBy: SortBy = "latest";
 let followForm: FollowForm | null = null;
+/** "+ Add an address" was clicked on the way to Followed: arrive with its form open. */
+let addFollow = false;
 /** Followed addresses as last opened: a folder's summary, or a file. */
 const opened = new Map<string, { summary?: Summary; file?: FileContent }>();
 /** The technical rules: shown for this item, and edited by hand (C6). */
@@ -329,23 +331,22 @@ function renderSide(): string {
         </a>
       </div>
       <div class="places-group">
-        <span class="label-mono">Followed</span>
+        <a class="label-mono group-link${route.name === "following" ? " is-current" : ""}" href="${routeHref({ name: "following" })}"${route.name === "following" ? ' aria-current="page"' : ""}>Followed</a>
         ${followed
           .map((f) => {
             const on = f.address === current;
             return `<a class="place${on ? " is-current" : ""}" href="${routeHref({ name: "followed", address: f.address })}"${on ? ' aria-current="page"' : ""}><span>${esc(f.title || nameOf(f.address))}</span><span class="meta">${f.unreadableSince ? "cannot be read now" : "read with your WebID"}</span></a>`;
           })
           .join("")}
-        <a class="place is-action${route.name === "following" ? " is-current" : ""}" href="${routeHref({ name: "following" })}"${route.name === "following" ? ' aria-current="page"' : ""}>${followed.length ? "All followed · follow an address" : "+ Follow an address"}</a>
+        <a class="place is-action is-small" id="side-add-follow" href="${routeHref({ name: "following" })}">+ Add an address</a>
       </div>
-      <p class="meta places-note">Nobody can list what is shared with you: someone has to send you the address.</p>
     </nav>
     <label class="field place-picker">
       <span class="label-mono">Pod</span>
       <select id="place-picker">
         <option value="${routeHref({ name: "places", path: "" })}"${onPod ? " selected" : ""}>My pod · ${esc(pod)}</option>
         ${followed.map((f) => `<option value="${routeHref({ name: "followed", address: f.address })}"${f.address === current ? " selected" : ""}>${esc(f.title || nameOf(f.address))}</option>`).join("")}
-        <option value="${routeHref({ name: "following" })}"${route.name === "following" ? " selected" : ""}>Followed · follow an address</option>
+        <option value="${routeHref({ name: "following" })}"${route.name === "following" ? " selected" : ""}>Followed · add an address</option>
       </select>
     </label>`;
 }
@@ -1192,6 +1193,8 @@ export async function showPlaces(next: Route, focus = true): Promise<void> {
     raw = null;
     technicalOpen = null;
   }
+  if (addFollow && route.name === "following") followForm = { error: null, pending: false };
+  addFollow = false;
   const mine = ++generation;
   draw(focus);
   const list = readFollowingList(mine);
@@ -1254,6 +1257,16 @@ function bindFollowing(): void {
     if (message) toast(message, undo ? { undo } : {});
     draw(false);
   };
+  frame.querySelector("#side-add-follow")?.addEventListener("click", (e) => {
+    if (route.name !== "following") {
+      addFollow = true;
+      return;
+    }
+    e.preventDefault();
+    followForm = { error: null, pending: false };
+    draw(false);
+    frame?.querySelector<HTMLInputElement>("#follow-address")?.focus();
+  });
   frame.querySelector("#follow-open")?.addEventListener("click", () => {
     followForm = { error: null, pending: false };
     draw(false);

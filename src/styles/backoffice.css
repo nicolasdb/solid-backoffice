@@ -963,6 +963,10 @@ button.link-button:hover { color: var(--text-primary); text-decoration: underlin
 .place:hover { color: var(--text-primary); background: var(--surface-recessed); }
 .place.is-current { color: var(--text-primary); background: var(--accent-soft); }
 .place.is-action { color: var(--accent); }
+.place.is-small { font-size: var(--text-small); }
+/* A group's heading that opens the whole group (Followed: the list of all). */
+.places-group .group-link { color: var(--text-tertiary); text-decoration: none; }
+.places-group .group-link:hover, .places-group .group-link.is-current { color: var(--text-primary); text-decoration: underline; }
 
 .place-picker { display: none; max-width: none; }
 .place-picker select {
@@ -1276,7 +1280,6 @@ button.menu-item.is-warn { color: var(--warn); }
 }
 
 /* Following (C5): the overview's cards. */
-.places-note { margin-top: auto; padding: 0 var(--space-3); }
 .fcards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .fcard {
   display: flex;
