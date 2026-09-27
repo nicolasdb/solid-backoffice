@@ -213,7 +213,7 @@ toasts and screen-reader announcements after each write.
   rules live; Delete is set apart.
   The link to send (27 Sep 2026, not yet on the canvas): in the `···`
   summary, one line between the actions and "Who can access it",
-  `test.nicolasdb.eu/?open=…/output2/hyperscope/ ⧉`, copied whole.
+  two small copy links, `Link ⧉ · Raw ⧉` (the app link, and the pod address itself for a program or a public file), whole on hover.
   Sharing is not a fourth action button, and not the access panel's job.
   The drawer closes with ✕, like the summary.
   Second review, the same day: the tip is a file explorer, so the list

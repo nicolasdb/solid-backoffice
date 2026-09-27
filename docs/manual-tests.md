@@ -519,8 +519,9 @@ the provider, a real browser, a phone, both themes.
    403 (or 401 signed out).
 7. **Open links** (27 Sep 2026). On a collective's screen, the shared
    folder's link opens it in Pods, not the raw pod page. In Pods, a
-   folder's `···` menu shows its link, trimmed, between the actions and
-   "Who can access it"; copy it (the tooltip shows it whole). Give the
+   folder's `···` menu shows "Link ⧉ · Raw ⧉" between the actions and
+   "Who can access it", on every item; each tooltip shows its address
+   whole. Raw copies the pod address itself. Copy Link. Give the
    folder to someone by name. In a private window, open it: the landing,
    sign in as that person, and you land on the folder read with their
    WebID, "Follow it" beside it. Open the same link as yourself: it opens

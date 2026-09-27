@@ -218,8 +218,10 @@ describe("C1 — a folder of your pod", () => {
     expect(menu.querySelector("[data-change=rename]")!.compareDocumentPosition(menu.querySelector(".access-chips")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(menu.querySelector(".is-apart [data-change=delete]")).toBeTruthy(); // set apart
     // The link to send sits between the actions and who can access it: it opens here, signed in.
-    const send = menu.querySelector<HTMLElement>(".menu-link [data-copy]")!;
+    const [send, raw] = menu.querySelectorAll<HTMLElement>(".menu-copy [data-copy]");
     expect(new URL(send.dataset.copy!).searchParams.get("open")).toBe(POD + "projects/drafts/");
+    expect(raw.dataset.copy).toBe(POD + "projects/drafts/"); // the address itself, for a program or anything public
+    expect(menu.querySelector(".menu-copy")!.textContent!.replace(/\s+/g, " ")).toMatch(/Link.*·.*Raw/);
     expect(send.compareDocumentPosition(menu.querySelector(".access-chips")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));

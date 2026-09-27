@@ -61,7 +61,7 @@ import { bindRules, rawDirty, renderRules, startRaw, type RawEdit } from "./raw-
 export type { Group };
 import { focusView } from "./ui/a11y";
 import { bindCopy, copyable } from "./steps";
-import { appLink, linkFace, openFromInput } from "./invite";
+import { appLink, openFromInput } from "./invite";
 
 export interface PlacesContext {
   webId: string;
@@ -509,7 +509,7 @@ function renderMenu(): string {
         <div class="menu-head"><h2 id="menu-title" tabindex="-1">${esc(name)}</h2><button class="ghost small" type="button" id="menu-close" aria-label="Close">✕</button></div>
         ${renderActions(url, changes.change, changeEnv())}
       </div>
-      <div class="menu-sec menu-link">${sendLink(url)}</div>
+      <div class="menu-sec menu-copy">${sendLink(url)}</div>
       <div class="menu-sec">
         <span class="label-mono"${origin ? ` title="${esc(origin)}"` : ""}>Who can access it${origin ? `<span class="visually-hidden">: ${esc(origin)}</span>` : ""}</span>
         ${who}
@@ -519,12 +519,15 @@ function renderMenu(): string {
 }
 
 /**
- * The link to send: it opens the item in this backoffice, signed in. The
- * item's own address opens in a browser with no sign-in, and is refused.
+ * Two addresses to copy, both whole on hover. "Link" opens the item in this
+ * backoffice, signed in: its own address opens in a browser with no sign-in,
+ * refused unless public. "Raw" is that address, for a program or anything
+ * public (a `.json` to register somewhere, say).
  */
 function sendLink(url: string): string {
-  const link = appLink("open", url);
-  return copyable(link, "Link copied. It opens here, signed in.", linkFace(link, "open"));
+  return `${copyable(appLink("open", url), "Link copied. It opens here, signed in.", "Link")}
+    <span class="meta" aria-hidden="true">·</span>
+    ${copyable(url, "Raw address copied. A browser opens it only if it is public.", "Raw")}`;
 }
 
 /** Level 2 and 3: who can access it, and the technical rules at the bottom. */

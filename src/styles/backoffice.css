@@ -1001,6 +1001,9 @@ a.button-link {
 }
 a.button-link:hover { background: var(--surface-recessed); }
 
+.menu-sec.menu-copy { flex-direction: row; align-items: center; gap: var(--space-2); }
+.menu-sec.menu-copy > button { margin-top: 0; }
+
 /* Goes somewhere, so a link; sits among buttons, so drawn as a ghost button. */
 a.button-ghost {
   display: inline-flex;
