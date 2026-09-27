@@ -181,7 +181,36 @@ as in the access panel.
 5. **Access log.** Draw it and build it once Epic 9 lands, or leave it
    out of D's screens until then?
 
-## Proposed order (to confirm after the design session)
+## Answers (27 Sep 2026), drawn on the canvas
+
+Page "You · agents (D, first draft)":
+[Backoffice layout](https://claude.ai/artifact/93WGYDxdEaB7DcyZBV4KVk).
+
+- **D is agents on the pod you are signed in to.** Create an agent WebID
+  (`agents/<name>#me`), connect Claude as it (one connector per agent),
+  choose its folders, revoke the connector, delete the agent. Several
+  pods on one account, pod owners and linking WebIDs across pods are out
+  of D (it got messy in the old backoffice): CSS's own account page, or a
+  later account app.
+- **No rename.** Every grant names the agent's address; its name
+  (`foaf:name`) may change, its address not. Renaming is deleting and
+  creating. Deleting runs in order: revoke the connector, remove it from
+  the rules found, from your `acl:delegates`, unlink, delete its document.
+- **No app tokens, no owners in D.** A token for your own WebID is owner
+  level; the connector already covers the need. Rare cases: CSS's page or
+  a Claude session in pocpod0.
+- **People & apps is not a tab.** Each agent shows what it can reach; a
+  pod-wide "who has access" view may come later as an entry in Pods' side
+  list, beside Followed. The phone bar stays two tabs (Pods,
+  Collectives); the last live boards with three were fixed.
+- **Access log dropped from D**: Epic 9 retires the reader-side approach.
+
+Still open (on the canvas): the account session (cookie first, "sign in
+to the provider again" if absent); whether the connector URL alone acts
+as the agent; keeping a deleted agent's address from being reused;
+whether "may act for you" is ticked by default.
+
+## Proposed order (superseded by the answers above)
 
 1. **D1**: agents and "Let Claude use a folder" (the 7.16 evidence).
 2. **D2**: connectors and app tokens (Dig).
