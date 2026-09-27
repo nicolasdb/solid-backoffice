@@ -565,6 +565,11 @@ an AI is connected is unknown, and Connect says the connector did not
 answer this site. On localhost, the
 provider's cookie is not sent (another site): use the password form.
 
+**Run 27 Sep 2026, test.nicolasdb.eu:** 3 create, 4 connect (claude.ai
+connects), 5 two folders granted (read and edit), 6 revoke, 7 delete and
+retire (a new "Claude" became `claude-2`) passed. Not run yet: 1, 2, 8
+(optional), 9, 10.
+
 1. **Shown, or not.** Signed in with a pod.nicolasdb.eu WebID, You has
    "Your agents" under the steps; with a WebID from elsewhere it is absent
    (not greyed). Agents the old backoffice made in `agents/` are listed

@@ -13,9 +13,12 @@ test.nicolasdb.eu, and reworked from what that showed (below, under C,
 **D · Your agents: built, deployed on test.nicolasdb.eu, live test in
 progress** (27 Sep 2026). Create an agent, connect it to an AI, choose its
 folders, revoke, delete, all on You (below, under D). pocpod0's connector
-now allows test.nicolasdb.eu, and connector status reads live. D closes
-once [manual tests](manual-tests.md) "D · Your agents" has run in full
-(create, connect in claude.ai, folders, revoke, delete, phone, themes).
+now allows test.nicolasdb.eu. **Run live the same day:** an agent created,
+connected in claude.ai, given two folders (read and edit), its connector
+revoked, then deleted and retired (a new "Claude" became `claude-2`). Left
+to run in [manual tests](manual-tests.md) "D · Your agents": 1 (hidden for
+another provider), 2 (the password form when the provider's session has
+ended), 9 (the card's states, the menu), 10 (phone, themes).
 Still open: the agent's document pointing back at its human (no triple
 chosen; ADR material for solid-kit), and the connector keeping the date a
 grant was revoked (pocpod0).
@@ -295,7 +298,7 @@ canvas shows all of it (27 Sep 2026, note "Closing C" on the Pods page).
 
 ## D — Provider layer, shown only on our provider
 
-**D1 · Your agents · built 27 Sep 2026, deployed, live test in progress**
+**D1 · Your agents · built 27 Sep 2026, main journey run live**
 ([manual tests](manual-tests.md), "D · Your agents"). On You, for our
 provider's WebIDs only: each agent (a linked WebID on your pod other than
 yours) with its connector and the folders whose rules name it; New agent
