@@ -27,8 +27,9 @@ higher up overrides it.
 - **"Inherit from parent" is not a rule.** It is the absence of an `.acl`:
   choosing it in Pods deletes the item's own. What the item then follows
   depends on the folders above, and changes when they change.
-- **Every `.acl` stands alone.** It must name you with Control, or you lose
-  control of that item; the app always writes you in.
+- **Every `.acl` stands alone.** It should name you with Control: one
+  that leaves you out locks you out under WAC alone (some servers, CSS
+  among them, still let a pod's owner in). The app always writes you in.
 - **A new pod's root gives public Read** to what inherits from it. A folder
   with no rules anywhere between it and the root is public.
 
