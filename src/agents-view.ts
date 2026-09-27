@@ -176,7 +176,6 @@ function head(): string {
   return `
     <div class="agents-head">
       <h2 class="agents-title" id="agents-title">Your agents</h2>
-      ${read ? `<button type="button" class="small" id="agent-new">New agent</button>` : ""}
     </div>
     <p class="meta">An agent is a WebID of its own, in <code>profile/</code> on your pod, beside your own card. It reaches only the folders you give it. A connector lets an AI sign in as it.</p>`;
 }
@@ -194,6 +193,7 @@ function renderAgents(ctx: Ctx): string {
   const count = read.walk.folders.length;
   return `${head()}
     ${list}
+    <div><button type="button" class="small" id="agent-new">New agent</button></div>
     <p class="meta">Folders counted from the rules the app has read on your pod: ${count} folder${count === 1 ? "" : "s"}${read.walk.complete ? "" : ", not all of them"}, no single files.</p>
     <p class="step-error error" role="alert" hidden></p>
     ${drawerHtml(ctx)}
