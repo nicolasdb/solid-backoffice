@@ -240,6 +240,11 @@ connector acting as your own WebID gets owner access. D's step 2 would
 then say "add this URL, sign in, pick the agent" instead of showing a
 minted URL; agent creation and folders stay the same.
 
+**Built (27 Sep 2026)** from these answers and the canvas, including a
+second pass of the agent's card (canvas "An agent's card, second pass":
+status, count, next step; folders one level down in Choose folders). What
+was built and what is still open: [slices](slices.md), under D.
+
 ## Proposed order (superseded by the answers above)
 
 1. **D1**: agents and "Let Claude use a folder" (the 7.16 evidence).

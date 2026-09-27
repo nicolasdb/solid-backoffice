@@ -10,12 +10,15 @@ who accepts them, then everyone's daily work.
 test.nicolasdb.eu, and reworked from what that showed (below, under C,
 "Closed"). With it the tabs' third pass and the sharing fixes.
 
-**D1 · Your agents is built** (27 Sep 2026), live test pending: create an
-agent, connect it to an AI, choose its folders, revoke, delete, all on You
-(below, under D). Before the live run, pocpod0's connector must allow
-test.nicolasdb.eu (`ONBOARD_CORS_ORIGINS`). Still open from the brief: the
-agent's document pointing back at its human (no triple chosen; ADR
-material for solid-kit).
+**D · Your agents: built, deployed on test.nicolasdb.eu, live test in
+progress** (27 Sep 2026). Create an agent, connect it to an AI, choose its
+folders, revoke, delete, all on You (below, under D). pocpod0's connector
+now allows test.nicolasdb.eu, and connector status reads live. D closes
+once [manual tests](manual-tests.md) "D · Your agents" has run in full
+(create, connect in claude.ai, folders, revoke, delete, phone, themes).
+Still open: the agent's document pointing back at its human (no triple
+chosen; ADR material for solid-kit), and the connector keeping the date a
+grant was revoked (pocpod0).
 
 Built and run live: A, B, J1, and the **layout pass** (L1 tabs, L2 the
 collective's own screen, L3 the landing, L4 a member's tab), on
@@ -292,7 +295,7 @@ canvas shows all of it (27 Sep 2026, note "Closing C" on the Pods page).
 
 ## D — Provider layer, shown only on our provider
 
-**D1 · Your agents · built 27 Sep 2026, live test pending**
+**D1 · Your agents · built 27 Sep 2026, deployed, live test in progress**
 ([manual tests](manual-tests.md), "D · Your agents"). On You, for our
 provider's WebIDs only: each agent (a linked WebID on your pod other than
 yours) with its connector and the folders whose rules name it; New agent
@@ -318,6 +321,26 @@ connector, let it act for you or not, delete. As built
   again after a failure.
 - You's "Your agent" step is now "May act for you", and offers your
   agents that the profile does not name yet.
+- Reworked the same day from the canvas (first and second passes, with
+  the user's edits): You's head follows the board (path, name; the full
+  WebID above the source; steps as "Name · value" with a Done / Optional
+  / To do pill); New agent under the agents. **The card, second pass**,
+  in the iceberg order: identity line (acts for you, the WebID from the
+  pod, connector made; hidden on a phone), whether an AI can use it now
+  (connected as its label, last used; revoked; not set up), what it
+  reaches as a count only, a warning when connected to nothing, the
+  drawer's steps while unfinished, and the next step as the one primary
+  button. The folders themselves are one level down, in Choose folders,
+  which marks `output2/<collective>/` as shared. The `···` menu (Connect
+  or Revoke, Choose folders, acts for you, Delete) closes on a click
+  elsewhere or Escape.
+- Found live and fixed: an agent whose connectors could not be read (the
+  connector refusing the origin) had no Connect button, so leaving the
+  drawer stranded it; Connect is now offered whenever no live connector
+  is known, and a refused connector says why.
+- As decided, only agents inside the signed-in pod are listed: a WebID
+  that is a pod of its own (e.g. `nicolas_claude/`) is not, though "May
+  act for you" still names it.
 
 **Brief:** [layout-brief-d](layout-brief-d.md) (27 Sep 2026), the input
 to D's design session: screens, states, data shapes, the account API as
