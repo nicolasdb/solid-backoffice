@@ -200,6 +200,7 @@ function renderAgents(ctx: Ctx): string {
     <div><button type="button" class="small" id="agent-new">New agent</button></div>
     <p class="meta">Folders counted from the rules the app has read on your pod: ${count} folder${count === 1 ? "" : "s"}${read.walk.complete ? "" : ", not all of them"}, no single files.</p>
     <p class="step-error error" role="alert" hidden></p>
+    ${menu ? `<div class="menu-scrim" id="agent-menu-scrim"></div>` : ""}
     ${drawerHtml(ctx)}
     ${deleteHtml(ctx)}`;
 }
@@ -533,6 +534,18 @@ function bindAgents(slot: HTMLElement, ctx: Ctx, draw: () => void): void {
     draw();
     slot.querySelector<HTMLInputElement>("#agent-name")?.focus();
   });
+  // A click anywhere else, or Escape, closes the ··· menu (as in Pods).
+  const closeMenu = () => {
+    const back = menu;
+    menu = null;
+    draw();
+    if (back) slot.querySelector<HTMLElement>(`[data-agent-menu="${CSS.escape(back)}"]`)?.focus();
+  };
+  on("#agent-menu-scrim", closeMenu);
+  slot.querySelector(".agent-menu")?.addEventListener("keydown", (e) => {
+    if ((e as KeyboardEvent).key === "Escape") closeMenu();
+  });
+  slot.querySelector<HTMLElement>(".agent-menu .menu-item")?.focus();
   on("[data-agent-menu]", (el) => {
     menu = menu === el.dataset.agentMenu ? null : el.dataset.agentMenu!;
     draw();

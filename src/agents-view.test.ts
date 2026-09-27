@@ -118,6 +118,18 @@ describe("your agents on You", () => {
     expect(app.querySelector(".agent-menu [data-agent-connect]")).not.toBeNull();
   });
 
+  it("closes the ··· menu on a click elsewhere or Escape", async () => {
+    const app = await mount();
+    app.querySelector<HTMLButtonElement>("[data-agent-menu]")!.click();
+    expect(app.querySelector(".agent-menu")).not.toBeNull();
+    app.querySelector<HTMLElement>("#agent-menu-scrim")!.click();
+    expect(app.querySelector(".agent-menu")).toBeNull();
+    app.querySelector<HTMLButtonElement>("[data-agent-menu]")!.click();
+    app.querySelector(".agent-menu")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.querySelector(".agent-menu")).toBeNull();
+    expect(document.activeElement).toBe(app.querySelector("[data-agent-menu]"));
+  });
+
   it("asks for the password when the account session has ended, and reads again once open", async () => {
     lib.ended = true;
     const app = await mount();
