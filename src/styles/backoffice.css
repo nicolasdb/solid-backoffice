@@ -117,15 +117,8 @@
 }
 
 .you-row > summary::-webkit-details-marker { display: none; }
-.you-title { flex: 1; }
-.you-value {
-  max-width: 50%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--text-meta);
-  color: var(--text-tertiary);
-}
+.you-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.you-value { color: var(--text-secondary); }
 
 .you-row .dot {
   flex: none;
@@ -1338,7 +1331,7 @@ button.warn { background: transparent; color: var(--warn); border-color: var(--w
 /* Your agents, on You (slice D). */
 .agents { margin-top: var(--space-5); }
 .agents-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.agents-head .section-title { margin: 0; }
+.agents-title { margin: 0; font-size: var(--text-h2); font-weight: 600; }
 .agent-card {
   position: relative;
   display: flex;

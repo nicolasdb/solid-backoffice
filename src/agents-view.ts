@@ -175,10 +175,10 @@ const MODE_WORDS = (modes: Mode[]) => {
 function head(): string {
   return `
     <div class="agents-head">
-      <h2 class="section-title" id="agents-title">Your agents</h2>
+      <h2 class="agents-title" id="agents-title">Your agents</h2>
       ${read ? `<button type="button" class="small" id="agent-new">New agent</button>` : ""}
     </div>
-    <p class="meta">An agent is a WebID of its own, in <code>profile/</code> on your pod. It reaches only the folders you give it. Its connector lets an AI sign in as it.</p>`;
+    <p class="meta">An agent is a WebID of its own, in <code>profile/</code> on your pod, beside your own card. It reaches only the folders you give it. A connector lets an AI sign in as it.</p>`;
 }
 
 function renderAgents(ctx: Ctx): string {
@@ -194,7 +194,7 @@ function renderAgents(ctx: Ctx): string {
   const count = read.walk.folders.length;
   return `${head()}
     ${list}
-    <p class="meta">Folders found in the rules of ${count} folder${count === 1 ? "" : "s"} on your pod${read.walk.complete ? "" : " (not all of them: the pod has more)"}. Rules on single files are not read.</p>
+    <p class="meta">Folders counted from the rules the app has read on your pod: ${count} folder${count === 1 ? "" : "s"}${read.walk.complete ? "" : ", not all of them"}, no single files.</p>
     <p class="step-error error" role="alert" hidden></p>
     ${drawerHtml(ctx)}
     ${deleteHtml(ctx)}`;
@@ -294,7 +294,7 @@ function nameStep(ctx: Ctx): string {
       <div class="field">
         <label for="agent-name">Name</label>
         <input id="agent-name" name="name" type="text" maxlength="64" required placeholder="Claude" />
-        <p class="meta" id="agent-address">Its address: <code>${esc(trimAddress(ctx.podUrl + "profile/", ctx.podUrl))}…#me</code>. The name can change later; the address cannot.</p>
+        <p class="meta" id="agent-address">Its address: <code>${esc(trimAddress(ctx.podUrl + "profile/", ctx.podUrl))}…#me</code>. The name can change later; the address cannot. <code>card</code> is taken: it is you.</p>
       </div>
       <label class="opt opt-top"><input type="checkbox" name="delegate" checked /><span>It may act for me<br /><span class="meta">Adds it to your profile (<code>acl:delegates</code>). Folders you share with a collective then give it Can edit too.</span></span></label>
       <div class="inherit-card">

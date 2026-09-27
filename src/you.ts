@@ -20,7 +20,7 @@ import { bindButton, bindForm } from "./bind";
 import { routeHref } from "./router";
 import { copyable } from "./steps";
 import type { Loaded, ViewContext } from "./onboarding";
-import { agentsSlot, agentSuggestionsFromAccount, mountAgents } from "./agents-view";
+import { agentsSlot, agentSuggestionsFromAccount, mountAgents, onProvider } from "./agents-view";
 
 /** Your profile document as the pod holds it, or why it could not be read. */
 export type Source = { text: string } | { error: string };
@@ -69,19 +69,21 @@ export function sourceLines(text: string, names: Map<string, string> = new Map()
 }
 
 /**
- * One line of the "You" checklist (layout A, as drawn): a dot, what it is,
+ * One line of the "You" checklist (canvas "You · agents"): what it is,
  * and its value. Open it to change it. A step still to do starts open, so its
  * action is in sight.
  */
 function youRow(title: string, done: boolean, value: string, body: string, optional = false): string {
-  const dot = done ? "is-done" : "is-todo";
-  const status = value || (done ? "Done" : optional ? "Optional" : "To do");
+  const pill = done
+    ? `<span class="pill is-ok">Done</span>`
+    : optional
+      ? `<span class="pill">Optional</span>`
+      : `<span class="pill is-wait">To do</span>`;
   return `
     <details class="you-row step-host${done ? " is-done" : ""}"${done || optional ? "" : " open"}>
       <summary>
-        <span class="dot ${dot}" aria-hidden="true"></span>
-        <span class="you-title">${esc(title)}</span>
-        <span class="you-value">${esc(status)}</span>
+        <span class="you-title">${esc(title)}${value ? ` <span class="you-value">· ${esc(value)}</span>` : ""}</span>
+        ${pill}
       </summary>
       <div class="you-body stack">
         ${body}
@@ -113,9 +115,8 @@ export function renderYouView(data: Loaded, webId: string, podUrl: string, sourc
     <div class="you-grid">
       <div class="stack">
         <div class="you-head">
+          <nav class="meta" aria-label="Path">You</nav>
           <h1 data-view-title>${esc(profile.name ?? "You")}</h1>
-          ${copyable(webId, "WebID copied.")}
-          <p class="meta">Everything here is written in your profile, on your own pod. Collectives read it; they never write it.</p>
         </div>
         <div class="you-card">
           ${stepName(profile)}
@@ -129,8 +130,10 @@ export function renderYouView(data: Loaded, webId: string, podUrl: string, sourc
           <h2 class="section-title" id="source-title">Source · ${esc(inPod ?? doc)}</h2>
           ${inPod !== null ? `<a href="${routeHref({ name: "places", path: inPod })}">Open in Pods</a>` : ""}
         </div>
+        ${copyable(webId, "WebID copied.")}
         ${src}
-        <p class="meta">Your profile as your pod holds it, read just now. The marked lines are what the steps beside it wrote. Read only here; in Pods, its editor saves only if nobody changed it meanwhile.</p>
+        <p class="meta">Your profile as your pod holds it, read just now: everything the steps beside it write, marked. Collectives read it; they never write it. Read only here; in Pods, its editor saves only if nobody changed it meanwhile.</p>
+        ${onProvider(webId) ? `<p class="meta">An agent's own document is separate: <code>profile/&lt;name&gt;</code>, public, so servers can check who it is. Your profile only names it when it may act for you.</p>` : ""}
       </section>
     </div>`;
 }
@@ -248,7 +251,7 @@ function stepInbox(profile: MemberDeclaration, unadvertised: string | null): str
     return youRow(
       "Your inbox",
       true,
-      "",
+      profile.inbox.replace(/^https?:\/\/[^/]+/, "…"),
       `<p class="lead">Collectives answer your requests here.</p>
        <p><code>${esc(profile.inbox)}</code></p>`
     );

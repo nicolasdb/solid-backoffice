@@ -86,7 +86,7 @@ describe("your agents on You", () => {
     expect(card.querySelector(".reach")!.textContent).toContain("notes/");
     expect(card.textContent).toContain("may act for you");
     expect(card.querySelector("[data-agent-connect]")).not.toBeNull();
-    expect(app.textContent).toContain("rules of 4 folders");
+    expect(app.textContent).toContain("on your pod: 4 folders");
   });
 
   it("asks for the password when the account session has ended, and reads again once open", async () => {
