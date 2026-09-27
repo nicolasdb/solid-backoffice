@@ -211,6 +211,11 @@ toasts and screen-reader announcements after each write.
   the folder" (usual) or "give it its own rules" (exception); the
   technical rules sit at the bottom of Change, on the `.acl` where the
   rules live; Delete is set apart.
+  The link to send (27 Sep 2026, not yet on the canvas): in the `···`
+  summary, one line between the actions and "Who can access it",
+  `test.nicolasdb.eu/?open=…/output2/hyperscope/ ⧉`, copied whole.
+  Sharing is not a fourth action button, and not the access panel's job.
+  The drawer closes with ✕, like the summary.
   Second review, the same day: the tip is a file explorer, so the list
   shows name, size (items inside for a folder) and last change, sortable,
   with columns to hide and reorder (kept in the browser, never on the

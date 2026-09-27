@@ -40,7 +40,7 @@ kinds of link instead:
 
 - **Inside the app**, a link to something on your own pod opens it in Pods
   (your shared folder, on a collective's screen).
-- **To send someone**, "Who can access it" offers a link to this backoffice,
+- **To send someone**, each item's `···` menu has a link to this backoffice,
   `…/?open=<address>`. Whoever opens it signs in if needed, then lands on
   the item read with their WebID, a "Follow it" button beside it; on their
   own pod, it opens in Pods. It survives the sign-in page the way an

@@ -125,7 +125,7 @@ folder falls back on it. → [Access rules](explanation/access-rules.md#in-shari
 
 **Why does a pod link say "Not logged in" when I am signed in?**
 Your sign-in lives in the app, not in the browser tab. Send the link from
-"Who can access it" instead: it opens the item here, signed in.
+the item's `···` menu instead: it opens the item here, signed in.
 → [Following](explanation/following.md#links-that-open-signed-in)
 
 

@@ -217,6 +217,10 @@ describe("C1 — a folder of your pod", () => {
     // The actions come before who can access it: reading the rules never moves them.
     expect(menu.querySelector("[data-change=rename]")!.compareDocumentPosition(menu.querySelector(".access-chips")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(menu.querySelector(".is-apart [data-change=delete]")).toBeTruthy(); // set apart
+    // The link to send sits between the actions and who can access it: it opens here, signed in.
+    const send = menu.querySelector<HTMLElement>(".menu-link [data-copy]")!;
+    expect(new URL(send.dataset.copy!).searchParams.get("open")).toBe(POD + "projects/drafts/");
+    expect(send.compareDocumentPosition(menu.querySelector(".access-chips")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(app.querySelector(".item-menu")).toBeNull();

@@ -60,8 +60,8 @@ import { bindRules, rawDirty, renderRules, startRaw, type RawEdit } from "./raw-
 
 export type { Group };
 import { focusView } from "./ui/a11y";
-import { bindCopy } from "./steps";
-import { openFromInput } from "./invite";
+import { bindCopy, copyable } from "./steps";
+import { appLink, linkFace, openFromInput } from "./invite";
 
 export interface PlacesContext {
   webId: string;
@@ -509,12 +509,22 @@ function renderMenu(): string {
         <div class="menu-head"><h2 id="menu-title" tabindex="-1">${esc(name)}</h2><button class="ghost small" type="button" id="menu-close" aria-label="Close">✕</button></div>
         ${renderActions(url, changes.change, changeEnv())}
       </div>
+      <div class="menu-sec menu-link">${sendLink(url)}</div>
       <div class="menu-sec">
         <span class="label-mono"${origin ? ` title="${esc(origin)}"` : ""}>Who can access it${origin ? `<span class="visually-hidden">: ${esc(origin)}</span>` : ""}</span>
         ${who}
         <button class="ghost small" type="button" id="change-access"${d ? "" : " disabled"}>Change who can access it</button>
       </div>
     </div>`;
+}
+
+/**
+ * The link to send: it opens the item in this backoffice, signed in. The
+ * item's own address opens in a browser with no sign-in, and is refused.
+ */
+function sendLink(url: string): string {
+  const link = appLink("open", url);
+  return copyable(link, "Link copied. It opens here, signed in.", linkFace(link, "open"));
 }
 
 /** Level 2 and 3: who can access it, and the technical rules at the bottom. */
@@ -526,7 +536,7 @@ function renderDrawer(): string {
   return `
     <div class="drawer-scrim" id="drawer-scrim"></div>
     <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" id="drawer">
-      <div class="drawer-head"><h2 id="drawer-title" tabindex="-1">Who can access ${esc(name)}</h2><button class="ghost small" type="button" id="drawer-close">Close</button></div>
+      <div class="drawer-head"><h2 id="drawer-title" tabindex="-1">Who can access ${esc(name)}</h2><button class="ghost small" type="button" id="drawer-close" aria-label="Close">✕</button></div>
       ${renderAccess(d, accessEnv(), d || draftError?.url !== url ? null : draftError.message)}
       ${d ? renderRules(d, raw, rulesEnv(), technicalOpen === url) : ""}
     </aside>`;
