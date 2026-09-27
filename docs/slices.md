@@ -4,7 +4,11 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (26 Sep 2026)
+## Where we are (27 Sep 2026)
+
+**C · Pods is closed** (27 Sep 2026): built, used live on
+test.nicolasdb.eu, and reworked from what that showed (below, under C,
+"Closed"). With it the tabs' third pass and the sharing fixes.
 
 Built and run live: A, B, J1, and the **layout pass** (L1 tabs, L2 the
 collective's own screen, L3 the landing, L4 a member's tab), on
@@ -49,15 +53,14 @@ still `make vps-deploy`.
    and last change (sortable, columns hidden or reordered in the browser);
    `···` opens a menu, "Change who can access it" a drawer, one panel for
    folders and files with Inherit from parent; addresses drop your
-   provider's host. The write logic is unchanged. Next: run
-   [manual tests](manual-tests.md) "C · Pods" C1–C6 live. Then D (with
-   People & apps), E.
+   provider's host. The write logic is unchanged. **Closed on 27 Sep
+   2026** after live use (see C, "Closed"). Next: D (with People &
+   apps), then E.
 5. **Tabs, third pass** (26 Sep 2026, [layout-brief](layout-brief.md),
    canvas "Tabs (third pass)"): built the same day. Sign-in lands on Pods
    (Collectives while an invitation waits); two tabs, Pods and
    Collectives, one collective opened inside it; Home is gone, You sits
-   under the avatar with `profile/card` shown read only. Next: run its
-   section of [manual tests](manual-tests.md) live, with C1–C6.
+   under the avatar with `profile/card` shown read only. Used live with C.
 
 In [journeys](journeys.md) terms: J1, J3 and J5's admin side are built;
 J2, J4 and J6 work already; J7 is C, J8 is D.
@@ -141,7 +144,7 @@ availability check before creating: on our provider an unused pod address
 answers 401, like a private one. CSS 7 cannot delete an account through the
 API, so a test account stays.
 
-## B — Admin side of the handshake · built, live test pending
+## B — Admin side of the handshake · built, run live
 
 On the collective's pod, for its owner:
 
@@ -163,7 +166,7 @@ the Read grants, then removes the `foaf:member` line, then sends `as:Remove`.
 Messages the app does not understand stay visible under "Other messages".
 Grants are refused before any write when a target has no `.acl` of its own.
 
-## C — Places: your pod, and what you follow
+## C — Places: your pod, and what you follow · built, run live, closed
 
 Planned 26 Sep 2026, drawn on the canvas ([layout-brief](layout-brief.md),
 "Places", both passes). Your own pod as a file browser, with the permissions
@@ -251,6 +254,35 @@ Not in C, on purpose:
   case). Following stays read only. A use case of its own, to write up
   (J9 in [journeys](journeys.md)).
 - **Wipe pod contents**: dropped.
+
+**Closed (27 Sep 2026).** Found in live use and changed before closing:
+
+- **Sharing** sets `output2/<collective>/.acl` whole (you, your
+  `acl:delegates` Can edit, the collective's agent Can read); stop sharing
+  deletes it, so the folder inherits. Both first give `output2/` rules of
+  its own when it has none, so inheriting never reaches the pod root's
+  public Read ([access rules](explanation/access-rules.md)). The merge of
+  26 Sep had left your agent out and could leave "Only me".
+- **Open links**: a pod address in a browser tab carries no sign-in, so
+  the app gives `…/?open=<address>` (carried across sign-in like an
+  invitation; Pods for your own pod, the followed view otherwise). Each
+  item's `···` menu has "Link ⧉ · Raw ⧉" (the raw address for a program
+  or a public file); the shared folder has an "Open folder" button.
+- **The side list**: the Followed heading opens the list of all; "+ Add
+  an address" opens it with its form; the note left.
+- The invitation link is trimmed and copied whole; the drawer closes
+  with ✕.
+
+Left open: **Stop sharing tells nobody.** The collective's "Shares"
+column comes from `as:Announce` only, so it keeps the folder after a
+member stops (the note under the table says only their pod can confirm).
+An `as:Undo` of the announcement to the collective's inbox, read by
+`src/lib/admin.ts`, would close it; small, B's side and A's.
+Also left open, each written where it belongs: the pod's default application
+(provider note, D), a rename telling the people it names through their
+inbox ("Your inbox, later", D), editing someone else's pod (J9), and the
+canvas, which does not yet show the menu's links nor the side list
+([layout-brief](layout-brief.md)).
 
 ## D — Provider layer, shown only on our provider
 

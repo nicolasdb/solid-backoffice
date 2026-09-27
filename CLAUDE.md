@@ -106,7 +106,8 @@ one changes, change the other. Never point it at the real provider.
   (C3): Preview first, saves with `If-Match`, unsaved text in memory only.
   `src/lib/move.ts` (C4) moves, renames and deletes, contents and rules
   included: copy, check, then delete (order pinned in `move.test.ts`);
-  `src/item-actions.ts` is its part of the `···` menu. `src/lib/following.ts`
+  `src/item-actions.ts` is its part of the `···` menu, which also copies
+  "Link" (`?open=`, `src/invite.ts`) and "Raw" (the pod address). `src/lib/following.ts`
   (C5) keeps what you follow in `settings/following.ttl`, so the list
   (`src/following-view.ts`) reads nothing from other pods.
   `src/raw-rules.ts` (C6) edits an item's own `.acl` by hand, desktop only:
