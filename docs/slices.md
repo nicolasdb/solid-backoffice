@@ -10,6 +10,13 @@ who accepts them, then everyone's daily work.
 test.nicolasdb.eu, and reworked from what that showed (below, under C,
 "Closed"). With it the tabs' third pass and the sharing fixes.
 
+**D1 · Your agents is built** (27 Sep 2026), live test pending: create an
+agent, connect it to an AI, choose its folders, revoke, delete, all on You
+(below, under D). Before the live run, pocpod0's connector must allow
+test.nicolasdb.eu (`ONBOARD_CORS_ORIGINS`). Still open from the brief: the
+agent's document pointing back at its human (no triple chosen; ADR
+material for solid-kit).
+
 Built and run live: A, B, J1, and the **layout pass** (L1 tabs, L2 the
 collective's own screen, L3 the landing, L4 a member's tab), on
 test.nicolasdb.eu, desktop and phone, both themes. B's last live steps
@@ -284,6 +291,33 @@ inbox ("Your inbox, later", D) and editing someone else's pod (J9). The
 canvas shows all of it (27 Sep 2026, note "Closing C" on the Pods page).
 
 ## D — Provider layer, shown only on our provider
+
+**D1 · Your agents · built 27 Sep 2026, live test pending**
+([manual tests](manual-tests.md), "D · Your agents"). On You, for our
+provider's WebIDs only: each agent (a linked WebID on your pod other than
+yours) with its connector and the folders whose rules name it; New agent
+→ Connect to AI → Choose folders in one drawer; `···` → revoke the
+connector, let it act for you or not, delete. As built
+(`src/lib/agents.ts`, `src/agents-view.ts`):
+
+- The account session is the provider's cookie; when it has lapsed, your
+  email and password open one (a token in memory only). The connector
+  (`/onboard/`) reads the cookie alone, so the test copy needs pocpod0's
+  `ONBOARD_CORS_ORIGINS` to list `https://test.nicolasdb.eu`.
+- An agent is `profile/<name>#me` (`card` is never given: "Card" becomes
+  `card-agent`), created in four writes, each undone on failure; on CSS
+  with one root storage the link always asks for the ownership proof, as
+  the pod test shows.
+- What an agent reaches is read from your own pod's folders (four levels,
+  200 folders at most, never single files), said under the list. Giving
+  a folder that follows its parent copies the rules it follows and adds
+  the agent, so nobody else gains or loses anything.
+- Delete revokes, removes the grants found, the `acl:delegates` line,
+  unlinks, then retires the document (no `solid:oidcIssuer`, a dated
+  note); a new agent of that name gets `<name>-2`. Every step can run
+  again after a failure.
+- You's "Your agent" step is now "May act for you", and offers your
+  agents that the profile does not name yet.
 
 **Brief:** [layout-brief-d](layout-brief-d.md) (27 Sep 2026), the input
 to D's design session: screens, states, data shapes, the account API as

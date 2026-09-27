@@ -1334,3 +1334,69 @@ button.warn { background: transparent; color: var(--warn); border-color: var(--w
   .desktop-only { display: none; }
   .technical.is-editing { display: none; }
 }
+
+/* Your agents, on You (slice D). */
+.agents { margin-top: var(--space-5); }
+.agents-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.agents-head .section-title { margin: 0; }
+.agent-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+}
+.agent-card p { margin: 0; }
+.agent-head { display: flex; align-items: center; gap: var(--space-2); align-self: stretch; }
+.agent-head strong { font-size: var(--text-body); overflow-wrap: anywhere; }
+.agent-head .grow { flex: 1; }
+.reach { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); align-self: stretch; font-size: var(--text-small); }
+.reach li { display: flex; justify-content: space-between; gap: var(--space-3); overflow-wrap: anywhere; }
+.agent-card .row-actions, .drawer .row-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.agent-menu {
+  position: absolute;
+  top: 3rem;
+  right: var(--space-3);
+  z-index: 30;
+  width: 19rem;
+  max-width: calc(100% - 2 * var(--space-3));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-elevated);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
+}
+.agent-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-2); }
+.agent-steps li { flex: 1; padding-top: var(--space-2); border-top: 3px solid var(--border); font-size: var(--text-micro); color: var(--text-tertiary); }
+.agent-steps li.is-done { border-color: var(--accent-line); color: var(--accent); }
+.agent-steps li.is-on { border-color: var(--accent); color: var(--text-primary); font-weight: 600; }
+.writes { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-small); color: var(--text-secondary); }
+.urlbox { padding: var(--space-3); border: var(--border-width) solid var(--accent-line); border-radius: var(--radius-md); background: var(--accent-soft); overflow-wrap: anywhere; }
+.urlbox .copyable code { white-space: normal; word-break: break-all; }
+.opt-top { align-items: flex-start; }
+.opt-top input { margin-top: 0.3em; }
+.folder-list { display: flex; flex-direction: column; }
+.folder-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding-left: calc(var(--depth, 0) * var(--space-5));
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  font-size: var(--text-small);
+}
+.folder-row label { overflow-wrap: anywhere; }
+.folder-row select {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}

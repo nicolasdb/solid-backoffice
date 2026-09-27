@@ -88,8 +88,8 @@ one changes, change the other. Never point it at the real provider.
   Collectives (`src/collectives.ts`: the one you run, the ones you belong
   to, joining); one collective opens inside it as `src/member.ts`
   (sharing, leaving, its members and agent) or `src/admin.ts` (the one you
-  run). `src/you.ts` is You (name, inbox, agent, and `profile/card` read
-  only with the steps' lines marked). `src/steps.ts` holds the pieces they
+  run). `src/you.ts` is You (name, inbox, may act for you, your agents on our
+  provider, and `profile/card` read only with the steps' lines marked). `src/steps.ts` holds the pieces they
   share. No role, progress or tab state is stored.
 - `src/places.ts` — Pods (slice C, the tab once called Places): your pod
   as a file explorer, built as an iceberg (list → `···` menu → access
@@ -112,6 +112,13 @@ one changes, change the other. Never point it at the real provider.
   (`src/following-view.ts`) reads nothing from other pods.
   `src/raw-rules.ts` (C6) edits an item's own `.acl` by hand, desktop only:
   two taps, refused unless it parses and you keep Control.
+- `src/lib/agents.ts` — **provider-specific** (slice D): the account
+  session (the provider's cookie, or a password unlock kept in memory),
+  agents at `profile/<name>#me` (four writes, undone on failure), folder
+  grants, the connector's `/onboard/` mint, grants and revoke, delete in
+  order (connector, rules, profile, unlink, retire). `src/agents-view.ts`
+  draws it on You, only for our provider's WebIDs (`onProvider`), and
+  forgets it all at sign-out.
 - `src/ui/address.ts` — addresses on screen without your provider's host
   (`…/neil/profile/card#me`). A whole WebID is copied with a click on the
   members lists (`copyable` in `src/steps.ts`, like the invitation link);

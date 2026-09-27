@@ -32,6 +32,7 @@ import { bindRun, loadRun, renderRunView, type RunView } from "./admin";
 import { pendingInvite, pendingOpen, setInvite, setOpen, takeNewcomer } from "./invite";
 import { bindCollectives, renderCollectivesView } from "./collectives";
 import { bindYou, readSource, renderYouView, youTodo } from "./you";
+import { forgetAgents } from "./agents-view";
 import { bindMember, renderMemberView, loadRoster } from "./member";
 import { currentRoute, isPlaces, onRouteChange, replaceRoute, type Route } from "./router";
 import { forgetPlaces, mountPlaces, placesFrame, showPlaces, type Group } from "./places";
@@ -190,6 +191,7 @@ export async function renderMembership(
     last = null;
     forgetReads();
     forgetPlaces();
+    forgetAgents();
     // The sign-in screen has no tabs; leave no route in the address.
     history.replaceState(null, "", location.pathname + location.search);
     onLogout();

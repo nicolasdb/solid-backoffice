@@ -258,7 +258,7 @@ need one too, or accepting is refused before any write.
 6. **A message it does not understand.** POST a plain-text body to
    `hyperscope/inbox/`. It shows under "Other messages" and can be deleted.
 7. **Share sets the rules, stop deletes them** (27 Sep 2026). Your
-   profile names your agent (You → Your agent). Share the folder: in Pods,
+   profile names your agent (You → May act for you). Share the folder: in Pods,
    `output2/hyperscope/` shows its own rules: your agent Can edit, the
    collective's agent Can read, nobody else; your agent can write a file
    there. Stop sharing: the folder shows "Inherit from parent" (not "Only
@@ -547,6 +547,59 @@ the provider, a real browser, a phone, both themes.
 5. On a phone (≤ 40rem): the rules show, read only, with no Edit.
 6. An item that follows its folder: its technical rules are its folder's,
    with no Edit, and the drawer says to give it rules of its own first.
+
+## D · Your agents, on the live pod
+
+Built 27 Sep 2026 from the canvas page "You · agents (D, first draft)" and
+[layout-brief-d](layout-brief-d.md). `npm run test:pods` covers the account
+API and the rules on CSS 7 (`test/pods/agents.test.ts`, with a stand-in for
+the connector) and `src/agents-view.test.ts` the screen; this pass covers
+what they cannot: the provider's cookie, the real connector, claude.ai, a
+phone, both themes. Use a throwaway agent name (e.g. "Test agent"), not one
+in use.
+
+**Before:** the connector answers the app's origin. On test.nicolasdb.eu,
+pocpod0's `ONBOARD_CORS_ORIGINS` must list `https://test.nicolasdb.eu`
+(the default lists `https://backoffice.nicolasdb.eu` only); without it,
+agents show "Connector unknown" and Connect fails. On localhost, the
+provider's cookie is not sent (another site): use the password form.
+
+1. **Shown, or not.** Signed in with a pod.nicolasdb.eu WebID, You has
+   "Your agents" under the steps; with a WebID from elsewhere it is absent
+   (not greyed). Agents the old backoffice made in `agents/` are listed
+   too; your own WebID is not.
+2. **The account session.** Right after signing in, the list reads without
+   a password. Sign out of the provider's own page (or wait for its cookie
+   to lapse), reload You: the email and password form shows; filled in,
+   the list reads. Reload: asked again (nothing is stored).
+3. **Create.** New agent → "Test agent", "It may act for me" ticked: the
+   address hint reads `…/profile/test-agent#me`. Create: the drawer moves to
+   Connect to AI; You's source shows the `acl:delegates` line marked. In
+   Pods, `profile/test-agent` exists, is public (open it in a private
+   window: it shows `solid:oidcIssuer`, no registration token), and has its
+   own rules. The provider's account page lists the WebID.
+4. **Connect to AI.** Make the connector URL: shown with Copy, and the
+   claude.ai steps. Add it in claude.ai (Settings → Connectors → Add custom
+   connector). The agent's card says Connected with the date. Close the
+   drawer: the URL is gone from the page.
+5. **Choose folders.** A folder with rules of its own and one that follows
+   its parent: tick both (Can read, Can edit). Save: the card lists them. In
+   Pods, each has its own rules with the agent added and everyone who
+   could reach it before still there. In claude.ai, the agent lists the
+   folder it can read and is refused elsewhere.
+6. **Revoke.** `···` → Revoke the connector: No connector; claude.ai's
+   next call fails. Connect again: a new URL works.
+7. **Delete.** `···` → Delete the agent…: the steps name the folders found.
+   First tap arms, second deletes. Then: the folders' rules no longer name
+   it, your profile no longer does, the account page no longer lists it,
+   `profile/test-agent` still exists with no `solid:oidcIssuer`. New agent
+   "Test agent" again: the hint still says `test-agent`, the created one is
+   `test-agent-2`.
+8. **A step that fails** (optional): make a folder's rules something the
+   app cannot represent (C6) and give that folder to an agent: refused, the
+   message says why, nothing else changed.
+9. **Phone and themes.** On a phone the drawer takes the screen and the
+   folder rows stay readable; both themes.
 
 ## Tabs, third pass · Pods first, one Collectives tab, You under the avatar
 

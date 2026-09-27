@@ -20,6 +20,7 @@ import { bindButton, bindForm } from "./bind";
 import { routeHref } from "./router";
 import { copyable } from "./steps";
 import type { Loaded, ViewContext } from "./onboarding";
+import { agentsSlot, agentSuggestionsFromAccount, mountAgents } from "./agents-view";
 
 /** Your profile document as the pod holds it, or why it could not be read. */
 export type Source = { text: string } | { error: string };
@@ -37,7 +38,7 @@ export async function readSource(webId: string): Promise<Source> {
 /** The lines the steps on this page write, by predicate. */
 const MARKS: Record<string, string> = {
   [NS.foaf + "name"]: "Your name",
-  [NS.acl + "delegates"]: "Your agent",
+  [NS.acl + "delegates"]: "May act for you",
   [NS.ldp + "inbox"]: "Your inbox",
   [NS.org + "memberOf"]: "A collective you joined",
 };
@@ -121,6 +122,7 @@ export function renderYouView(data: Loaded, webId: string, podUrl: string, sourc
           ${stepInbox(profile, unadvertisedInbox)}
           ${stepAgent(profile, run?.collective ?? null)}
         </div>
+        ${agentsSlot(webId)}
       </div>
       <section class="stack you-source" aria-labelledby="source-title">
         <div class="source-head">
@@ -136,6 +138,7 @@ export function renderYouView(data: Loaded, webId: string, podUrl: string, sourc
 export function bindYou(app: HTMLElement, data: Loaded, ctx: ViewContext): void {
   const { webId, podUrl, rerender } = ctx;
   const { unadvertisedInbox } = data;
+  mountAgents(app, ctx);
 
   bindForm(app, "#name-form", async (form) => {
     const name = (form.elements.namedItem("name") as HTMLInputElement).value.trim();
@@ -147,7 +150,7 @@ export function bindYou(app: HTMLElement, data: Loaded, ctx: ViewContext): void 
   bindForm(app, "#agent-form", async (form) => {
     const agent = (form.elements.namedItem("agent") as HTMLInputElement).value.trim();
     if (!isValidWebId(agent)) throw new Error("That is not a WebID: it should start with https:// and have no spaces.");
-    if (agent === webId) throw new Error("That is your own WebID. Your agent has a WebID of its own.");
+    if (agent === webId) throw new Error("That is your own WebID. An agent has a WebID of its own.");
     await updateOwnProfile(webId, profileEdits.addDelegate(agent));
     announce("Agent declared.");
   }, rerender);
@@ -198,15 +201,17 @@ function stepName(profile: MemberDeclaration): string {
 }
 
 /**
- * Agents the pods already name, offered with one click. Today: a collective
- * account's own agent (`hs:agent` in its config.ttl). WebIDs linked to the
- * account on our provider come with the provider layer (slice D).
+ * Agents the pods already name, offered with one click: a collective
+ * account's own agent (`hs:agent` in its config.ttl), and on our provider
+ * the agents linked to your account (slice D, read by agents-view.ts).
  */
 function agentSuggestions(profile: MemberDeclaration, run: Collective | null): string[] {
-  return run && !profile.delegates.includes(run.agent) ? [run.agent] : [];
+  const fromRun = run && !profile.delegates.includes(run.agent) ? [run.agent] : [];
+  return [...new Set([...fromRun, ...agentSuggestionsFromAccount(profile)])];
 }
 
 function stepAgent(profile: MemberDeclaration, run: Collective | null): string {
+  const fromRun = run && !profile.delegates.includes(run.agent);
   const suggested = agentSuggestions(profile, run)
     .map(
       (agent) => `<li><code>${esc(agent)}</code>
@@ -220,15 +225,15 @@ function stepAgent(profile: MemberDeclaration, run: Collective | null): string {
     )
     .join("");
   return youRow(
-    "Your agent",
+    "May act for you",
     profile.delegates.length > 0,
-    "",
+    profile.delegates.length ? `${profile.delegates.length} WebID${profile.delegates.length === 1 ? "" : "s"}` : "",
     `<p class="lead">
        If an AI agent works for you, say so here, so that what it writes is
        credited to you. This gives it no access to anything.
      </p>
      ${list ? `<ul class="plain-list">${list}</ul>` : ""}
-     ${suggested ? `<p class="meta">Named in your collective's config.ttl:</p><ul class="plain-list">${suggested}</ul>` : ""}
+     ${suggested ? `<p class="meta">${fromRun ? "Named in your collective's config.ttl, or your agents" : "Your agents"}, not in your profile yet:</p><ul class="plain-list">${suggested}</ul>` : ""}
      <form id="agent-form" class="field">
        <label for="agent">Your agent's WebID</label>
        <input id="agent" name="agent" type="url" placeholder="https://…/profile/card#me" required />
