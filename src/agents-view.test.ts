@@ -81,24 +81,37 @@ describe("your agents on You", () => {
     expect(view.onProvider(ME)).toBe(true);
   });
 
-  it("lists each agent with its connector and the folders it reaches, not your own WebID", async () => {
+  it("shows each agent as on the canvas: who, whether an AI can use it, how much it reaches, the next step", async () => {
     const app = await mount();
     const cards = app.querySelectorAll("[data-agent]");
     expect(cards).toHaveLength(1);
     const card = cards[0] as HTMLElement;
-    expect(card.textContent).toContain("Claude");
-    expect(card.textContent).toContain("No connector");
-    expect(card.querySelector(".reach")!.textContent).toContain("notes/");
-    expect(card.textContent).toContain("may act for you");
-    expect(card.querySelector("[data-agent-connect]")).not.toBeNull();
+    expect(card.querySelector(".agent-foot")!.textContent).toContain("Acts for you");
+    expect(card.querySelector(".agent-foot")!.textContent).toContain("profile/claude#me");
+    expect(card.querySelector(".agent-status")!.textContent).toContain("Not connected yet");
+    expect(card.querySelector(".agent-summary")!.textContent).toBe("Can read 1 folder, once connected.");
+    // The folders themselves are one level down, in Choose folders.
+    expect(card.textContent).not.toContain("notes/");
+    expect(card.querySelector<HTMLButtonElement>("[data-agent-connect]")!.className).not.toContain("ghost");
+    expect(card.querySelector('[aria-current="step"]')!.textContent).toContain("Connect to AI");
     expect(app.textContent).toContain("on your pod: 4 folders");
+  });
+
+  it("counts what an agent reaches, and says when it was used", () => {
+    const r = (modes: string[]) => ({ url: "x", modes: modes as never });
+    expect(view.reachSummary([r(["read", "append", "write"]), r(["read"])])).toBe("Can edit 1 folder and read 1, with what is inside them.");
+    expect(view.reachSummary([r(["read"]), r(["read"])])).toBe("Can read 2 folders, with what is inside them.");
+    const now = new Date("2026-09-27T12:00:00Z");
+    expect(view.ago("2026-09-27T10:00:00Z", now)).toBe("2 h ago");
+    expect(view.ago("2026-09-27T11:59:30Z", now)).toBe("just now");
+    expect(view.shortDate("2026-09-23T08:00:00Z", now)).toBe("23 Sep");
   });
 
   it("still offers Connect to AI when the connectors cannot be read, and says why", async () => {
     lib.connectorsDown = true;
     const app = await mount();
     const card = app.querySelector<HTMLElement>("[data-agent]")!;
-    expect(card.textContent).toContain("Connector unknown");
+    expect(card.textContent).toContain("unknown right now");
     expect(card.querySelector("[data-agent-connect]")).not.toBeNull();
     expect(app.textContent).toContain("did not answer this site");
     card.querySelector<HTMLButtonElement>("[data-agent-menu]")!.click();

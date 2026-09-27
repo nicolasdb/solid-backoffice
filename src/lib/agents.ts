@@ -464,6 +464,8 @@ export interface Connector {
   label: string;
   webId: string;
   createdAt: string | null;
+  /** When an AI last signed in through it; null when never. */
+  lastUsedAt: string | null;
   revoked: boolean;
 }
 
@@ -492,7 +494,7 @@ export async function listConnectors(session: AccountSession): Promise<Connector
   const grants = (await res.json())?.grants ?? [];
   return grants
     .filter((g: Connector) => g.grantId && g.webId)
-    .map((g: Connector) => ({ grantId: g.grantId, label: g.label ?? "", webId: g.webId, createdAt: g.createdAt ?? null, revoked: Boolean(g.revoked) }));
+    .map((g: Connector) => ({ grantId: g.grantId, label: g.label ?? "", webId: g.webId, createdAt: g.createdAt ?? null, lastUsedAt: g.lastUsedAt ?? null, revoked: Boolean(g.revoked) }));
 }
 
 /** Mints a connector acting as `webId`. The URL is its only key: shown once, never stored. */

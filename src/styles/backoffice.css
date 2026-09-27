@@ -1347,6 +1347,15 @@ button.warn { background: transparent; color: var(--warn); border-color: var(--w
 .agent-head { display: flex; align-items: center; gap: var(--space-2); align-self: stretch; }
 .agent-head strong { font-size: var(--text-body); overflow-wrap: anywhere; }
 .agent-head .grow { flex: 1; }
+.agent-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); font-size: var(--text-meta); color: var(--text-tertiary); }
+.agent-foot .copyable { font-size: inherit; }
+.agent-status { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-small); color: var(--text-secondary); }
+.agent-status strong { color: var(--text-primary); font-weight: 600; }
+.agent-status .dot { flex: none; width: 9px; height: 9px; border-radius: var(--radius-full); background: var(--accent); }
+.agent-status .dot.is-off { background: transparent; border: 1.5px solid var(--text-tertiary); }
+.agent-summary { font-size: var(--text-body); color: var(--text-primary); }
+.agent-warn { align-self: stretch; padding: var(--space-2) var(--space-3); border: var(--border-width) solid var(--warn-line); border-radius: var(--radius-md); background: var(--warn-soft); color: var(--warn); font-size: var(--text-small); }
+.agent-card .agent-steps { align-self: stretch; }
 .reach { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); align-self: stretch; font-size: var(--text-small); }
 .reach li { display: flex; justify-content: space-between; gap: var(--space-3); overflow-wrap: anywhere; }
 .agent-card .row-actions, .drawer .row-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }

@@ -64,6 +64,8 @@ export interface AgentRow {
   link: Link;
   /** Its live connector; undefined when the connector service could not be read. */
   connector: Connector | null | undefined;
+  /** It had a connector, now revoked, and has no live one. */
+  revoked: boolean;
   reach: Reach[];
 }
 
@@ -136,6 +138,7 @@ async function load(ctx: Ctx): Promise<void> {
           name: agentName(text, link.webId),
           link,
           connector: connectors === undefined ? undefined : connectors.find((c) => c.webId === link.webId && !c.revoked) ?? null,
+          revoked: Boolean(connectors?.some((c) => c.webId === link.webId && c.revoked)),
           reach: reachOf(walk, link.webId),
         };
       })
@@ -171,10 +174,6 @@ export function mountAgents(root: HTMLElement, ctx: Ctx): void {
 
 /* ── Drawing ───────────────────────────────────────────────────────────── */
 
-const MODE_WORDS = (modes: Mode[]) => {
-  const preset = presetOf(modes);
-  return preset === "edit" ? "Can edit" : preset === "read" ? "Can read" : "Custom";
-};
 
 function head(): string {
   return `
@@ -218,36 +217,100 @@ function unlockForm(): string {
     </div>`;
 }
 
+/** A date as people say it: "23 Sep", with the year when it is not this one. */
+export function shortDate(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
+  return `${d.getDate()} ${month}${d.getFullYear() === now.getFullYear() ? "" : ` ${d.getFullYear()}`}`;
+}
+
+/** How long ago: "just now", "5 min ago", "2 h ago", "3 days ago", then the date. */
+export function ago(iso: string, now = new Date()): string {
+  const minutes = Math.round((now.getTime() - new Date(iso).getTime()) / 60_000);
+  if (Number.isNaN(minutes)) return iso;
+  if (minutes < 2) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 60 * 24) return `${Math.round(minutes / 60)} h ago`;
+  if (minutes < 60 * 24 * 14) return `${Math.round(minutes / 60 / 24)} days ago`;
+  return `on ${shortDate(iso, now)}`;
+}
+
+/** "Can edit 1 folder and read 2": what it reaches, counted. The folders themselves are in Choose folders. */
+export function reachSummary(reach: Reach[]): string {
+  const edit = reach.filter((r) => presetOf(r.modes) === "edit").length;
+  const read = reach.filter((r) => presetOf(r.modes) === "read").length;
+  const other = reach.length - edit - read;
+  const n = (k: number) => `${k} folder${k === 1 ? "" : "s"}`;
+  const parts = [edit ? `edit ${n(edit)}` : "", read ? `read ${edit ? read : n(read)}` : "", other ? `${n(other)} with other rules` : ""].filter(Boolean);
+  const text = parts.join(parts.length > 2 ? ", " : " and ").replace(/, ([^,]*)$/, " and $1");
+  return `Can ${text}, with what is inside them.`;
+}
+
+type Step = "connect" | "folders";
+
+/**
+ * The card, as on the canvas ("An agent's card, second pass"): who it is,
+ * whether an AI can use it now, how much it reaches, and the next step. The
+ * folders themselves are one level down, in Choose folders (the iceberg).
+ */
 function agentCard(a: AgentRow, ctx: Ctx): string {
-  const pill =
-    a.connector === undefined
-      ? `<span class="pill">Connector unknown</span>`
-      : a.connector
-        ? `<span class="pill is-ok">Connected</span>`
-        : `<span class="pill">No connector</span>`;
-  const reach = a.reach.length
-    ? `<ul class="reach" aria-label="What ${esc(a.name)} can reach">${a.reach
-        .map((r) => `<li><code>${esc(trimAddress(r.url, ctx.podUrl) || "your whole pod")}</code><span class="meta">${MODE_WORDS(r.modes)}</span></li>`)
-        .join("")}</ul>`
-    : `<p class="meta">No folder yet.</p>`;
   const delegate = ctx.profile.delegates.includes(a.webId);
-  const made = a.connector?.createdAt ? `Connector made ${esc(a.connector.createdAt.slice(0, 10))}` : "";
-  const facts = [made, delegate ? "may act for you (in your profile)" : ""].filter(Boolean).join(" · ");
+  const live = a.connector;
+  const reached = a.reach.length > 0;
   const open = menu === a.webId;
+
+  const foot = `
+    <div class="agent-foot">
+      <span>${delegate ? "Acts for you" : "Does not act for you"}</span>
+      ${copyable(a.webId, "WebID copied.", a.webId.startsWith(ctx.podUrl) ? a.webId.slice(ctx.podUrl.length) : trimAddress(a.webId, ctx.podUrl))}
+      ${live?.createdAt ? `<span>Connector made ${esc(shortDate(live.createdAt))}</span>` : ""}
+    </div>`;
+
+  let status: string;
+  if (a.connector === undefined) status = `<span class="dot is-off" aria-hidden="true"></span><span>Whether an AI is connected is unknown right now.</span>`;
+  else if (live) {
+    const name = live.label ? ` as "${esc(live.label)}"` : "";
+    const used = live.lastUsedAt ? `last used ${esc(ago(live.lastUsedAt))}` : "never used yet";
+    status = `<span class="dot" aria-hidden="true"></span><span><strong>Connected</strong>${name} · ${used}</span>`;
+  } else if (a.revoked) status = `<span class="dot is-off" aria-hidden="true"></span><span>Not connected · its connector was revoked</span>`;
+  else if (!reached) status = `<span class="dot is-off" aria-hidden="true"></span><span>Not set up yet: no AI can use it.</span>`;
+  else status = `<span class="dot is-off" aria-hidden="true"></span><span>Not connected yet</span>`;
+
+  const summary = reached
+    ? `<p class="agent-summary">${esc(live === null ? reachSummary(a.reach).replace(/, with what is inside them\.$/, a.revoked ? ", if connected again." : ", once connected.") : reachSummary(a.reach))}</p>`
+    : "";
+  const warn = live && !reached ? `<p class="agent-warn"><span aria-hidden="true">!</span> It can sign in, but reaches no folder yet: the AI will see nothing.</p>` : "";
+
+  // The drawer's steps come back while it is not usable: never connected, or connected to nothing.
+  const next: Step | null = live === null ? "connect" : live && !reached ? "folders" : null;
+  const setup = next && !(a.revoked && reached)
+    ? `<ol class="agent-steps" aria-label="Setting it up">
+        <li class="is-done">✓ Named</li>
+        <li class="${next === "connect" ? "is-on" : "is-done"}"${next === "connect" ? ' aria-current="step"' : ""}>${next === "connect" ? "2 · Connect to AI" : "✓ Connected"}</li>
+        <li class="${next === "folders" ? "is-on" : ""}"${next === "folders" ? ' aria-current="step"' : ""}>${reached ? "✓ Folders" : "3 · Choose folders"}</li>
+      </ol>`
+    : "";
+
+  const connectPrimary = live === null || a.connector === undefined;
+  const buttons = [
+    connectPrimary ? `<button type="button" class="small" data-agent-connect="${esc(a.webId)}">Connect to AI</button>` : "",
+    `<button type="button" class="${live && !reached ? "" : "ghost "}small" data-agent-folders="${esc(a.webId)}">${connectPrimary && !reached ? "Choose folders first" : "Choose folders"}</button>`,
+  ].join("");
+
   return `
     <article class="agent-card" data-agent="${esc(a.webId)}">
       <div class="agent-head">
-        <strong>${esc(a.name)}</strong>${pill}
+        <strong>${esc(a.name)}</strong>
         <span class="grow"></span>
         <button type="button" class="ghost small" data-agent-menu="${esc(a.webId)}" aria-label="More for ${esc(a.name)}" aria-expanded="${open}">···</button>
       </div>
-      ${copyable(a.webId, "WebID copied.", trimAddress(a.webId, ctx.podUrl))}
-      ${reach}
-      ${facts ? `<p class="meta">${facts}</p>` : ""}
-      <div class="row-actions">
-        ${!a.connector ? `<button type="button" class="ghost small" data-agent-connect="${esc(a.webId)}">Connect to AI</button>` : ""}
-        <button type="button" class="ghost small" data-agent-folders="${esc(a.webId)}">Choose folders</button>
-      </div>
+      ${foot}
+      <p class="agent-status">${status}</p>
+      ${summary}
+      ${warn}
+      ${setup}
+      <div class="row-actions">${buttons}</div>
       ${open ? agentMenu(a, delegate) : ""}
     </article>`;
 }
@@ -363,8 +426,9 @@ function foldersStep(agent: AgentRow | undefined, ctx: Ctx): string {
     .map((f) => {
       const has = reach.find((r) => r.url === f.url);
       const mode = has ? presetOf(has.modes) : null;
-      const path = trimAddress(f.url, ctx.podUrl);
-      const note = f.own ? "" : "follows the folder above";
+      const path = f.url.slice(ctx.podUrl.length);
+      const shared = /^output2\/([^/]+)\/$/.exec(path)?.[1];
+      const note = [shared ? `shared with ${shared}` : "", f.own ? "" : "follows the folder above"].filter(Boolean).join(" · ");
       return `
         <div class="folder-row" style="--depth: ${f.depth - 1}">
           <input type="checkbox" name="folder" value="${esc(f.url)}" id="f-${esc(path)}"${has ? " checked" : ""}${has && !mode ? " disabled" : ""} />
