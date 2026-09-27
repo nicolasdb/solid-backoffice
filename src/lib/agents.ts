@@ -468,13 +468,21 @@ export interface Connector {
 }
 
 /** The connector reads the cookie only: no token header, which its CORS would refuse. */
-function onboard(session: AccountSession, path: string, body?: unknown): Promise<Response> {
-  return net.fetch(new URL(`onboard/${path}`, session.issuer).href, {
-    credentials: "include",
-    ...(body === undefined
-      ? {}
-      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
-  });
+async function onboard(session: AccountSession, path: string, body?: unknown): Promise<Response> {
+  try {
+    return await net.fetch(new URL(`onboard/${path}`, session.issuer).href, {
+      credentials: "include",
+      ...(body === undefined
+        ? {}
+        : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    });
+  } catch {
+    // A network error here is almost always CORS: the connector answers only the origins it lists.
+    throw new AccountSessionError(
+      "provider",
+      `The connector service did not answer this site (${typeof location === "undefined" ? "this origin" : location.origin}). Its operator must allow it (ONBOARD_CORS_ORIGINS).`
+    );
+  }
 }
 
 export async function listConnectors(session: AccountSession): Promise<Connector[]> {

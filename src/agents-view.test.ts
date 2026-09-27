@@ -13,6 +13,7 @@ const CLAUDE = POD + "profile/claude#me";
 
 const lib = vi.hoisted(() => ({
   ended: false,
+  connectorsDown: false,
   calls: [] as string[],
 }));
 
@@ -27,7 +28,10 @@ vi.mock("./lib/agents", async (original) => {
         { webId: CLAUDE, resource: "r1" },
       ];
     },
-    listConnectors: async () => [],
+    listConnectors: async () => {
+      if (lib.connectorsDown) throw new real.AccountSessionError("provider", "The connector service did not answer this site.");
+      return [];
+    },
     walkRules: async () => ({
       complete: true,
       folders: [
@@ -67,6 +71,7 @@ async function mount(): Promise<HTMLElement> {
 beforeEach(() => {
   view.forgetAgents();
   lib.ended = false;
+  lib.connectorsDown = false;
   lib.calls = [];
 });
 
@@ -87,6 +92,17 @@ describe("your agents on You", () => {
     expect(card.textContent).toContain("may act for you");
     expect(card.querySelector("[data-agent-connect]")).not.toBeNull();
     expect(app.textContent).toContain("on your pod: 4 folders");
+  });
+
+  it("still offers Connect to AI when the connectors cannot be read, and says why", async () => {
+    lib.connectorsDown = true;
+    const app = await mount();
+    const card = app.querySelector<HTMLElement>("[data-agent]")!;
+    expect(card.textContent).toContain("Connector unknown");
+    expect(card.querySelector("[data-agent-connect]")).not.toBeNull();
+    expect(app.textContent).toContain("did not answer this site");
+    card.querySelector<HTMLButtonElement>("[data-agent-menu]")!.click();
+    expect(app.querySelector(".agent-menu [data-agent-connect]")).not.toBeNull();
   });
 
   it("asks for the password when the account session has ended, and reads again once open", async () => {

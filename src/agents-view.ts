@@ -71,6 +71,8 @@ interface Read {
   agents: AgentRow[];
   walk: Walk;
   at: number;
+  /** Why the connectors could not be read, when they could not. */
+  connectorProblem: string | null;
 }
 
 type Drawer =
@@ -114,10 +116,12 @@ async function load(ctx: Ctx): Promise<void> {
   session ??= cookieSession(SIGNUP_PROVIDER!);
   const s = session;
   try {
+    let connectorProblem: string | null = null;
     const [links, connectors, walk] = await Promise.all([
       linkedWebIds(s),
       listConnectors(s).catch((err) => {
         if (err instanceof AccountSessionError && err.code === "ended") throw err;
+        connectorProblem = err instanceof Error ? err.message : String(err);
         return undefined;
       }),
       walkRules(ctx.podUrl, ctx.webId),
@@ -137,7 +141,7 @@ async function load(ctx: Ctx): Promise<void> {
       })
     );
     agents.sort((a, b) => a.name.localeCompare(b.name));
-    read = { agents, walk, at: Date.now() };
+    read = { agents, walk, at: Date.now(), connectorProblem };
     failure = null;
   } catch (err) {
     if (err instanceof AccountSessionError && err.code === "ended") {
@@ -193,6 +197,7 @@ function renderAgents(ctx: Ctx): string {
   const count = read.walk.folders.length;
   return `${head()}
     ${list}
+    ${read.connectorProblem ? `<p class="meta" role="status">Whether an agent is connected is unknown: ${esc(read.connectorProblem)}</p>` : ""}
     <div><button type="button" class="small" id="agent-new">New agent</button></div>
     <p class="meta">Folders counted from the rules the app has read on your pod: ${count} folder${count === 1 ? "" : "s"}${read.walk.complete ? "" : ", not all of them"}, no single files.</p>
     <p class="step-error error" role="alert" hidden></p>
@@ -240,7 +245,7 @@ function agentCard(a: AgentRow, ctx: Ctx): string {
       ${reach}
       ${facts ? `<p class="meta">${facts}</p>` : ""}
       <div class="row-actions">
-        ${a.connector === null ? `<button type="button" class="ghost small" data-agent-connect="${esc(a.webId)}">Connect to AI</button>` : ""}
+        ${!a.connector ? `<button type="button" class="ghost small" data-agent-connect="${esc(a.webId)}">Connect to AI</button>` : ""}
         <button type="button" class="ghost small" data-agent-folders="${esc(a.webId)}">Choose folders</button>
       </div>
       ${open ? agentMenu(a, delegate) : ""}
@@ -251,7 +256,10 @@ function agentMenu(a: AgentRow, delegate: boolean): string {
   return `
     <div class="agent-menu" role="menu" aria-label="${esc(a.name)}">
       <div class="menu-sec">
-        ${a.connector ? `<button class="menu-item" role="menuitem" type="button" data-agent-revoke="${esc(a.connector.grantId)}">Revoke the connector</button>` : ""}
+        ${a.connector
+          ? `<button class="menu-item" role="menuitem" type="button" data-agent-revoke="${esc(a.connector.grantId)}">Revoke the connector</button>`
+          : `<button class="menu-item" role="menuitem" type="button" data-agent-connect="${esc(a.webId)}">Connect to AI</button>`}
+        <button class="menu-item" role="menuitem" type="button" data-agent-folders="${esc(a.webId)}">Choose folders</button>
         <button class="menu-item" role="menuitem" type="button" data-agent-delegate="${esc(a.webId)}" data-on="${delegate ? "" : "1"}">${delegate ? "Stop it acting for you" : "Let it act for you"}</button>
       </div>
       ${a.connector ? `<div class="menu-sec"><p class="meta">Revoking stops the AI signing in as this agent. The agent and its folders stay: connect again for a new URL.</p></div>` : ""}
