@@ -219,11 +219,26 @@ Page "You · agents (D, first draft)":
 - **Words**: step 2 is "Connect to AI", not "Connect Claude". The name
   heads the page; the full WebID sits above the profile's source.
 
-Still open: the account session (cookie first, "sign in to the provider
-again" if absent; a pod test and a live check first); where agents live,
-`profile/<name>#me` (beside `card`, which is reserved) or
-`agents/<name>#me` (the old app's, where teammates' agents are). The app
-lists agents from the account's links either way.
+- **Agents live in `profile/<name>#me`** from now on, beside `card`
+  (reserved). Agents the old app made in `agents/` still show: the list
+  comes from the account's linked WebIDs, not from a folder.
+- **The account session is the cookie route**, which the old backoffice
+  uses live.
+- **One connector URL per organization in claude.ai**: adding a URL that
+  already exists there is refused, so each agent's slug is its own
+  connector.
+
+**Later, provider work, not D: OAuth for the connector.** claude.ai now
+supports OAuth (DCR or CIMD) for custom connectors
+([Claude docs, authentication](https://claude.com/docs/connectors/building/authentication)).
+Our connector uses "none": the secret is the URL's slug, which those docs
+advise against. With OAuth, everyone adds the same URL, each person signs
+in at pod.nicolasdb.eu and picks a linked WebID, and no secret sits in a
+URL. The connector would have to refuse a person's own WebID: OAuth
+changes who proves the identity, not what the identity may do, and a
+connector acting as your own WebID gets owner access. D's step 2 would
+then say "add this URL, sign in, pick the agent" instead of showing a
+minted URL; agent creation and folders stay the same.
 
 ## Proposed order (superseded by the answers above)
 
