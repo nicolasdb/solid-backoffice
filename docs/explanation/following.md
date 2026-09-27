@@ -51,6 +51,16 @@ On our provider, a raw pod address could also send a browser to the
 backoffice: that is the server's "default application", a provider
 setting ([slices, D](../slices.md#d--provider-layer-shown-only-on-our-provider)).
 
+## When the source moves
+
+You follow an address, not a document. If its owner renames or moves it,
+the address answers 404 and the entry says "cannot be read now"; it stays
+in your list with what you last saw, until you unfollow it. Solid has no
+redirect for a moved resource, and the owner's pod does not know who
+follows it. Today someone has to send you the new address; the owner
+telling followers through their inbox is a later idea
+([slices, "Your inbox, later"](../slices.md#d--provider-layer-shown-only-on-our-provider)).
+
 ## What it does not do
 
 It never writes to someone else's pod, and it cannot list what is shared

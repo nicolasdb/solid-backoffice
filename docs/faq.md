@@ -128,6 +128,10 @@ Your sign-in lives in the app, not in the browser tab. Send the link from
 the item's `···` menu instead: it opens the item here, signed in.
 → [Following](explanation/following.md#links-that-open-signed-in)
 
+**What happens to something I follow when its owner renames or moves it?**
+The address breaks: it shows "cannot be read now" until you unfollow it or
+get the new address. → [Following](explanation/following.md#when-the-source-moves)
+
 
 **What is "Following"?**
 A reader for anything shared with you: a folder, a feed, a bundle, opened

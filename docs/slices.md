@@ -297,7 +297,10 @@ changes no state. Two uses to come: show "Refused" from an `as:Reject`
 (the roster cannot say it to someone it refused), and the inbox as mail
 between members, since any signed-in WebID may append to it (a member
 shares minutes that name you, gives you edit on them, and posts a note to
-your inbox; your agent could do the same).
+your inbox; your agent could do the same). A third (27 Sep 2026): a
+rename or move in Pods tells the people it names (each WebID granted on
+the item, never public Read, which names nobody) with an `as:Move` to
+their inbox, so a followed address can follow along instead of breaking.
 
 ## E — Maps of Making landing
 
