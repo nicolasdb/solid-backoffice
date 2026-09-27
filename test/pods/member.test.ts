@@ -58,14 +58,18 @@ describe("a member sets themselves up (slice A)", () => {
     expect(await current.fetch(cast.neil.pod + "inbox/").then((r) => r.status)).toBe(403);
   });
 
-  it("shares keeping what the folder inherits, and stopping makes it inherit again", async () => {
+  it("shares with its own rules (your agents edit, the collective's reads); stopping deletes them", async () => {
     await actAs("neil");
     const output2 = neil.pod + "output2/";
     const folder = output2 + "story/";
     const agent = cast.hsagent.webId;
     const mine = cast.ines.webId; // stands in for Neil's own agent
     await ensureContainer(folder);
-    await setAccess(output2, neil.webId, { agents: [{ webId: mine, modes: ["read", "append", "write"] }], public: [], authenticated: [] }, null);
+    await updateOwnProfile(neil.webId, profileEdits.addDelegate(mine));
+    const { delegates } = await readOwnProfile(neil.webId);
+    expect(delegates).toContain(mine);
+    // output2/ gives something else entirely: stopping must bring it back.
+    await setAccess(output2, neil.webId, { agents: [], public: ["read"], authenticated: [] }, null);
     const as = async (role: "hsagent" | "ines", url: string, init?: RequestInit) => {
       await actAs(role);
       const s = (await current.fetch(url, init)).status;
@@ -74,27 +78,31 @@ describe("a member sets themselves up (slice A)", () => {
     };
     const put = (name: string) => ({ method: "PUT", headers: { "Content-Type": "text/markdown" }, body: name });
 
-    await shareFolder(folder, neil.webId, neil.pod, agent);
-    expect((await getAccess(folder, neil.webId)).inherited).toBe(false);
+    await shareFolder(folder, neil.webId, agent, delegates);
+    const own = await getAccess(folder, neil.webId);
+    expect(own.inherited).toBe(false);
+    expect(own.public).toEqual([]);
     expect(await as("hsagent", folder)).toBe(200);
-    expect(await as("ines", folder + "a.md", put("a"))).toBe(201); // the parent's edit came along
+    expect(await as("hsagent", folder + "x.md", put("x"))).toBe(403); // the collective's agent reads only
+    expect(await as("ines", folder + "a.md", put("a"))).toBe(201); // your agent edits
     expect(await sharedWith(folder, neil.webId, neil.pod, agent)).toBe(true);
 
-    await stopSharing(folder, neil.webId, neil.pod, agent);
+    await stopSharing(folder, neil.webId);
     expect((await getAccess(folder, neil.webId)).inherited).toBe(true);
-    expect(await as("hsagent", folder)).toBe(403);
-    expect(await as("ines", folder + "b.md", put("b"))).toBe(201);
-    expect(await sharedWith(folder, neil.webId, neil.pod, agent)).toBe(false);
+    expect(await as("hsagent", folder)).toBe(200); // output2/'s public read
+    expect(await as("ines", folder + "b.md", put("b"))).toBe(403); // output2/ gives reading only
+    expect(await sharedWith(folder, neil.webId, neil.pod, agent)).toBe(true); // public read, inherited
 
-    // Something set apart on the folder stays when the agent goes.
-    await shareFolder(folder, neil.webId, neil.pod, agent);
-    const own = await getAccess(folder, neil.webId);
-    await setAccess(folder, neil.webId, { ...own, public: ["read"] }, own.etag);
-    await stopSharing(folder, neil.webId, neil.pod, agent);
-    const kept = await getAccess(folder, neil.webId);
-    expect(kept.inherited).toBe(false);
-    expect(kept.public).toEqual(["read"]);
-    expect(kept.agents.map((a) => a.webId)).toEqual([mine]);
+    // Rules set by hand on the folder go too: it is the app's folder.
+    await shareFolder(folder, neil.webId, agent, delegates);
+    const set = await getAccess(folder, neil.webId);
+    await setAccess(folder, neil.webId, { ...set, authenticated: ["read"] }, set.etag);
+    await stopSharing(folder, neil.webId);
+    expect((await getAccess(folder, neil.webId)).inherited).toBe(true);
+    await stopSharing(folder, neil.webId); // already inheriting: nothing to do
+
+    await setAccess(output2, neil.webId, { agents: [], public: [], authenticated: [] }, (await getAccess(output2, neil.webId)).etag);
+    expect(await sharedWith(folder, neil.webId, neil.pod, agent)).toBe(false);
   });
 });
 

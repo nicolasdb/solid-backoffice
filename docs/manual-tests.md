@@ -257,14 +257,14 @@ need one too, or accepting is refused before any write.
    member. "Remove" asks once more. Read the wording of both.
 6. **A message it does not understand.** POST a plain-text body to
    `hyperscope/inbox/`. It shows under "Other messages" and can be deleted.
-7. **Sharing keeps what `output2/` gives** (26 Sep 2026). In Pods, give
-   your own agent Can edit on `output2/`, and let `output2/hyperscope/`
-   inherit. Share the folder: in Pods its access shows its own rules with
-   your agent (Can edit) and the collective's agent (Can read); your agent
-   can still write a file there. Stop sharing: the folder shows "Inherit
-   from parent" again, and the collective's agent is gone. Give the folder
-   something of its own (Anyone with the link), share, stop: it keeps its
-   own rules without the agent.
+7. **Share sets the rules, stop deletes them** (27 Sep 2026). Your
+   profile names your agent (You → Your agent). Share the folder: in Pods,
+   `output2/hyperscope/` shows its own rules: your agent Can edit, the
+   collective's agent Can read, nobody else; your agent can write a file
+   there. Stop sharing: the folder shows "Inherit from parent" (not "Only
+   me"), and its technical rules say it has no `.acl` of its own. Give it
+   something by hand (Anyone with the link), share, stop: back to
+   "Inherit from parent" again.
 
 Write down anything the copy got wrong, not just what failed.
 

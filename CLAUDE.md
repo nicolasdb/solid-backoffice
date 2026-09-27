@@ -64,9 +64,9 @@ one changes, change the other. Never point it at the real provider.
 - `src/admin.ts` — the collective you run, its own tab over `lib/admin.ts`:
   requests beside a members table, other messages, the invitation link.
 - `src/lib/sharing.ts` — sharing a member's folder with a collective's
-  agent: adds Read to the rules the folder follows (a folder that inherits
-  starts from what it inherits), stop sharing returns it to inheriting when
-  nothing else set it apart (`docs/explanation/sharing.md`).
+  agent: writes the folder's own `.acl` whole (you, your `acl:delegates`
+  Can edit, the agent Can read); stop sharing deletes it, so the folder
+  inherits again (`docs/explanation/sharing.md`).
 - `src/lib/css-account.ts` — **provider-specific**: account, password login
   and pod through the CSS account API (J1). Shown only when
   `SIGNUP_PROVIDER` is set. `test/pods/` creates its whole cast with it.

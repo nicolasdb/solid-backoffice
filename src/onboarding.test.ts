@@ -52,8 +52,8 @@ vi.mock("./lib/acl", () => ({
     void calls.push(`acl ${url} authenticated ${modes.join(",")}`),
 }));
 vi.mock("./lib/sharing", () => ({
-  shareFolder: async (url: string, _o: string, _p: string, agent: string) => void calls.push(`acl ${url} ${agent} read`),
-  stopSharing: async (url: string, _o: string, _p: string, agent: string) => void calls.push(`acl ${url} ${agent} `),
+  shareFolder: async (url: string, _o: string, agent: string) => void calls.push(`acl ${url} ${agent} read`),
+  stopSharing: async (url: string) => void calls.push(`inherit ${url}`),
   sharedWith: async (_u: string, _o: string, _p: string, agent: string) =>
     agentGrants.some((a) => a.webId === agent && a.modes.includes("read")),
 }));
@@ -350,7 +350,7 @@ describe("slice A — the member's side of the handshake", () => {
     const app = await render(tab(COLLECTIVE));
     expect(app.textContent).toContain("does not remove copies already made");
     await click(app, "#unpublish-0");
-    expect(calls).toEqual([`acl ${POD}output2/hyperscope/ ${COLLECTIVE.agent} `]);
+    expect(calls).toEqual([`inherit ${POD}output2/hyperscope/`]);
   });
 
   it("treats an unreadable roster as pending, not as refused", async () => {

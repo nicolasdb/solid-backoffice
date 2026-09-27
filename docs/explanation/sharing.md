@@ -19,15 +19,15 @@ share, not when you join (joining only writes `org:memberOf` in your profile
 and sends the request). Its name comes from the collective's `config.ttl`
 (`hs:bundleFolder`).
 
-Sharing **adds** Read for the collective's agent to the rules the folder
-already follows; it never resets them. `output2/` is yours to arrange: your
-own agent, for one, needs to write there to deliver files to your
-collectives, and whatever `output2/` gives it reaches each collective's
-folder too. So a folder that inherits gets rules of its own that start from
-what it inherited, plus the agent. The grant is the consent: it lives on
-your pod and you can remove it there. (The first cut, slice A, started the
-folder's rules from nobody and silently took your agent's access away;
-overruled on 26 Sep 2026.)
+Sharing gives the folder **rules of its own**, set whole: you (Control,
+as on everything of yours), each agent your profile names
+(`acl:delegates`) Can edit, so it can deliver files, and the collective's
+agent Can read. The folder belongs to the app, so whatever it followed or
+held before is replaced, not merged. The grant is the consent: it lives on
+your pod and you can remove it there. (Two earlier cuts are overruled: slice
+A's gave only the collective's agent, and your own agent lost its access;
+the next one copied what the folder inherited, and stopping could leave it
+on "Only me". 27 Sep 2026.)
 
 Everything you put in that folder is shared, including files added later.
 The screen says so in one line.
@@ -48,9 +48,11 @@ Nothing already collected is ever removed, by either side.
 
 - **Delete a file** from your folder: the collective marks it as removed and
   keeps the copies it made.
-- **Stop sharing**: the grant goes; nothing new is collected; earlier copies
-  stay. If nothing else set the folder apart, it follows `output2/`'s rules
-  again ("Inherit from parent"); otherwise it keeps its own, minus the agent.
+- **Stop sharing**: the folder's own rules are deleted; nothing new is
+  collected; earlier copies stay. "Inherit from parent" is not a rule that
+  could be restored, it is the absence of one: without its own `.acl`, the
+  server applies the nearest folder above that has rules (`output2/`, or
+  the pod's root).
 - **Leave**: your profile stops declaring the membership. Stopping sharing is
   a separate choice, offered at the same time.
 

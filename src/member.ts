@@ -193,9 +193,8 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
     bindButton(publish, async () => {
       await ensureContainer(folderUrl);
       // The grant IS the consent (ADR 006 §1.1): per-WebID, on the member's
-      // own pod, revocable here. Never a group. It starts from what the
-      // folder already follows, so your own agent keeps what output2/ gave it.
-      await shareFolder(folderUrl, webId, ctx.podUrl, collective.agent);
+      // own pod, revocable here. Never a group. Your agents keep edit.
+      await shareFolder(folderUrl, webId, collective.agent, profile.delegates);
       await sendToInbox(collective.inbox, buildAnnounce(webId, folderUrl, collective.group));
       announce(`Your folder is published to ${collective.name}.`);
     }, rerender);
@@ -204,9 +203,9 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   const unpublish = app.querySelector<HTMLButtonElement>(`#unpublish-${i}`);
   if (unpublish) {
     bindButton(unpublish, async () => {
-      await stopSharing(folderUrl, webId, ctx.podUrl, collective.agent);
+      await stopSharing(folderUrl, webId);
       toast(`${collective.name} can no longer read the folder. Copies it already made stay.`, {
-        undo: () => void shareFolder(folderUrl, webId, ctx.podUrl, collective.agent).then(rerender),
+        undo: () => void shareFolder(folderUrl, webId, collective.agent, profile.delegates).then(rerender),
       });
     }, rerender);
   }

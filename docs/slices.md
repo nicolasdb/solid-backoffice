@@ -76,12 +76,13 @@ Not in A, on purpose:
 
 ## Decided since A was built
 
-- **Sharing keeps what the folder inherits** (26 Sep 2026, overrules A's
-  first cut): Share adds the collective's agent to the rules
-  `output2/<collective>/` follows instead of starting from nobody, so your
-  own agent keeps the write it needs to deliver files; Stop sharing returns
-  the folder to "Inherit from parent" when nothing else set it apart.
-  `src/lib/sharing.ts`, pinned on CSS in `test/pods/member.test.ts`.
+- **Sharing sets the folder's rules whole; stopping deletes them** (27 Sep
+  2026, overrules A's first cut and the 26 Sep merge): Share writes
+  `output2/<collective>/.acl` as you (Control), your profile's
+  `acl:delegates` (Can edit) and the collective's agent (Can read). Stop
+  sharing deletes that `.acl`, so the folder inherits again: inheriting is
+  the absence of rules, not something to restore. `src/lib/sharing.ts`,
+  pinned on CSS in `test/pods/member.test.ts`.
 
 The design review (draft 2) changed three things in A before B starts:
 account creation moves into the first journey (username, email, password;
