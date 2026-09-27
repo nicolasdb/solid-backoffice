@@ -280,9 +280,8 @@ member and folder (`announcedBy`, `src/lib/admin.ts`), so share, stop and
 share again read right. Added to solid-kit ADR 006 §1 as step 5.
 Left open, each written where it belongs: the pod's default application
 (provider note, D), a rename telling the people it names through their
-inbox ("Your inbox, later", D), editing someone else's pod (J9), and the
-canvas, which does not yet show the menu's links nor the side list
-([layout-brief](layout-brief.md)).
+inbox ("Your inbox, later", D) and editing someone else's pod (J9). The
+canvas shows all of it (27 Sep 2026, note "Closing C" on the Pods page).
 
 ## D — Provider layer, shown only on our provider
 
