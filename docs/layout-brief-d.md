@@ -205,10 +205,25 @@ Page "You · agents (D, first draft)":
   Collectives); the last live boards with three were fixed.
 - **Access log dropped from D**: Epic 9 retires the reader-side approach.
 
-Still open (on the canvas): the account session (cookie first, "sign in
-to the provider again" if absent); whether the connector URL alone acts
-as the agent; keeping a deleted agent's address from being reused;
-whether "may act for you" is ticked by default.
+- **The connector URL is the key.** claude.ai's custom connector sends
+  only a URL, so the connector on the provider holds the agent's CSS
+  credential and picks the agent by the random slug in `/mcp/<slug>`
+  (pocpod0 `mcp-connector`, Story 8.3). Anyone with the URL acts as the
+  agent until it is revoked: shown once, "keep it private"; lost means
+  revoke and connect again.
+- **Delete retires the address.** After revoking and removing grants,
+  the agent's document stays without `solid:oidcIssuer` (nobody can sign
+  in as it) and is unlinked; a new agent with the same name gets
+  `<name>-2`, so rules the app never found cannot pass to it.
+- **"May act for you" is ticked by default.**
+- **Words**: step 2 is "Connect to AI", not "Connect Claude". The name
+  heads the page; the full WebID sits above the profile's source.
+
+Still open: the account session (cookie first, "sign in to the provider
+again" if absent; a pod test and a live check first); where agents live,
+`profile/<name>#me` (beside `card`, which is reserved) or
+`agents/<name>#me` (the old app's, where teammates' agents are). The app
+lists agents from the account's links either way.
 
 ## Proposed order (superseded by the answers above)
 
