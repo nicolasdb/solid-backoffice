@@ -270,6 +270,13 @@ export function invitationLink(collective: Collective): string {
   return `${url.href}?collective=${address}`;
 }
 
+/** The invitation link as shown: the app's host, then the config's last two segments. */
+export function invitationFace(link: string): string {
+  const url = new URL(link);
+  const tail = new URL(url.searchParams.get("collective") ?? url.href).pathname.split("/").filter(Boolean).slice(-2).join("/");
+  return `${url.host}/?collective=…/${tail}`;
+}
+
 /**
  * The collective's own screen (layout L2): requests beside members on a wide
  * screen, one above the other on a phone with chips to jump between them.
@@ -306,7 +313,7 @@ export function renderRunView(view: RunView): string {
     ${collectiveHead(
       collective.name,
       requests.length ? `<span class="pill is-wait">${requests.length} ${requests.length === 1 ? "request" : "requests"}</span>` : "",
-      `<p class="meta">Invitation link: ${copyable(link, "Invitation link copied.")}</p>
+      `<p class="meta invite-line">Invitation link ${copyable(link, "Invitation link copied.", invitationFace(link))}</p>
        ${isLocal() ? `<p class="meta">This link points to your development server: it works only on this computer.</p>` : ""}`,
       "run-head"
     )}

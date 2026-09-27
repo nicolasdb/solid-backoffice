@@ -25,7 +25,7 @@ vi.mock("./lib/admin", async (importOriginal) => ({
   deleteMessage: async (url: string) => void calls.push(`delete ${url}`),
 }));
 
-const { renderRunView, bindRun } = await import("./admin");
+const { renderRunView, bindRun, invitationFace } = await import("./admin");
 type RunView = import("./admin").RunView;
 
 const POD = "https://pod.example/hs/";
@@ -144,7 +144,7 @@ describe("You run", () => {
     const app = render();
     const head = app.querySelector(".run-head")!;
     expect(head.querySelector("h1")!.textContent).toBe("HyperScope");
-    expect(head.textContent).toContain(`?collective=${COLLECTIVE.configUrl}`);
+    expect(head.querySelector("[data-copy]")!.getAttribute("data-copy")).toContain(`?collective=${COLLECTIVE.configUrl}`);
     expect(head.querySelector(".crumbs a")!.getAttribute("href")).toBe("#/c");
     expect(head.textContent).toContain("1 request");
     expect(app.querySelector("#run-members-title")!.textContent).toBe("Members · 1");
@@ -220,5 +220,12 @@ describe("You run", () => {
     chips[1].click();
     expect(document.activeElement!.id).toBe("run-members");
     expect(location.hash).toBe(before);
+  });
+});
+
+describe("the invitation link", () => {
+  it("shows the app's host and the config's tail; copies the whole link", () => {
+    const link = "https://test.nicolasdb.eu/?collective=https://pod.nicolasdb.eu/hyperscope/config.ttl";
+    expect(invitationFace(link)).toBe("test.nicolasdb.eu/?collective=…/hyperscope/config.ttl");
   });
 });
