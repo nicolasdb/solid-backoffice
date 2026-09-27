@@ -27,7 +27,7 @@ has no rules of its own: you and your agents, nothing else. Otherwise it
 would pass on the pod root's rules, which on a new pod include public Read,
 and stopping would make the folder public without a word. Rules `output2/`
 already has are left as you set them; the pod's root is never touched.
-The folder belongs to the app, so whatever it followed or
+(Which rules apply where: [access rules](access-rules.md).) The folder belongs to the app, so whatever it followed or
 held before is replaced, not merged. The grant is the consent: it lives on
 your pod and you can remove it there. (Two earlier cuts are overruled: slice
 A's gave only the collective's agent, and your own agent lost its access;

@@ -108,6 +108,19 @@ Not now. → ADR 006 §3 "Versions"
 In a small Turtle file next to each copy, on the collective's pod. Oxigraph
 is only an index rebuilt from it. → ADR 006 §3 · ADR 001
 
+**Does a folder's rule override the rules of a file inside it?**
+No, the other way round: the server uses the nearest `.acl`, starting from
+the item and going up. A file with its own public Read is public in a
+private folder. → [Access rules](explanation/access-rules.md#nearest-wins)
+
+**What does "Inherit from parent" actually do?**
+Deletes the item's own `.acl`; it then follows the nearest folder above
+that has one. → [Access rules](explanation/access-rules.md#what-follows)
+
+**Can stopping sharing make my folder public?**
+No: `output2/` is given rules of its own (you, your agents) before the
+folder falls back on it. → [Access rules](explanation/access-rules.md#in-sharing)
+
 ## Following
 
 **What is "Following"?**
