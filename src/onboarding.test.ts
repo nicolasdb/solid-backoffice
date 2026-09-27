@@ -52,7 +52,7 @@ vi.mock("./lib/acl", () => ({
     void calls.push(`acl ${url} authenticated ${modes.join(",")}`),
 }));
 vi.mock("./lib/sharing", () => ({
-  shareFolder: async (url: string, _o: string, agent: string) => void calls.push(`acl ${url} ${agent} read`),
+  shareFolder: async (url: string, _o: string, _p: string, agent: string) => void calls.push(`acl ${url} ${agent} read`),
   stopSharing: async (url: string) => void calls.push(`inherit ${url}`),
   sharedWith: async (_u: string, _o: string, _p: string, agent: string) =>
     agentGrants.some((a) => a.webId === agent && a.modes.includes("read")),
@@ -329,7 +329,7 @@ describe("slice A — the member's side of the handshake", () => {
     expect(app.querySelector("#publish-0")).toBeNull();
   });
 
-  it("shares by creating the folder, granting the agent Read, then announcing", async () => {
+  it("shares (folder, rules: lib/sharing), then announces", async () => {
     profile.inbox = POD + "inbox/";
     profile.memberOf = [COLLECTIVE.group];
     listed = true;
@@ -337,7 +337,6 @@ describe("slice A — the member's side of the handshake", () => {
     expect(app.textContent).toContain("You are a member.");
     await click(app, "#publish-0");
     expect(calls).toEqual([
-      `ensure ${POD}output2/hyperscope/`,
       `acl ${POD}output2/hyperscope/ ${COLLECTIVE.agent} read`,
       "inbox Announce",
     ]);

@@ -264,7 +264,10 @@ need one too, or accepting is refused before any write.
    there. Stop sharing: the folder shows "Inherit from parent" (not "Only
    me"), and its technical rules say it has no `.acl` of its own. Give it
    something by hand (Anyone with the link), share, stop: back to
-   "Inherit from parent" again.
+   "Inherit from parent" again. On a new account (no `output2/`): after
+   Share, `output2/` has its own rules (you, your agent Can edit, not
+   public); after Stop sharing, the folder is still not public (open its
+   address in a private window).
 
 Write down anything the copy got wrong, not just what failed.
 

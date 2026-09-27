@@ -9,13 +9,19 @@
  * - Stop sharing: its own `.acl` is deleted. "Inherit from parent" is not a
  *   rule to restore, it is the absence of one: the server then applies the
  *   nearest folder above that has rules.
+ * - The folder above (`output2/`) is secured first, on both, when it has no
+ *   rules of its own: it would pass on the pod root's (public Read, on a new
+ *   pod), and stopping would silently make the folder public. You and your
+ *   agents, nothing else. Rules it already has are yours: left alone. The
+ *   pod's root is never touched.
  * - Shared: whether the agent can read it, from its own rules or inherited.
  *
  * One conditional write each (`setAccess` / `removeOwnRules`), based on
  * rules read fresh: nothing written over a change made meanwhile.
  */
 import { getAccess, PRESETS, removeOwnRules, setAccess, type AgentGrant } from "./acl";
-import { effectiveAccess } from "./files";
+import { effectiveAccess, parentOf } from "./files";
+import { ensureContainer } from "./pod";
 
 /** The folder's own rules: your agents edit, the collective's agent reads. */
 export function sharingRules(agent: string, delegates: string[]): AgentGrant[] {
@@ -25,8 +31,25 @@ export function sharingRules(agent: string, delegates: string[]): AgentGrant[] {
   ];
 }
 
-/** Gives `folderUrl` its own rules for sharing with `agent` (see `sharingRules`). */
-export async function shareFolder(folderUrl: string, owner: string, agent: string, delegates: string[]): Promise<void> {
+/** The folder above `folderUrl` gets rules of its own (you, your agents edit) when it has none. Not the pod's root. */
+export async function secureParent(folderUrl: string, owner: string, podUrl: string, delegates: string[]): Promise<void> {
+  const parent = parentOf(folderUrl);
+  if (!parent || parent === podUrl || !parent.startsWith(podUrl)) return;
+  await ensureContainer(parent);
+  const current = await getAccess(parent, owner);
+  if (!current.inherited) return;
+  const agents = delegates.map((webId) => ({ webId, modes: PRESETS.edit }));
+  await setAccess(parent, owner, { agents, public: [], authenticated: [] }, null);
+}
+
+/**
+ * Creates `folderUrl` if needed and gives it its own rules for sharing with
+ * `agent` (see `sharingRules`), the folder above secured first: nothing is
+ * public on the way.
+ */
+export async function shareFolder(folderUrl: string, owner: string, podUrl: string, agent: string, delegates: string[]): Promise<void> {
+  await secureParent(folderUrl, owner, podUrl, delegates);
+  await ensureContainer(folderUrl);
   const current = await getAccess(folderUrl, owner);
   await setAccess(
     folderUrl,
@@ -36,10 +59,14 @@ export async function shareFolder(folderUrl: string, owner: string, agent: strin
   );
 }
 
-/** Deletes the folder's own rules, so it inherits again. Already inheriting: nothing to do. */
-export async function stopSharing(folderUrl: string, owner: string): Promise<void> {
+/**
+ * Deletes the folder's own rules, so it inherits again: from the folder
+ * above, secured first when it has none. Already inheriting: nothing to do.
+ */
+export async function stopSharing(folderUrl: string, owner: string, podUrl: string, delegates: string[]): Promise<void> {
   const current = await getAccess(folderUrl, owner);
   if (current.inherited) return;
+  await secureParent(folderUrl, owner, podUrl, delegates);
   await removeOwnRules(folderUrl, current.etag);
 }
 

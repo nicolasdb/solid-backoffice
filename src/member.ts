@@ -11,7 +11,6 @@
  * Orders of writes are unchanged from the checklist they came from, and
  * pinned in src/onboarding.test.ts: folder, grant, then announce.
  */
-import { ensureContainer } from "./lib/pod";
 import { shareFolder, stopSharing } from "./lib/sharing";
 import { buildAnnounce, buildJoin, profileEdits, sendToInbox, updateOwnProfile, type Collective } from "./lib/collective";
 import { readPerson, readRoster } from "./lib/admin";
@@ -191,10 +190,9 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   const publish = app.querySelector<HTMLButtonElement>(`#publish-${i}`);
   if (publish) {
     bindButton(publish, async () => {
-      await ensureContainer(folderUrl);
       // The grant IS the consent (ADR 006 §1.1): per-WebID, on the member's
       // own pod, revocable here. Never a group. Your agents keep edit.
-      await shareFolder(folderUrl, webId, collective.agent, profile.delegates);
+      await shareFolder(folderUrl, webId, ctx.podUrl, collective.agent, profile.delegates);
       await sendToInbox(collective.inbox, buildAnnounce(webId, folderUrl, collective.group));
       announce(`Your folder is published to ${collective.name}.`);
     }, rerender);
@@ -203,9 +201,9 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   const unpublish = app.querySelector<HTMLButtonElement>(`#unpublish-${i}`);
   if (unpublish) {
     bindButton(unpublish, async () => {
-      await stopSharing(folderUrl, webId);
+      await stopSharing(folderUrl, webId, ctx.podUrl, profile.delegates);
       toast(`${collective.name} can no longer read the folder. Copies it already made stay.`, {
-        undo: () => void shareFolder(folderUrl, webId, collective.agent, profile.delegates).then(rerender),
+        undo: () => void shareFolder(folderUrl, webId, ctx.podUrl, collective.agent, profile.delegates).then(rerender),
       });
     }, rerender);
   }

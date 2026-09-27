@@ -81,7 +81,9 @@ Not in A, on purpose:
   `output2/<collective>/.acl` as you (Control), your profile's
   `acl:delegates` (Can edit) and the collective's agent (Can read). Stop
   sharing deletes that `.acl`, so the folder inherits again: inheriting is
-  the absence of rules, not something to restore. `src/lib/sharing.ts`,
+  the absence of rules, not something to restore. Both first give
+  `output2/` rules of its own (you, your agents) when it has none, so
+  inheriting never means the pod root's public Read. `src/lib/sharing.ts`,
   pinned on CSS in `test/pods/member.test.ts`.
 
 The design review (draft 2) changed three things in A before B starts:

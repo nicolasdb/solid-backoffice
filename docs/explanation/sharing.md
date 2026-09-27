@@ -22,7 +22,12 @@ and sends the request). Its name comes from the collective's `config.ttl`
 Sharing gives the folder **rules of its own**, set whole: you (Control,
 as on everything of yours), each agent your profile names
 (`acl:delegates`) Can edit, so it can deliver files, and the collective's
-agent Can read. The folder belongs to the app, so whatever it followed or
+agent Can read. The folder above it (`output2/`) is secured first when it
+has no rules of its own: you and your agents, nothing else. Otherwise it
+would pass on the pod root's rules, which on a new pod include public Read,
+and stopping would make the folder public without a word. Rules `output2/`
+already has are left as you set them; the pod's root is never touched.
+The folder belongs to the app, so whatever it followed or
 held before is replaced, not merged. The grant is the consent: it lives on
 your pod and you can remove it there. (Two earlier cuts are overruled: slice
 A's gave only the collective's agent, and your own agent lost its access;
@@ -52,7 +57,8 @@ Nothing already collected is ever removed, by either side.
   collected; earlier copies stay. "Inherit from parent" is not a rule that
   could be restored, it is the absence of one: without its own `.acl`, the
   server applies the nearest folder above that has rules (`output2/`, or
-  the pod's root).
+  the pod's root). `output2/` is secured before, if it still has no rules
+  (a folder shared before 27 Sep), so this never makes it public.
 - **Leave**: your profile stops declaring the membership. Stopping sharing is
   a separate choice, offered at the same time.
 
