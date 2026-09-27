@@ -128,7 +128,7 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
       <p class="actions">
         ${
           published
-            ? `<a href="${routeHref({ name: "places", path: collective.bundleFolder })}">Open ${esc(collective.bundleFolder)}</a>
+            ? `<a class="button-ghost" href="${routeHref({ name: "places", path: collective.bundleFolder })}">Open folder</a>
                <button id="unpublish-${i}" class="ghost">Stop sharing</button>`
             : `<button id="publish-${i}">Share the folder</button>`
         }

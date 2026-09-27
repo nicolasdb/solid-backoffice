@@ -1001,6 +1001,18 @@ a.button-link {
 }
 a.button-link:hover { background: var(--surface-recessed); }
 
+/* Goes somewhere, so a link; sits among buttons, so drawn as a ghost button. */
+a.button-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+a.button-ghost:hover { background: var(--surface-recessed); }
+
 table.items { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
 table.items th {
   font-family: var(--font-mono);
