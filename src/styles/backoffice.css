@@ -1349,6 +1349,8 @@ button.warn { background: transparent; color: var(--warn); border-color: var(--w
 .agent-head .grow { flex: 1; }
 .agent-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); font-size: var(--text-meta); color: var(--text-tertiary); }
 .agent-foot .copyable { font-size: inherit; }
+/* On a phone the card keeps status, count and next step; identity is on the desktop card. */
+@media (max-width: 40rem) { .agent-foot { display: none; } }
 .agent-status { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-small); color: var(--text-secondary); }
 .agent-status strong { color: var(--text-primary); font-weight: 600; }
 .agent-status .dot { flex: none; width: 9px; height: 9px; border-radius: var(--radius-full); background: var(--accent); }
