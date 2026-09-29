@@ -107,7 +107,13 @@ member's side harmless:
 
 - **A new name** shows up everywhere at the next read.
 - **A replaced agent** changes only that agent's own grants. The member's
-  sharing is a grant to the *collective's* agent, so it is untouched.
+  sharing is a grant to the *collective's* agent, so it is untouched. On
+  the collective's side, a member's agents read what the member reads (the
+  roster and the shared folders, and so the collective's graph): accepting
+  grants the agents the profile declares, and the members table flags one
+  added later ("Let them read it"). Removing revokes the agents declared
+  at that moment; one dropped earlier keeps its grant until removed by
+  hand.
 - **A new WebID** is a new member. The old one's state becomes "left" once
   its profile no longer declares the membership.
 

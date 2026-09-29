@@ -16,6 +16,7 @@ import {
   readPerson,
   readRoster,
   refuse,
+  readersOf,
   removeMember,
   deleteMessage,
   requestFlags,
@@ -220,10 +221,13 @@ function renderMember(member: MemberView, i: number, collective: Collective, own
       </td>
       <td class="row-actions">
         ${
-          member.canReadRoster
-            ? ""
-            : `<span class="meta">Cannot read the roster yet: accepting was not finished.</span>
+          !member.canReadRoster
+            ? `<span class="meta">Cannot read the roster yet: accepting was not finished.</span>
                <button class="ghost small" data-grant="${i}">Let them read it</button>`
+            : member.missing.length
+              ? `<span class="meta">They or their agents cannot read ${member.missing.map((m) => `<code>${esc(m)}</code>`).join(", ")} yet.</span>
+                 <button class="ghost small" data-grant="${i}">Let them read it</button>`
+              : ""
         }
         ${member.webId === owner ? "" : `<button class="ghost small" data-remove="${i}">Remove</button>`}
       </td>
@@ -392,7 +396,8 @@ export function bindRun(app: HTMLElement, view: RunView, rerender: () => void): 
   app.querySelectorAll<HTMLButtonElement>("[data-grant]").forEach((button) => {
     const member = view.members[Number(button.dataset.grant)];
     bindButton(button, async () => {
-      await grantMemberRead(await memberReadTargets(collective, owner), owner, member.webId);
+      const targets = await memberReadTargets(collective, owner);
+      for (const reader of readersOf(member)) await grantMemberRead(targets, owner, reader);
       announce("Access granted.");
     }, rerender);
   });

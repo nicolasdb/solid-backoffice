@@ -4,7 +4,17 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (27 Sep 2026)
+## Where we are (29 Sep 2026)
+
+**E · The collective's graph, with HyperScope as the proof** started on 29
+Sep 2026 (below, under E). The hypothesis: a member's summary, pulled,
+confronted and loaded into Oxigraph, is found by another member's agent in
+a new conversation, which builds on it and names its author. Built so far:
+pocpod0's connector has `graph_ingest` (the collective's agent only) and
+`graph_query` (members and their declared agents, read-only, over what they
+can read on the pod), deployed; and here, accepting a member grants their
+agents too. Next: the confrontation procedure writes a Turtle sidecar
+(solid-kit), then the loop run by hand with Xavier.
 
 **C · Pods is closed** (27 Sep 2026): built, used live on
 test.nicolasdb.eu, and reworked from what that showed (below, under C,
@@ -425,7 +435,57 @@ rename or move in Pods tells the people it names (each WebID granted on
 the item, never public Read, which names nobody) with an `as:Move` to
 their inbox, so a followed address can follow along instead of breaking.
 
-## E — Maps of Making landing
+## E — The collective's graph · in progress
+
+The pipeline of the "pod as blackboard" note (pull → confront → flag →
+chantier → publish), with its must-have first: **pull → confront → ingest
+into Oxigraph → a member's agent draws on it**. HyperScope's pod is the
+proof. Most of the work is in pocpod0 (connector, Oxigraph) and solid-kit
+(the procedures, ADR 006); this repo holds the membership side of it.
+
+The scenario it must pass: Xavier's agent writes his summary to
+`output2/hyperscope/`; the collective's agent pulls, confronts and ingests
+it; Nicolas opens a new conversation with his own agent, which finds
+Xavier's work through `graph_query`, reads it on the pod, and writes a new
+contribution citing it (`prov:wasDerivedFrom`) that goes round again.
+Later: the agent queries the graph on its own at a session's edges, 2 or 3
+suggestions, naming the author.
+
+Decided (29 Sep 2026):
+
+- **One Oxigraph, one named graph per document**, named by its pod address;
+  a collective is every graph under its pod. Isolation is the connector's
+  job, since Oxigraph has none: the SPARQL protocol dataset holds against
+  `FROM`, `FROM NAMED` and `GRAPH <iri>`, `SERVICE` escapes it, so the
+  query is parsed, `SERVICE` and updates refused, and the regenerated text
+  sent (pocpod0 `mcp-connector/src/collectiveGraph.js`). Oxigraph's port is
+  loopback only.
+- **Members' agents query too, read-only, acting as their member**: on the
+  roster, or declared by someone on it (`acl:delegates`), and only over
+  folders they can read on the pod. So accepting grants the member's
+  agents the same Read (`src/lib/admin.ts`, `readersOf`), and the members
+  table says what a member or their agents cannot read yet.
+- **Triggers**: by hand first ("lance le pull" in the collective agent's
+  session), then polling, then the webhook (ADR 006 §4).
+- **Skills as IPO modules**: each procedure names its input folder, its
+  output folder and is the only writer there. Pull and confrontation exist
+  (solid-kit `docs/procedures/`); ingest is a tool; the member's procedure
+  (what to put in `output2/`, how to cite) is to write.
+
+Steps: (1) connector tools, **done, deployed**; (2) agents granted on
+accept, **built**, live check in [manual tests](manual-tests.md) "E";
+(3) confrontation v2 writes a Turtle sidecar (topics, cites, verdict) next
+to each snapshot, and a member procedure; (4) Xavier onboarded through the
+backoffice, then the loop by hand, then with HyperScope's members.
+
+Not in E, on purpose: **admin rotation** (today "the collective you run" is
+the account signed in; rotating means admins by WebID in `config.ttl`, not
+blocking yet) and **creating a collective** from the app (a recipe not
+settled: pod, `inbox/`, agent, `config.ttl`, `membres.ttl`, procedures,
+required profile fields, members-only documents such as a machines list;
+maybe a script or its own app, with the collective's own landing page).
+
+## F — Maps of Making landing
 
 The same app with a second `config.ttl` and its own entry page. If that needs
 more than a config line and copy, the backoffice is not generic enough yet, and

@@ -56,6 +56,13 @@ describe("the collective answers requests (J3)", () => {
   });
 
   it("accepts Inès: listed, able to read the roster, answered, request gone", async () => {
+    // Inès declares an agent first. Any account that can sign in stands in for it here.
+    await actAs("ines");
+    await updateOwnProfile(cast.ines.webId, profileEdits.addDelegate(cast.network.webId));
+    await actAs("network");
+    expect(await status(cast.hyperscope.pod + "membres.ttl")).toBe(403);
+
+    await actAs("hyperscope");
     await actAs("hyperscope");
     const hs = await loadCollective(hsConfig);
     const join = (await admin.readInbox(hs)).find((m) => m.type === "Join" && m.actor === cast.ines.webId)!;
@@ -71,6 +78,10 @@ describe("the collective answers requests (J3)", () => {
     expect(membershipState(true, true)).toBe("member");
     const answer = (await inboxOf("ines")).find((m) => m.rawType?.endsWith("Accept"));
     expect(answer).toMatchObject({ actor: owner, object: join.url, target: hs.group });
+
+    // Her agent reads what she reads: in the pod, and so in the collective's graph.
+    await actAs("network");
+    expect(await status(hs.roster)).toBe(200);
   });
 
   it("refuses the outsider: request gone, roster untouched, no inbox to answer", async () => {
@@ -96,7 +107,16 @@ describe("members, from both sides", () => {
     const amina = members.find((m) => m.webId === cast.amina.webId)!;
     expect(amina).toMatchObject({ state: "member", nick: "amina", canReadRoster: true });
     expect(amina.announced).toContain(cast.amina.pod + "output2/hyperscope/");
-    expect(members.find((m) => m.webId === cast.ines.webId)).toMatchObject({ state: "member", canReadRoster: true });
+    expect(members.find((m) => m.webId === cast.ines.webId)).toMatchObject({ state: "member", canReadRoster: true, missing: [] });
+
+    // An agent Inès declares after acceptance cannot read yet, and the table says where.
+    await actAs("ines");
+    await updateOwnProfile(cast.ines.webId, profileEdits.addDelegate(cast.outsider.webId));
+    await actAs("hyperscope");
+    const later = await admin.readMembers(hs, owner, []);
+    expect(later.find((m) => m.webId === cast.ines.webId)!.missing).toEqual(["membres.ttl"]);
+    await actAs("ines");
+    await updateOwnProfile(cast.ines.webId, profileEdits.removeDelegate(cast.outsider.webId));
 
     // Amina stops sharing: the Undo reaches the inbox, and the folder leaves "Shares".
     await actAs("amina");
@@ -133,10 +153,14 @@ describe("removing a member (J5, admin side)", () => {
     expect(members.map((m) => m.webId)).not.toContain(cast.ines.webId);
     expect(nicks.get(cast.ines.webId)).toBe("ines");
 
+    await actAs("network");
+    expect(await status(hs.roster)).toBe(403); // her agent's Read goes with hers
+
     await actAs("ines");
     expect(await status(hs.roster)).toBe(403);
     // Her side still declares it and cannot read the roster: pending, never refused.
     expect(membershipState(true, await isListed(hs, cast.ines.webId))).toBe("pending");
     expect((await inboxOf("ines")).some((m) => m.rawType?.endsWith("Remove"))).toBe(true);
+    await updateOwnProfile(cast.ines.webId, profileEdits.removeDelegate(cast.network.webId)); // the cast as it was
   });
 });

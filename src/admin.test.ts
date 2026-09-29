@@ -23,6 +23,8 @@ vi.mock("./lib/admin", async (importOriginal) => ({
     return { answered: true };
   },
   deleteMessage: async (url: string) => void calls.push(`delete ${url}`),
+  memberReadTargets: async () => ["targets"],
+  grantMemberRead: async (_t: string[], _o: string, webId: string) => void calls.push(`grant ${webId}`),
 }));
 
 const { renderRunView, bindRun, invitationFace } = await import("./admin");
@@ -56,7 +58,7 @@ beforeEach(() => {
     requests: [{ message: message(), person: { webId: INES, profile: profile("Inès"), problem: null }, flags: [], listed: false, knownNick: null }],
     members: [{
       webId: AMINA, profile: profile("Amina"), problem: null, nick: "amina", state: "member",
-      canReadRoster: true, announced: ["https://pod.example/amina/output2/hs/"],
+      canReadRoster: true, missing: [], announced: ["https://pod.example/amina/output2/hs/"],
     }],
     others: [message({ url: POD + "inbox/x", type: "other", actor: null, problem: "Not an activity: text/plain." })],
     inboxError: null,
@@ -123,6 +125,16 @@ describe("You run", () => {
     view.members[0] = { ...view.members[0], canReadRoster: false };
     const app = render();
     expect(app.querySelector("[data-grant='0']")).not.toBeNull();
+  });
+
+  it("offers to finish what a member or their agents cannot read yet, and grants the agents with them", async () => {
+    const agent = "https://pod.example/amina/profile/claude#me";
+    view.members[0] = { ...view.members[0], profile: profile("Amina", { delegates: [agent] }), missing: ["confrontations/"] };
+    const app = render();
+    expect(app.textContent!.replace(/\s+/g, " ")).toContain("They or their agents cannot read confrontations/ yet.");
+    app.querySelector<HTMLButtonElement>("[data-grant='0']")!.click();
+    await tick();
+    expect(calls).toEqual([`grant ${AMINA}`, `grant ${agent}`, "rerender"]);
   });
 
   it("keeps messages it does not understand visible, and deletable", async () => {

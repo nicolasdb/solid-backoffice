@@ -310,9 +310,20 @@ export async function readRoster(collective: Collective): Promise<ReturnType<typ
 /**
  * Where a member holds Read, one WebID at a time (ADR 006 §5): the roster,
  * and the shared containers once they exist. Relative to the collective's pod
- * root, which is where `config.ttl` sits.
+ * root, which is where `config.ttl` sits. `depots/` and `confrontations/` are
+ * also what the collective's graph shows a member (pocpod0 `graph_query`):
+ * the graph never shows more than the pod lets them read.
  */
-export const MEMBER_READ_OPTIONAL = ["depots/", "principles/"];
+export const MEMBER_READ_OPTIONAL = ["depots/", "confrontations/", "chantiers/", "briefs/", "principles/"];
+
+/**
+ * Who reads as this member: the member, and each agent their own profile
+ * declares with `acl:delegates`, one WebID per grant (ADR 006 §2). An agent
+ * acts for its human, in the pod and in the collective's graph.
+ */
+export function readersOf(person: Person): string[] {
+  return [person.webId, ...(person.profile?.delegates ?? []).filter((d) => d !== person.webId && isValidWebId(d))];
+}
 
 /**
  * The resources to grant on, checked BEFORE any write: each must have its own
@@ -366,7 +377,7 @@ export async function accept(
   if (!join.actor || join.actor !== person.webId) throw new Error("This request has no sender to accept.");
   const targets = await memberReadTargets(collective, owner);
   await addToRoster(collective, person.webId, nick);
-  await grantMemberRead(targets, owner, person.webId);
+  for (const reader of readersOf(person)) await grantMemberRead(targets, owner, reader);
   const inbox = person.profile?.inbox ?? null;
   if (inbox) await sendToInbox(inbox, buildAnswer("Accept", owner, join.url, collective.group));
   await deleteMessage(join.url);
@@ -382,13 +393,15 @@ export async function refuse(collective: Collective, owner: string, join: InboxM
 }
 
 /**
- * Remove: revoke grants → roster → `as:Remove`. Grants go first, so a failure
- * never leaves someone off the roster who can still read it. The nick stays
- * (it is used in paths), and nothing already collected is deleted (J5).
+ * Remove: revoke grants (theirs, then their agents') → roster → `as:Remove`.
+ * Grants go first, so a failure never leaves someone off the roster who can
+ * still read it. The nick stays (it is used in paths), and nothing already
+ * collected is deleted (J5). Only the agents their profile declares today are
+ * revoked: one they dropped earlier keeps its grant until removed by hand.
  */
 export async function removeMember(collective: Collective, owner: string, person: Person): Promise<Outcome> {
   const targets = await memberReadTargets(collective, owner);
-  await revokeMemberRead(targets, owner, person.webId);
+  for (const reader of readersOf(person)) await revokeMemberRead(targets, owner, reader);
   await removeFromRoster(collective, person.webId);
   const inbox = person.profile?.inbox ?? null;
   if (inbox) await sendToInbox(inbox, buildRemove(owner, person.webId, collective.group));
@@ -403,6 +416,12 @@ export interface MemberView extends Person {
   state: MembershipState;
   /** Whether the roster's own `.acl` grants them Read. `false`: accepting was not finished. */
   canReadRoster: boolean;
+  /**
+   * Where they, or an agent their profile declares, cannot read yet (paths
+   * from the pod root): an agent added after they were accepted, or a folder
+   * created since. Only folders with rules of their own are checked.
+   */
+  missing: string[];
   /** Folders they announced. Only their pod can say whether the grant still holds. */
   announced: string[];
 }
@@ -425,18 +444,45 @@ export async function readMembers(
 ): Promise<MemberView[]> {
   const entries = (roster ?? readRoster(collective)).then((r) => r.members);
   const people = entries.then((members) => Promise.all(members.map((entry) => readPerson(entry.webId))));
-  const [members, access, persons, inbox] = await Promise.all([
+  const [members, access, folders, persons, inbox] = await Promise.all([
     entries,
     readAccess(collective.roster, owner),
+    folderReaders(collective, owner),
     people,
     messages,
   ]);
-  const readers = new Set(access.agents.filter((a) => a.modes.includes("read")).map((a) => a.webId));
+  const readers = readersIn(access);
+  const everywhere = [{ path: collective.roster.slice(new URL("./", collective.configUrl).href.length), readers }, ...folders];
   return members.map((entry, i) => ({
     ...persons[i],
     nick: entry.nick,
     state: memberState(persons[i], collective.group),
     canReadRoster: readers.has(entry.webId) || entry.webId === owner,
+    missing:
+      entry.webId === owner
+        ? []
+        : everywhere.filter((t) => readersOf(persons[i]).some((r) => !t.readers.has(r))).map((t) => t.path),
     announced: announcedBy(inbox, entry.webId),
   }));
+}
+
+function readersIn(access: { agents: { webId: string; modes: string[] }[] }): Set<string> {
+  return new Set(access.agents.filter((a) => a.modes.includes("read")).map((a) => a.webId));
+}
+
+/** Who can read each shared folder that exists and has rules of its own. One that cannot be read is skipped. */
+async function folderReaders(collective: Collective, owner: string): Promise<{ path: string; readers: Set<string> }[]> {
+  const found = await Promise.all(
+    MEMBER_READ_OPTIONAL.map(async (path) => {
+      const url = new URL(path, collective.configUrl).href;
+      try {
+        if (!(await exists(url))) return null;
+        const access = await readAccess(url, owner);
+        return access.inherited ? null : { path, readers: readersIn(access) };
+      } catch {
+        return null;
+      }
+    })
+  );
+  return found.filter((f): f is { path: string; readers: Set<string> } => f !== null);
 }

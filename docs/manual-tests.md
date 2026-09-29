@@ -642,3 +642,26 @@ both themes.
    name: the marked line changes with it. "Open in Pods" opens the same
    file in Pods.
 
+## E · A member's agents read what the member reads
+
+On the live pod, as the collective's account, before onboarding the first
+member through the new flow.
+
+1. **Folders ready.** Each of `depots/`, `confrontations/`, `chantiers/`,
+   `briefs/`, `principles/` that exists has rules of its own (Pods, `···`,
+   Who can access it: not "Same as"). Accept someone while one inherits:
+   refused, the message names the folder, nothing written.
+2. **Accept with an agent.** A requester whose profile declares an agent
+   (You, "may act for you"): after Accept, the roster and each folder's
+   rules name the member *and* the agent, Can read.
+3. **An agent added later.** The member creates a second agent: the
+   members table says "They or their agents cannot read membres.ttl, … yet"
+   with "Let them read it"; one click, the line goes.
+4. **Members accepted before this change.** Their row lists
+   `confrontations/` (and any folder created since): "Let them read it"
+   finishes it.
+5. **The graph.** In claude.ai, the member's agent's connector:
+   `graph_query` on the collective answers; the same query from an agent
+   nobody declares is refused ("not on the roster").
+6. **Remove.** The member and their current agents lose Read on the roster
+   and every folder.

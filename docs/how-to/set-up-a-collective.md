@@ -34,10 +34,17 @@ files and `.acl` documents on its pod.
    it as you accept them.
 5. **Create `inbox/`** and give `acl:AuthenticatedAgent` Append on it, with
    `acl:default` so it applies to what is inside.
-6. **Check** by signing in to the backoffice as an unrelated account and
+6. **Give each shared folder rules of its own** once it exists (`depots/`,
+   `confrontations/`, `chantiers/`, `briefs/`, `principles/`): the owner
+   with Control and `acl:default`, the collective's agent as in
+   [ADR 006 §5](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md).
+   Accepting a member adds them, and each agent their profile declares, to
+   every one of these, so accepting is refused while one of them still
+   inherits: a grant written there would replace what it inherits.
+7. **Check** by signing in to the backoffice as an unrelated account and
    opening the invitation link: the collective's card appears, and
    `membres.ttl` stays unreadable.
-7. **Invite** by sending the invitation link, copied from the collective's
+8. **Invite** by sending the invitation link, copied from the collective's
    tab in the backoffice ([invite people](invite-people.md)):
    `https://<backoffice>/?collective=https://<pod>/<collective>/config.ttl`.
    Opened, it shows the invited welcome; pasted into "Join another

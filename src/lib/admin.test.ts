@@ -63,7 +63,8 @@ const COLLECTIVE = {
 const OWNER = POD + "profile/card#me";
 const INES = "https://pod.example/ines/profile/card#me";
 const JOIN_URL = POD + "inbox/j1";
-const ines = (over: Partial<{ memberOf: string[]; inbox: string | null; name: string | null }> = {}) => ({
+const INES_AGENT = "https://pod.example/ines/profile/claude#me";
+const ines = (over: Partial<{ memberOf: string[]; inbox: string | null; name: string | null; delegates: string[] }> = {}) => ({
   webId: INES,
   profile: { name: "Inès", memberOf: [COLLECTIVE.group], delegates: [], inbox: "https://pod.example/ines/inbox/", ...over },
   problem: null,
@@ -192,6 +193,19 @@ describe("order of writes", () => {
     ]);
   });
 
+  it("accepts a member's agents with them: the member's grants first, then each agent's", async () => {
+    await admin.accept(COLLECTIVE, OWNER, join, ines({ delegates: [INES_AGENT, "not a webid"] }), "ines");
+    expect(calls).toEqual([
+      `roster ${COLLECTIVE.roster}`,
+      `acl ${COLLECTIVE.roster} ${INES} read`,
+      `acl ${POD}depots/ ${INES} read`,
+      `acl ${COLLECTIVE.roster} ${INES_AGENT} read`,
+      `acl ${POD}depots/ ${INES_AGENT} read`,
+      "send https://pod.example/ines/inbox/ Accept",
+      `DELETE ${JOIN_URL}`,
+    ]);
+  });
+
   it("keeps the request when a grant fails, so accepting again finishes it", async () => {
     failAt = "acl";
     await expect(admin.accept(COLLECTIVE, OWNER, join, ines(), "ines")).rejects.toThrow();
@@ -228,6 +242,18 @@ describe("order of writes", () => {
       `acl ${POD}depots/ ${INES} none`,
       `roster ${COLLECTIVE.roster}`,
       "send https://pod.example/ines/inbox/ Remove",
+    ]);
+  });
+
+  it("removes a member's agents before the roster too", async () => {
+    rosterText = admin.addMemberText(rosterText, COLLECTIVE.roster, COLLECTIVE.group, INES, "ines");
+    await admin.removeMember(COLLECTIVE, OWNER, ines({ delegates: [INES_AGENT] }));
+    expect(calls.slice(0, 5)).toEqual([
+      `acl ${COLLECTIVE.roster} ${INES} none`,
+      `acl ${POD}depots/ ${INES} none`,
+      `acl ${COLLECTIVE.roster} ${INES_AGENT} none`,
+      `acl ${POD}depots/ ${INES_AGENT} none`,
+      `roster ${COLLECTIVE.roster}`,
     ]);
   });
 });
