@@ -13,8 +13,8 @@ a new conversation, which builds on it and names its author. Built so far:
 pocpod0's connector has `graph_ingest` (the collective's agent only) and
 `graph_query` (members and their declared agents, read-only, over what they
 can read on the pod), deployed; and here, accepting a member grants their
-agents too. Next: the confrontation procedure writes a Turtle sidecar
-(solid-kit), then the loop run by hand with Xavier.
+agents too; the procedures for it are written (solid-kit). Next: the loop
+run by hand with Xavier.
 
 **C · Pods is closed** (27 Sep 2026): built, used live on
 test.nicolasdb.eu, and reworked from what that showed (below, under C,
@@ -475,7 +475,8 @@ Decided (29 Sep 2026):
 Steps: (1) connector tools, **done, deployed**; (2) agents granted on
 accept, **built**, live check in [manual tests](manual-tests.md) "E";
 (3) confrontation v2 writes a Turtle sidecar (topics, cites, verdict) next
-to each snapshot, and a member procedure; (4) Xavier onboarded through the
+to each snapshot, and a member procedure, **written** (solid-kit `f8a0b90`,
+every query checked on Oxigraph; not yet run by an agent); (4) Xavier onboarded through the
 backoffice, then the loop by hand, then with HyperScope's members.
 
 Not in E, on purpose: **admin rotation** (today "the collective you run" is
