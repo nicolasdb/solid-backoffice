@@ -22,6 +22,8 @@ describe("trimAddress", () => {
   it("names a person by their pod's folder, or the host's first part", () => {
     expect(webIdName("https://pod.example/nicolas_claude/profile/card#me")).toBe("nicolas_claude");
     expect(webIdName("https://neil.example/profile/card#me")).toBe("neil");
+    expect(webIdName("https://pod.example/nicolas/profile/claude#me")).toBe("claude");
+    expect(webIdName("https://pod.example/nicolas/profile/claude-2#me")).toBe("claude-2");
     expect(webIdName("https://id.example/people/sam.ttl#me")).toBe("sam");
     expect(webIdName("not an address")).toBe("not an address");
   });

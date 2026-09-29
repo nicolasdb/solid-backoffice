@@ -25,8 +25,9 @@ export function podLabel(podUrl: string): string {
 
 /**
  * A person by name when nothing better is known: the pod's folder in
- * "…/nicolas_claude/profile/card#me", or the first part of the host when the
- * pod is the whole domain. The full WebID is for the people screen (slice D).
+ * "…/nicolas_claude/profile/card#me", the document in
+ * "…/nicolas/profile/claude#me", or the first part of the host when the pod
+ * is the whole domain. The full WebID is for the people screen (slice D).
  */
 export function webIdName(webId: string): string {
   let url: URL;
@@ -37,6 +38,10 @@ export function webIdName(webId: string): string {
   }
   const parts = url.pathname.split("/").filter(Boolean);
   const profile = parts.indexOf("profile");
+  // An agent beside your card (`…/nicolas/profile/claude#me`, slice D) is
+  // named by its document, not by the pod it lives on.
+  const doc = parts[profile + 1];
+  if (profile >= 0 && doc && doc !== "card") return decodeURIComponent(doc).replace(/\.[a-z]+$/i, "");
   if (profile > 0) return decodeURIComponent(parts[profile - 1]);
   if (profile === 0 || parts.length === 0) return url.hostname.split(".")[0];
   return decodeURIComponent(parts[parts.length - 1]).replace(/\.[a-z]+$/i, "");
