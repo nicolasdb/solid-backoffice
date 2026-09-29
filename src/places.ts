@@ -62,6 +62,7 @@ export type { Group };
 import { focusView } from "./ui/a11y";
 import { bindCopy, copyable } from "./steps";
 import { appLink, openFromInput } from "./invite";
+import { readName } from "./lib/collective";
 
 export interface PlacesContext {
   webId: string;
@@ -131,6 +132,7 @@ let generation = 0;
 let objectUrls: string[] = [];
 
 export function forgetPlaces(): void {
+  naming.clear();
   listings.clear();
   errors.clear();
   rows.clear();
@@ -764,7 +766,9 @@ async function readRules(urls: string[], mine: number): Promise<void> {
     urls.map(async (url) => {
       let value: RowRules | "error";
       try {
-        value = rowRules(url, await effectiveAccess(url, ctx!.webId, ctx!.podUrl, memo), ctx!.names);
+        const effective = await effectiveAccess(url, ctx!.webId, ctx!.podUrl, memo);
+        if (effective) await learnNames(effective.access.agents.map((a) => a.webId));
+        value = rowRules(url, effective, ctx!.names);
       } catch {
         value = "error";
       }
@@ -773,6 +777,21 @@ async function readRules(urls: string[], mine: number): Promise<void> {
       rows.set(url, value);
       if (JSON.stringify(value) !== was) patchRules(url);
     })
+  );
+}
+
+/** Names asked for, one read per WebID a session (the read is cached as well). */
+const naming = new Map<string, Promise<void>>();
+
+/** Puts each WebID's own `foaf:name` in `names`, unless the app already knows a better label. */
+function learnNames(webIds: string[]): Promise<unknown> {
+  return Promise.all(
+    webIds
+      .filter((w) => w !== ctx!.webId && !ctx!.names.has(w))
+      .map((w) => {
+        if (!naming.has(w)) naming.set(w, readName(w).then((name) => void (name && !ctx?.names.has(w) && ctx?.names.set(w, name))));
+        return naming.get(w)!;
+      })
   );
 }
 
@@ -1140,6 +1159,7 @@ async function startDraft(url: string, mine: number): Promise<void> {
     const next = await loadDraft(url, ctx!.webId, ctx!.podUrl).finally(() => {
       if (draftLoading === url) draftLoading = null;
     });
+    await learnNames(next.agents.map((a) => a.webId));
     if (mine !== generation || accessUrl() !== url) return;
     draft = next;
     draftError = null;

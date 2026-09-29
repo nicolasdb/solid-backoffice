@@ -251,6 +251,21 @@ export async function readOwnProfile(webId: string): Promise<MemberDeclaration> 
   return parseProfile(await res.text(), docUrl, webId);
 }
 
+/**
+ * Anyone's `foaf:name`, from the document their WebID points into: a card, or
+ * an agent's own document (`profile/claude#me`). `null` when there is none or
+ * it cannot be read; the caller falls back to the address.
+ */
+export async function readName(webId: string): Promise<string | null> {
+  try {
+    const docUrl = profileDocOf(webId);
+    const res = await readTurtle(docUrl);
+    return res.ok ? parseProfile(await res.text(), docUrl, webId).name : null;
+  } catch {
+    return null;
+  }
+}
+
 export const profileEdits = {
   setName: (name: string) => (t: ReturnType<typeof createThing>) => setStringNoLocale(t, FOAF_NAME, name),
   addDelegate: (agent: string) => (t: ReturnType<typeof createThing>) =>

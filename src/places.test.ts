@@ -229,6 +229,22 @@ describe("C1 — a folder of your pod", () => {
     expect(document.activeElement!.getAttribute("data-menu")).toBe(POD + "projects/drafts/");
   });
 
+  it("names an agent by its own foaf:name, and by its document when it has none", async () => {
+    const claude = POD + "profile/claude#me";
+    const bare = POD + "profile/bot-2#me";
+    pod[POD + "profile/claude"] = { body: `<#me> <http://xmlns.com/foaf/0.1/name> "Claude".`, etag: '"c"' };
+    pod[POD + "profile/bot-2"] = { body: `<#me> a <http://xmlns.com/foaf/0.1/Person>.`, etag: '"b"' };
+    pod[POD + "projects/drafts/.acl"] = {
+      body: acl("./", true, `<#c> a acl:Authorization; acl:agent <${claude}>, <${bare}>; acl:accessTo <./>; acl:default <./>; acl:mode acl:Read, acl:Write.`),
+      etag: '"dacl2"',
+    };
+    await mount("projects/");
+    await reading;
+    menuFor(POD + "projects/drafts/");
+    await until(() => app.querySelector("#change-access:not([disabled])"));
+    expect(chips()).toEqual(["You", "Claude", "bot-2"]);
+  });
+
   it("says an item follows its folder, and names your pod by its last part", async () => {
     await mount("projects/");
     await reading;
