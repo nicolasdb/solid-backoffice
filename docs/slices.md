@@ -13,8 +13,14 @@ a new conversation, which builds on it and names its author. Built so far:
 pocpod0's connector has `graph_ingest` (the collective's agent only) and
 `graph_query` (members and their declared agents, read-only, over what they
 can read on the pod), deployed; and here, accepting a member grants their
-agents too; the procedures for it are written (solid-kit). Next: the loop
-run by hand with Xavier.
+agents too; the procedures for it are written (solid-kit). **Run live the
+same day:** the collective's agent and Nicolas's agent (declared by
+`hyperscope_ndb`, granted with "Let them read it") both query the graph
+from claude.ai and see the same 7 `provenance.ttl`; the agent reads "for
+the collective", yours "for `hyperscope_ndb`". A first deploy missed the
+fix letting the collective's agent query (the VPS copy is rsynced by
+`make vps-deploy`, not pulled from git). Next: confrontation v2 on one
+snapshot (TransiStore), then the loop with Xavier.
 
 **C · Pods is closed** (27 Sep 2026): built, used live on
 test.nicolasdb.eu, and reworked from what that showed (below, under C,
