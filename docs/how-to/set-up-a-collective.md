@@ -32,8 +32,11 @@ files and `.acl` documents on its pod.
 4. **Create `membres.ttl`** at the pod root, with only `foaf:member` lines
    ([example](../examples/hyperscope-membres.ttl)). Give each member Read on
    it as you accept them.
-5. **Create `inbox/`** and give `acl:AuthenticatedAgent` Append on it, with
-   `acl:default` so it applies to what is inside.
+5. **Create `inbox/`** and give `acl:AuthenticatedAgent` Append on it, and
+   the collective's agent (`hs:agent`) Read, both with `acl:default` so they
+   apply to the messages inside. Read only: the agent's pull reads the
+   announcements and never deletes; the backoffice deletes a request as the
+   owner.
 6. **Give each shared folder rules of its own** once it exists (`depots/`,
    `confrontations/`, `chantiers/`, `briefs/`, `principles/`): the owner
    with Control and `acl:default`, the collective's agent as in
