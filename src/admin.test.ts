@@ -18,8 +18,8 @@ vi.mock("./lib/admin", async (importOriginal) => ({
     calls.push(`refuse ${m.url}`);
     return { answered: true };
   },
-  removeMember: async (_c: unknown, _o: string, p: { webId: string }) => {
-    calls.push(`remove ${p.webId}`);
+  removeMember: async (_c: unknown, _o: string, p: { webId: string }, reason?: string) => {
+    calls.push(`remove ${p.webId}${reason ? ` "${reason}"` : ""}`);
     return { answered: true };
   },
   deleteMessage: async (url: string) => void calls.push(`delete ${url}`),
@@ -119,6 +119,19 @@ describe("You run", () => {
     remove.click();
     await tick();
     expect(calls).toEqual([`remove ${AMINA}`, "rerender"]);
+  });
+
+  it("asks for an optional reason only once removing is armed, and sends it", async () => {
+    const app = render();
+    expect(app.querySelector("input[name=remove-reason]")).toBeNull();
+    const remove = app.querySelector<HTMLButtonElement>("[data-remove='0']")!;
+    remove.click();
+    const reason = app.querySelector<HTMLInputElement>("input[name=remove-reason]")!;
+    expect(document.activeElement).toBe(reason);
+    reason.value = "Plus actif depuis un an.";
+    remove.click();
+    await tick();
+    expect(calls).toEqual([`remove ${AMINA} "Plus actif depuis un an."`, "rerender"]);
   });
 
   it("proposes a free short name when the plain one is another member's, and says so", () => {

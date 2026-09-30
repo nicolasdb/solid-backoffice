@@ -98,7 +98,7 @@ export function buildAnswer(
   return activity(type, { actor, object: join, target: group, published, summary: reason?.trim() || undefined });
 }
 
-/** "You are no longer listed": sent to a removed member's inbox. */
-export function buildRemove(actor: string, member: string, group: string, published?: Date): string {
-  return activity("Remove", { actor, object: member, target: group, published });
+/** "You are no longer listed": sent to a removed member's inbox, with the admin's reason when given. */
+export function buildRemove(actor: string, member: string, group: string, published?: Date, reason?: string): string {
+  return activity("Remove", { actor, object: member, target: group, published, summary: reason?.trim() || undefined });
 }

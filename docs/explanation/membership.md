@@ -95,7 +95,8 @@ in, never who was turned down.
 
 The requester learns it from their own inbox. A refusal is an `as:Reject`,
 with the admin's reason as `as:summary` when one was given; a removal is an
-`as:Remove`. While a collective reads as "pending" on their side, the
+`as:Remove`, with its reason too when one was given (asked for once
+"Remove" is armed). While a collective reads as "pending" on their side, the
 backoffice looks in their inbox for one of these aimed at it, and shows it
 instead: "refused" or "removed", with the date and the reason. That is the
 only way "refused" is ever shown: from the collective's own message, never

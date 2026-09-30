@@ -673,8 +673,10 @@ member through the new flow.
    "Refused", the date and the reason, no longer "pending". "Ask again"
    sends a new request and the refusal is gone from their inbox; the
    collective sees the request again.
-9. **Removed.** A removed member sees "Removed" and the date, not
-   "pending"; "Take it out of my profile" leaves and clears it.
+9. **Removed, with a reason.** The first click on Remove shows a reason
+   field; type one, confirm. The removed member sees "Removed", the date and
+   the reason, not "pending"; "Take it out of my profile" leaves and clears
+   it.
 10. **Markdown preview.** A contribution with a YAML header and a fenced
    diagram (in Pods): the header as fields, links clickable; the diagram as
    one block, its spacing kept, scrolled sideways on a phone; headings and

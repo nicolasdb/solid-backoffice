@@ -285,5 +285,7 @@ describe("the collective's answer, read on the member's side", () => {
     const withReason = admin.parseActivity(buildAnswer("Reject", OWNER, JOIN_URL, COLLECTIVE.group, undefined, "  Plus de place.  "), JOIN_URL + "-r");
     expect(withReason.summary).toBe("Plus de place.");
     expect(admin.parseActivity(buildAnswer("Reject", OWNER, JOIN_URL, COLLECTIVE.group, undefined, "   "), JOIN_URL + "-r").summary).toBeNull();
+    const removed = admin.parseActivity(activity.buildRemove(OWNER, INES, COLLECTIVE.group, undefined, "Plus actif."), JOIN_URL + "-x");
+    expect(removed).toMatchObject({ rawType: NS.as + "Remove", summary: "Plus actif." });
   });
 });

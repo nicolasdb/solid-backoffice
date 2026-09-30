@@ -432,10 +432,20 @@ export function bindRun(app: HTMLElement, view: RunView, rerender: () => void): 
       if (!button.dataset.armed) {
         button.dataset.armed = "yes";
         button.textContent = `Yes, remove ${name}`;
+        // Asked only now: a reason field on every row would be noise.
+        const field = document.createElement("label");
+        field.className = "field remove-reason";
+        field.textContent = "Reason (optional, sent with the removal)";
+        const input = document.createElement("input");
+        Object.assign(input, { type: "text", name: "remove-reason", maxLength: 300, autocomplete: "off" });
+        field.append(input);
+        button.before(field);
+        input.focus();
         return;
       }
+      const reason = button.parentElement?.querySelector<HTMLInputElement>("input[name=remove-reason]")?.value;
       void run(button, async () => {
-        await removeMember(collective, owner, member);
+        await removeMember(collective, owner, member, reason);
         announce(`${name} is no longer a member. What was already collected stays.`);
       }, rerender);
     });

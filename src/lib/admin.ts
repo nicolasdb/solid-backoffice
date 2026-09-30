@@ -438,12 +438,12 @@ export async function refuse(collective: Collective, owner: string, join: InboxM
  * collected is deleted (J5). Only the agents their profile declares today are
  * revoked: one they dropped earlier keeps its grant until removed by hand.
  */
-export async function removeMember(collective: Collective, owner: string, person: Person): Promise<Outcome> {
+export async function removeMember(collective: Collective, owner: string, person: Person, reason?: string): Promise<Outcome> {
   const targets = await memberReadTargets(collective, owner);
   for (const reader of readersOf(person)) await revokeMemberRead(targets, owner, reader);
   await removeFromRoster(collective, person.webId);
   const inbox = person.profile?.inbox ?? null;
-  if (inbox) await sendToInbox(inbox, buildRemove(owner, person.webId, collective.group));
+  if (inbox) await sendToInbox(inbox, buildRemove(owner, person.webId, collective.group, undefined, reason));
   return { answered: inbox !== null };
 }
 
