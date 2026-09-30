@@ -21,6 +21,16 @@ the collective", yours "for `hyperscope_ndb`". A first deploy missed the
 fix letting the collective's agent query (the VPS copy is rsynced by
 `make vps-deploy`, not pulled from git). Next: confrontation v2 on one
 snapshot (TransiStore), then the loop with Xavier.
+**29–30 Sep 2026, both halves run live.** Collective side: pull,
+confrontation v2 (8 catch-up sidecars, 13 topics), 20/20 documents
+ingested, a topic query found two documents through a synonym. Member side:
+a new chat with Nicolas's agent drew related topics from the graph into
+the conversation and wrote a new contribution to `output2/hyperscope/`,
+citing its sources in `s-appuie-sur:`, ready for the next run. Fixed from
+that use: a free short name when the plain one is taken, a refusal or
+removal shown on the member's side (with the admin's reason) instead of
+"pending" forever, Markdown previews styled and their YAML header shown as
+fields. Next: the loop with Xavier, then running the pipeline unattended.
 
 **C · Pods is closed** (27 Sep 2026): built, used live on
 test.nicolasdb.eu, and reworked from what that showed (below, under C,
