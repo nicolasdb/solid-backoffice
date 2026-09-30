@@ -665,3 +665,17 @@ member through the new flow.
    nobody declares is refused ("not on the roster").
 6. **Remove.** The member and their current agents lose Read on the roster
    and every folder.
+7. **Same name, another WebID.** A request from someone whose name gives a
+   short name another member holds: the form proposes `name-2` and says
+   whose `name` is. Accept: listed as `name-2`.
+8. **Refuse with a reason.** Refuse a request with a reason typed. On the
+   requester's side (their Collectives tab and the collective's page):
+   "Refused", the date and the reason, no longer "pending". "Ask again"
+   sends a new request and the refusal is gone from their inbox; the
+   collective sees the request again.
+9. **Removed.** A removed member sees "Removed" and the date, not
+   "pending"; "Take it out of my profile" leaves and clears it.
+10. **Markdown preview.** A contribution with a YAML header and a fenced
+   diagram (in Pods): the header as fields, links clickable; the diagram as
+   one block, its spacing kept, scrolled sideways on a phone; headings and
+   paragraphs spaced. Both themes.

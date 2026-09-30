@@ -34,6 +34,8 @@ let placesCtx: { loadGroups: () => Promise<unknown> } | null = null;
 let profileGate: Promise<void> | null = null;
 let profileReads = 0;
 const places: string[] = [];
+/** The signed-in person's own inbox, as readInboxAt parses it. */
+let ownInbox: import("./lib/admin").InboxMessage[] = [];
 
 vi.mock("./lib/auth", () => ({ authFetch: vi.fn() }));
 vi.mock("./lib/pod", () => ({
@@ -89,6 +91,8 @@ vi.mock("./lib/collective", async (importOriginal) => {
 vi.mock("./lib/admin", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./lib/admin")>()),
   readInbox: async () => [],
+  readInboxAt: async () => ownInbox,
+  deleteMessage: async (url: string) => void calls.push(`delete ${url}`),
   readMembers: async () => [],
   readRoster: async () => {
     if (!rosterEntries) throw new Error("Could not read the roster (403).");
@@ -143,6 +147,7 @@ async function click(app: HTMLElement, selector: string): Promise<void> {
 
 beforeEach(() => {
   calls.length = 0;
+  ownInbox = [];
   profile = { name: "Neil", memberOf: [], delegates: [], inbox: null };
   listed = null;
   rosterEntries = [];
@@ -351,6 +356,26 @@ describe("slice A — the member's side of the handshake", () => {
     expect(app.querySelector('a[href="#/p/output2/hyperscope/"]')).not.toBeNull(); // in Pods, signed in: not the raw address
     await click(app, "#unpublish-0");
     expect(calls).toEqual([`inherit ${POD}output2/hyperscope/`, "inbox Undo"]); // revoke, then tell
+  });
+
+  it("shows the collective's refusal from your own inbox, with its reason; asking again drops the old answer first", async () => {
+    profile.memberOf = [COLLECTIVE.group];
+    profile.inbox = POD + "inbox/";
+    listed = null;
+    rosterEntries = [];
+    ownInbox = [
+      { url: POD + "inbox/r1", type: "other", rawType: "https://www.w3.org/ns/activitystreams#Reject", actor: null, object: null,
+        target: "https://pod.example/other/config.ttl#x", summary: null, published: null, problem: null }, // another collective's
+      { url: POD + "inbox/r2", type: "other", rawType: "https://www.w3.org/ns/activitystreams#Reject", actor: null, object: null,
+        target: COLLECTIVE.group, summary: "Nous ne prenons plus de membres cette année.", published: "2026-09-30T10:00:00Z", problem: null },
+    ];
+    const app = await render(tab(COLLECTIVE));
+    expect(app.textContent).toContain("HyperScope refused your request");
+    expect(app.textContent).toContain("“Nous ne prenons plus de membres cette année.”");
+    expect(app.textContent).not.toContain("Waiting for the collective");
+    expect(app.querySelector("#resend-0")!.textContent).toBe("Ask again");
+    await click(app, "#resend-0");
+    expect(calls).toEqual([`delete ${POD}inbox/r2`, "inbox Join"]);
   });
 
   it("treats an unreadable roster as pending, not as refused", async () => {

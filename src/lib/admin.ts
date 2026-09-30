@@ -144,11 +144,40 @@ async function readMessage(url: string): Promise<InboxMessage> {
 
 /** Every message in the collective's inbox, oldest first. Never drops one. */
 export async function readInbox(collective: Collective): Promise<InboxMessage[]> {
-  const res = await readTurtle(collective.inbox);
-  if (!res.ok) throw new Error(`Could not read the inbox at ${collective.inbox} (${res.status}).`);
-  const urls = parseInboxListing(await res.text(), collective.inbox);
+  return readInboxAt(collective.inbox);
+}
+
+/** Any inbox its reader may read: a collective's, or a person's own. Oldest first. */
+export async function readInboxAt(inbox: string): Promise<InboxMessage[]> {
+  const res = await readTurtle(inbox);
+  if (!res.ok) throw new Error(`Could not read the inbox at ${inbox} (${res.status}).`);
+  const urls = parseInboxListing(await res.text(), inbox);
   const messages = await Promise.all(urls.map(readMessage));
   return messages.sort((a, b) => (a.published ?? "￿").localeCompare(b.published ?? "￿"));
+}
+
+/** A collective's answer that ends a membership or a request: refused, or removed. */
+export interface Answer {
+  kind: "Reject" | "Remove";
+  url: string;
+  published: string | null;
+  /** The collective's words, when it gave any (`as:summary`). */
+  reason: string | null;
+}
+
+/**
+ * The latest `as:Reject` or `as:Remove` a collective sent to this inbox
+ * (`as:target` is the collective). It is what tells a "pending" person that
+ * the answer came: the roster, which they cannot read, never says "refused".
+ */
+export function answerFrom(messages: InboxMessage[], group: string): Answer | null {
+  const answers = messages.filter(
+    (m) => m.target === group && (m.rawType === NS.as + "Reject" || m.rawType === NS.as + "Remove")
+  );
+  const last = answers.at(-1);
+  return last
+    ? { kind: last.rawType!.endsWith("Reject") ? "Reject" : "Remove", url: last.url, published: last.published, reason: last.summary }
+    : null;
 }
 
 /** Deletes a handled message. Already gone counts as done. */
@@ -394,10 +423,10 @@ export async function accept(
   return { answered: inbox !== null };
 }
 
-/** Refuse: `as:Reject` → delete the Join. Nothing is written to the roster. */
-export async function refuse(collective: Collective, owner: string, join: InboxMessage, person: Person): Promise<Outcome> {
+/** Refuse: `as:Reject` (with the reason, when given) → delete the Join. Nothing is written to the roster. */
+export async function refuse(collective: Collective, owner: string, join: InboxMessage, person: Person, reason?: string): Promise<Outcome> {
   const inbox = person.profile?.inbox ?? null;
-  if (inbox) await sendToInbox(inbox, buildAnswer("Reject", owner, join.url, collective.group));
+  if (inbox) await sendToInbox(inbox, buildAnswer("Reject", owner, join.url, collective.group, undefined, reason));
   await deleteMessage(join.url);
   return { answered: inbox !== null };
 }

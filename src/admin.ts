@@ -160,10 +160,14 @@ function renderRequest(request: Request, i: number, collective: Collective): str
         <button type="submit">Accept</button>
         <button type="button" class="ghost" id="refuse-${i}">Refuse</button>
       </p>
+      <label class="field">Reason, if you refuse (optional, sent with the answer)
+        <input name="reason" type="text" maxlength="300" autocomplete="off">
+      </label>
     </form>
     <p class="meta">
       Accepting lists them in the roster and lets them read it: two separate
-      writes. Both answers are sent to their inbox and the request is then deleted.
+      writes. Both answers are sent to their inbox and the request is then deleted;
+      a refusal carries your reason, when you give one.
     </p>`);
 }
 
@@ -403,7 +407,8 @@ export function bindRun(app: HTMLElement, view: RunView, rerender: () => void): 
     const refuseButton = app.querySelector<HTMLButtonElement>(`#refuse-${i}`);
     if (refuseButton) {
       bindButton(refuseButton, async () => {
-        const { answered } = await refuse(collective, owner, request.message, request.person);
+        const reason = (app.querySelector<HTMLFormElement>(`#accept-${i}`)?.elements.namedItem("reason") as HTMLInputElement | null)?.value;
+        const { answered } = await refuse(collective, owner, request.message, request.person, reason);
         announce(`Request from ${name} refused.`);
         if (!answered) toast(`${name} has no inbox: tell them another way.`);
       }, rerender);

@@ -1,6 +1,7 @@
 /**
  * Pieces shared by the home screen and a collective's tab.
  */
+import type { Answer } from "./lib/admin";
 import type { MembershipState } from "./lib/collective";
 import { esc, toast } from "./ui/patterns";
 
@@ -44,6 +45,19 @@ export function stateLabel(state: MembershipState, name: string): string {
     case "left": return `${name} lists you as a member, but your profile does not say so. Confirm it to complete the membership.`;
     default: return "Not a member.";
   }
+}
+
+/** What a pending person reads once the collective answered no (the answer is in their inbox). */
+export function answerLabel(answer: Answer, name: string): string {
+  const on = answer.published ? ` on ${new Date(answer.published).toLocaleDateString()}` : "";
+  const said = answer.reason ? ` In its words: “${answer.reason}”` : "";
+  return answer.kind === "Reject"
+    ? `${name} refused your request${on}.${said}`
+    : `${name} removed you from its members${on}. What it already collected stays with it.${said}`;
+}
+
+export function answerPill(answer: Answer): string {
+  return `<span class="pill">${answer.kind === "Reject" ? "Refused" : "Removed"}</span>`;
 }
 
 /** Member or request sent: the person has declared it on their side. */

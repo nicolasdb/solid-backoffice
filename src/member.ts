@@ -14,11 +14,11 @@
 import { routeHref } from "./router";
 import { shareFolder, stopSharing } from "./lib/sharing";
 import { buildAnnounce, buildJoin, buildUndoAnnounce, profileEdits, sendToInbox, updateOwnProfile, type Collective } from "./lib/collective";
-import { readPerson, readRoster } from "./lib/admin";
+import { deleteMessage, readPerson, readRoster } from "./lib/admin";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { bindButton } from "./bind";
-import { bindCopy, collectiveHead, copyable, stateLabel, statePill } from "./steps";
+import { answerLabel, answerPill, bindCopy, collectiveHead, copyable, stateLabel, statePill } from "./steps";
 import { trimAddress } from "./ui/address";
 import type { CollectiveView, ViewContext } from "./onboarding";
 
@@ -107,7 +107,7 @@ function agentCard(collective: Collective): string {
 }
 
 export function renderMemberView(view: CollectiveView, i: number, roster: RosterMember[] | null, webId: string): string {
-  const { collective, state, published } = view;
+  const { collective, state, published, answer } = view;
   const name = esc(collective.name);
   const nick = roster?.find((m) => m.webId === webId)?.nick ?? null;
 
@@ -139,12 +139,12 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
   const membership = `
     <section class="step is-quiet">
       <div class="step-head"><h2>Your membership</h2></div>
-      <p class="lead">${esc(stateLabel(state, collective.name))}${
+      <p class="lead">${esc(answer ? answerLabel(answer, collective.name) : stateLabel(state, collective.name))}${
         state === "member" && nick ? ` Its roster lists you as <span class="label-mono">${esc(nick)}</span>.` : ""
       }</p>
       <p class="actions">
-        ${state === "pending" ? `<button id="resend-${i}" class="ghost">Send the request again</button>` : ""}
-        <button id="leave-${i}" class="ghost">Leave ${name}</button>
+        ${state === "pending" ? `<button id="resend-${i}" class="ghost">${answer ? "Ask again" : "Send the request again"}</button>` : ""}
+        <button id="leave-${i}" class="ghost">${answer ? "Take it out of my profile" : `Leave ${name}`}</button>
       </p>
       <p class="meta">
         Leaving takes the line out of your profile. What ${name} already
@@ -156,7 +156,7 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
   return `
     ${collectiveHead(
       collective.name,
-      statePill(state),
+      answer ? answerPill(answer) : statePill(state),
       `<p class="meta">Its address: ${copyable(collective.configUrl, "Address copied.", trimAddress(collective.configUrl, webId))}</p>`
     )}
     <div class="member-grid">
@@ -173,6 +173,8 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   const resend = app.querySelector<HTMLButtonElement>(`#resend-${i}`);
   if (resend) {
     bindButton(resend, async () => {
+      // The old answer goes first: left in the inbox, it would still read as the answer.
+      if (view.answer) await deleteMessage(view.answer.url);
       await sendToInbox(collective.inbox, buildJoin(webId, collective.group, profile.name));
       toast(`Request sent to ${collective.name} again.`);
     }, rerender);
@@ -182,6 +184,7 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   if (leave) {
     bindButton(leave, async () => {
       await updateOwnProfile(webId, profileEdits.leave(collective.group));
+      if (view.answer) await deleteMessage(view.answer.url); // read, and acted on
       toast(`Your profile no longer says you belong to ${collective.name}.`, {
         undo: () => void updateOwnProfile(webId, profileEdits.join(collective.group)).then(rerender),
       });

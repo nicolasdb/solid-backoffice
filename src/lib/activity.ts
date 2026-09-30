@@ -91,9 +91,11 @@ export function buildAnswer(
   actor: string,
   join: string,
   group: string,
-  published?: Date
+  published?: Date,
+  /** Why, in the admin's words (`as:summary`): shown to the person with the answer. */
+  reason?: string
 ): string {
-  return activity(type, { actor, object: join, target: group, published });
+  return activity(type, { actor, object: join, target: group, published, summary: reason?.trim() || undefined });
 }
 
 /** "You are no longer listed": sent to a removed member's inbox. */

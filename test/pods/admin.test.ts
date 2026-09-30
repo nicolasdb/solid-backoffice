@@ -161,6 +161,8 @@ describe("removing a member (J5, admin side)", () => {
     // Her side still declares it and cannot read the roster: pending, never refused.
     expect(membershipState(true, await isListed(hs, cast.ines.webId))).toBe("pending");
     expect((await inboxOf("ines")).some((m) => m.rawType?.endsWith("Remove"))).toBe(true);
+    // What her side shows instead of "pending": the removal, found in her own inbox.
+    expect(admin.answerFrom(await admin.readInboxAt(cast.ines.pod + "inbox/"), hs.group)).toMatchObject({ kind: "Remove" });
     await updateOwnProfile(cast.ines.webId, profileEdits.removeDelegate(cast.network.webId)); // the cast as it was
   });
 });

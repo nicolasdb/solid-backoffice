@@ -36,7 +36,7 @@ import { forgetAgents } from "./agents-view";
 import { bindMember, renderMemberView, loadRoster } from "./member";
 import { currentRoute, isPlaces, onRouteChange, replaceRoute, type Route } from "./router";
 import { forgetPlaces, mountPlaces, placesFrame, showPlaces, type Group } from "./places";
-import { readRoster } from "./lib/admin";
+import { answerFrom, readInboxAt, readRoster, type Answer } from "./lib/admin";
 import { bindShell, renderShell, tabsFor } from "./shell";
 import { declared } from "./steps";
 
@@ -53,6 +53,8 @@ export interface CollectiveView {
   state: MembershipState;
   folderUrl: string;
   published: boolean;
+  /** While "pending": the collective's refusal or removal, found in your own inbox. */
+  answer: Answer | null;
 }
 
 export interface Loaded {
@@ -131,10 +133,18 @@ export async function load(webId: string, podUrl: string): Promise<Loaded> {
         state: membershipState(profile.memberOf.includes(collective.group), listed),
         folderUrl,
         published,
+        answer: null,
       };
     })
   );
   const [{ run, runError }, unadvertisedInbox, all] = await Promise.all([runLoad, inboxCheck, views]);
+
+  // "Pending" is all the roster can say to someone it does not list. Whether
+  // the collective answered is in your own inbox: read it only then.
+  if (profile.inbox && all.some((v) => v.state === "pending")) {
+    const messages = await readInboxAt(profile.inbox).catch(() => [] as Awaited<ReturnType<typeof readInboxAt>>);
+    for (const view of all) if (view.state === "pending") view.answer = answerFrom(messages, view.collective.group);
+  }
 
   // An invitation to the collective you run is not an invitation: a
   // collective never joins itself. One to a collective your profile already

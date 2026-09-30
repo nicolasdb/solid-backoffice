@@ -24,7 +24,7 @@ import { bindButton, bindForm } from "./bind";
 import { runSummary, type RunView } from "./admin";
 import { collectiveFromInput, pendingInvite, setInvite } from "./invite";
 import { routeHref } from "./router";
-import { declared, stateLabel, statePill, step } from "./steps";
+import { answerLabel, answerPill, declared, stateLabel, statePill, step } from "./steps";
 import type { CollectiveView, Loaded, ViewContext } from "./onboarding";
 
 export function renderCollectivesView(data: Loaded): string {
@@ -146,7 +146,8 @@ function runCard(run: RunView): string {
 }
 
 function collectiveCard(view: CollectiveView): string {
-  const { collective, state, published } = view;
+  const { collective, state, published, answer } = view;
+  if (answer) return card(collective, answerPill(answer), answerLabel(answer, collective.name));
   const line =
     state === "member"
       ? published

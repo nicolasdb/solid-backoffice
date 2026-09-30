@@ -83,12 +83,25 @@ declare the membership is flagged, not hidden: a claim from one side proves
 nothing, but the admin decides.
 
 Accepting is two writes, in this order: the roster line, then a Read grant
-for that one WebID on the roster (and on `depots/` and `principles/` once
-they exist). Then the answer goes to the requester's inbox and the request is
+for that one WebID, and each agent its profile declares, on the roster and
+on the shared folders that exist (`depots/`, `confrontations/`,
+`chantiers/`, `briefs/`, `principles/`). The short name is proposed from
+their name; when another member already holds it, the first free `-2`,
+`-3`…, since it names their folder. Then the answer goes to the requester's inbox and the request is
 deleted. Deleting it last means a failure halfway leaves the request on
 screen, and accepting it again finishes the job. Deleting it at all is what
 tells a refused request apart from a pending one: the roster records who is
 in, never who was turned down.
+
+The requester learns it from their own inbox. A refusal is an `as:Reject`,
+with the admin's reason as `as:summary` when one was given; a removal is an
+`as:Remove`. While a collective reads as "pending" on their side, the
+backoffice looks in their inbox for one of these aimed at it, and shows it
+instead: "refused" or "removed", with the date and the reason. That is the
+only way "refused" is ever shown: from the collective's own message, never
+from a roster they cannot read. "Ask again" deletes that answer before
+sending a new request, so the old answer does not outlive it; taking the
+collective out of their profile deletes it too.
 
 Removing reverses the order: grants first, so nobody is ever off the roster
 and still able to read it; then the roster line; then `as:Remove` to their

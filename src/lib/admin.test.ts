@@ -47,7 +47,8 @@ vi.mock("./collective", async (importOriginal) => ({
 }));
 
 const admin = await import("./admin");
-const { buildJoin, buildAnnounce, buildUndoAnnounce } = await import("./activity");
+const activity = await import("./activity");
+const { buildJoin, buildAnnounce, buildUndoAnnounce } = activity;
 const { NS } = await import("./vocab");
 
 const POD = "https://pod.example/hs/";
@@ -260,5 +261,29 @@ describe("order of writes", () => {
       `acl ${POD}depots/ ${INES_AGENT} none`,
       `roster ${COLLECTIVE.roster}`,
     ]);
+  });
+});
+
+describe("the collective's answer, read on the member's side", () => {
+  const msg = (url: string, kind: string, target: string, summary: string | null = null) => ({
+    url, type: "other" as const, rawType: NS.as + kind, actor: null, object: null, target, summary, published: null, problem: null,
+  });
+
+  it("is the latest refusal or removal aimed at that collective, with its reason", () => {
+    const messages = [
+      msg("r1", "Reject", COLLECTIVE.group, "first"),
+      msg("x", "Reject", "https://other.example/config.ttl#o"),
+      msg("a", "Accept", COLLECTIVE.group),
+      msg("r2", "Remove", COLLECTIVE.group, "last"),
+    ];
+    expect(admin.answerFrom(messages, COLLECTIVE.group)).toEqual({ kind: "Remove", url: "r2", published: null, reason: "last" });
+    expect(admin.answerFrom([msg("a", "Accept", COLLECTIVE.group)], COLLECTIVE.group)).toBeNull();
+  });
+
+  it("carries the admin's reason in the refusal, and leaves it out when there is none", () => {
+    const { buildAnswer } = activity;
+    const withReason = admin.parseActivity(buildAnswer("Reject", OWNER, JOIN_URL, COLLECTIVE.group, undefined, "  Plus de place.  "), JOIN_URL + "-r");
+    expect(withReason.summary).toBe("Plus de place.");
+    expect(admin.parseActivity(buildAnswer("Reject", OWNER, JOIN_URL, COLLECTIVE.group, undefined, "   "), JOIN_URL + "-r").summary).toBeNull();
   });
 });
