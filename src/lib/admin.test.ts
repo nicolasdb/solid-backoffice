@@ -139,6 +139,11 @@ describe("requestFlags", () => {
     expect(admin.suggestNick(ines())).toBe("ines");
     expect(admin.suggestNick(ines({ name: null }))).toBe("ines");
   });
+
+  it("suggests a free nick when another member already holds that one", () => {
+    expect(admin.suggestNick(ines(), ["amina", "ines"])).toBe("ines-2");
+    expect(admin.suggestNick(ines(), ["ines", "ines-2"])).toBe("ines-3");
+  });
 });
 
 describe("roster text", () => {

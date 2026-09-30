@@ -40,6 +40,10 @@ interface Request {
   listed: boolean;
   /** The nick the roster already holds for them, which never changes. */
   knownNick: string | null;
+  /** What the form proposes: the known nick, else a free one. */
+  nick: string;
+  /** The nick their name gives, when another member already holds it. */
+  nickTakenBy: string | null;
 }
 
 export interface RunView {
@@ -83,13 +87,25 @@ export async function loadRun(collective: Collective, owner: string): Promise<Ru
   const [messages, joins] = await Promise.all([inbox, joinsRead, membersRead]);
   const listed = new Set(members.map((m) => m.webId));
 
-  const requests = joins.map(({ message, person }) => ({
-    message,
-    person,
-    flags: requestFlags(message, person, collective),
-    listed: listed.has(person.webId),
-    knownNick: nicks.get(person.webId) ?? null,
-  }));
+  // Held nicks, plus those proposed to earlier requests on this screen: two
+  // people asking with the same name are not offered the same one.
+  const taken = new Set(nicks.values());
+  const requests = joins.map(({ message, person }) => {
+    const knownNick = nicks.get(person.webId) ?? null;
+    const plain = suggestNick(person);
+    const nick = knownNick ?? suggestNick(person, taken);
+    taken.add(nick);
+    const holder = knownNick || nick === plain ? null : [...nicks].find(([, n]) => n === plain)?.[0] ?? null;
+    return {
+      message,
+      person,
+      flags: requestFlags(message, person, collective),
+      listed: listed.has(person.webId),
+      knownNick,
+      nick,
+      nickTakenBy: holder ? `"${plain}" is ${members.find((m) => m.webId === holder)?.profile?.name ?? holder}'s` : null,
+    };
+  });
   const others = messages.filter(
     (m) => !joins.some((j) => j.message === m) && !((m.type === "Announce" || m.type === "Undo") && m.actor && listed.has(m.actor))
   );
@@ -115,7 +131,7 @@ function check(ok: boolean, text: string): string {
 }
 
 function renderRequest(request: Request, i: number, collective: Collective): string {
-  const { message, person, flags, listed, knownNick } = request;
+  const { message, person, flags, listed, knownNick, nick, nickTakenBy } = request;
   const profile = person.profile;
   const name = esc(collective.name);
   const facts = profile
@@ -135,10 +151,11 @@ function renderRequest(request: Request, i: number, collective: Collective): str
     ${listed ? `<p class="meta">Already on the roster: an earlier acceptance stopped halfway. Accepting again finishes it.</p>` : ""}
     <form id="accept-${i}" class="stack">
       <label class="field">Short name, used in the collective's folders
-        <input name="nick" type="text" autocomplete="off" value="${esc(knownNick ?? suggestNick(person))}"${knownNick ? " readonly" : ""}
+        <input name="nick" type="text" autocomplete="off" value="${esc(nick)}"${knownNick ? " readonly" : ""}
                pattern="[a-z0-9][a-z0-9\\-]{0,39}" required>
       </label>
       ${knownNick ? `<p class="meta">Kept from before: a short name never changes once used.</p>` : ""}
+      ${nickTakenBy ? `<p class="meta">${esc(nickTakenBy)} already: short names name folders, so each is used once. Change it if you like.</p>` : ""}
       <p class="actions">
         <button type="submit">Accept</button>
         <button type="button" class="ghost" id="refuse-${i}">Refuse</button>

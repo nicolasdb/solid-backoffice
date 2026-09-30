@@ -195,9 +195,19 @@ export function requestFlags(message: InboxMessage, person: Person, collective: 
 }
 
 /** A nick for the roster, from the person's name or their pod's first path segment. */
-export function suggestNick(person: Person): string {
+/**
+ * A short name for someone about to be accepted: from their name, else their
+ * pod. When another member already holds it (two Nicolas, two WebIDs), the
+ * first free `-2`, `-3`…: the nick names a folder, so it must be unique.
+ */
+export function suggestNick(person: Person, taken: Iterable<string> = []): string {
   const from = person.profile?.name ?? new URL(person.webId).pathname.split("/").filter(Boolean)[0] ?? "";
-  return slugify(from, "member").slice(0, 40).replace(/-+$/, "");
+  const base = slugify(from, "member").slice(0, 37).replace(/-+$/, "");
+  const used = new Set(taken);
+  if (!used.has(base)) return base;
+  let n = 2;
+  while (used.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
 }
 
 /* ── Roster ────────────────────────────────────────────────────────────── */

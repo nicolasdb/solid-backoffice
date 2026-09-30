@@ -55,7 +55,7 @@ beforeEach(() => {
   view = {
     collective: COLLECTIVE,
     owner: POD + "profile/card#me",
-    requests: [{ message: message(), person: { webId: INES, profile: profile("Inès"), problem: null }, flags: [], listed: false, knownNick: null }],
+    requests: [{ message: message(), person: { webId: INES, profile: profile("Inès"), problem: null }, flags: [], listed: false, knownNick: null, nick: "ines", nickTakenBy: null }],
     members: [{
       webId: AMINA, profile: profile("Amina"), problem: null, nick: "amina", state: "member",
       canReadRoster: true, missing: [], announced: ["https://pod.example/amina/output2/hs/"],
@@ -119,6 +119,13 @@ describe("You run", () => {
     remove.click();
     await tick();
     expect(calls).toEqual([`remove ${AMINA}`, "rerender"]);
+  });
+
+  it("proposes a free short name when the plain one is another member's, and says so", () => {
+    view.requests[0] = { ...view.requests[0], nick: "ines-2", nickTakenBy: '"ines" is Inès D.\'s' };
+    const app = render();
+    expect(app.querySelector<HTMLInputElement>("#accept-0 input[name=nick]")!.value).toBe("ines-2");
+    expect(app.textContent).toContain(`"ines" is Inès D.'s already`);
   });
 
   it("offers to finish an acceptance when a member cannot read the roster", () => {
