@@ -4,7 +4,70 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (1 Oct 2026, paused)
+## Where we are (1 Oct 2026, end of day)
+
+**E: the loop ran both ways with procedures that serve any collective.**
+Done today, across four repos:
+
+- **Generic procedures** (solid-kit `docs/procedures/`): pull v2,
+  confrontation v3, contribution v2 hold no collective's address; each
+  resolves it from `config.ttl`, and pull and confrontation stop unless the
+  connector is `hs:agent`. On HyperScope's pod they live flat in
+  `principles/`, beside `cultivate.md`; `procedures/` is deprecated.
+- **`config.ttl`** gains `hs:procedures <principles/>` and
+  `hs:guide <guide/>` ([reference](reference/collective-files.md#agent-entry-points)),
+  added by hand on HyperScope's pod. It stays owner-write only: the
+  agent's attempt to edit it got a 403, as it should.
+- **`solid_whoami`** in pocpod0's connector (`63d9e5f`, deployed): the
+  WebID a connector acts as. Both connectors answered as expected.
+- **The `collectif` skill** (solid-kit `skills/collectif/`): who am I →
+  who delegates to me (the human's profile, or the collective account's for
+  the common agent) → which collective → `hs:procedures` → role → load;
+  procedures trusted only when listed directly in `hs:procedures`.
+- **`guide/`** (onboarding, FAQ, glossary) on the pod, public; generic
+  copy in solid-kit. [Creating a collective](https://github.com/nicolasdb/solid-kit/blob/main/docs/collectives/create-a-collective.md)
+  holds the pod tree, generic vs local, access per path.
+- **Roster**: `test-easy` and `testy` nicks removed by hand. Keeping a nick
+  after removal stays intended; a nick without `foaf:member` is a
+  reservation, and the procedures report it as such.
+- **Uploads truncated** past ~6 s: the gateway streamed request bodies to
+  CSS, whose write lock expires after 6 s and leaves the bytes received as
+  the file. hetzner-gateway now buffers request bodies (deployed, checked
+  with a throttled PUT; the 6 MB PNG re-uploaded whole).
+
+**Run live** (two claude.ai projects, one connector each): the common
+agent pulled 3 snapshots, set the two removed members' sources to
+`membre-retire`, confronted 3 🟧, loaded 26/26; the member's agent drew on
+the graph, deposited after confirmation, and the next pull and
+confrontation brought it back linked to its three sources. Record and
+proposals: solid-kit ADR 006 "Live evidence", procedures README
+"Proposed, not adopted".
+
+**Next, in order:**
+
+1. **The loop with Xavier**: the only test one author cannot pass
+   (cross-member queries return nothing today). Onboarding through the
+   backoffice, his deposit, a query that finds both authors.
+2. **Deliberate the four procedure proposals** (file not folder in
+   `s-appuie-sur`; `sources.ttl` by append; abstracts naming methods;
+   weight for the author's `sujets:`), then apply the adopted ones in
+   solid-kit and copy them to `principles/`.
+3. **Run the pipeline unattended**: options A–D below, unchanged, except
+   that procedures are read from `hs:procedures`, not `procedures/`.
+4. **Binaries**: the PNG waits as `binaire-en-attente`; the connector reads
+   text only. Either a binary read in the connector, or the Hermes routine.
+5. **Backoffice follow-ups**: grant members Read on `guide/` at acceptance
+   (public by hand today); after a failed or partial upload, check the
+   stored size and say so (CSS keeps the partial bytes on a 500); a
+   « mettre à jour les procédures » command, run as a ceremony.
+6. **Before real members**, still open: review `sujets.ttl` (now 15
+   topics), `foaf:name` of `hyperscope_ndb` → "Nicolas", `inbox/` Read only
+   for the agent.
+7. **Manual checks**: E 1–10, D 1, 2, 9, 10 in [manual tests](manual-tests.md).
+8. **`hs:` namespace**: hosted on HyperScope's pod, used by all; a neutral
+   one is to deliberate (solid-kit ADR 006, open).
+
+## Where we were (1 Oct 2026, morning, paused)
 
 **Paused on E, at the automation question.** The loop runs live by hand on
 both sides (below). What remains for E, in order:
