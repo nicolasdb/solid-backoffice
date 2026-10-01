@@ -4,7 +4,50 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (29 Sep 2026)
+## Where we are (1 Oct 2026, paused)
+
+**Paused on E, at the automation question.** The loop runs live by hand on
+both sides (below). What remains for E, in order:
+
+1. **Choose how the pipeline runs unattended.** Options, from the 30 Sep
+   discussion:
+   - **A. A Claude routine on a schedule** (cloud agent, the account's
+     `hyperscopeMain` connector, procedures read from the pod's
+     `procedures/`): no code, at most once an hour, stops early when the
+     pull finds nothing. Suggested first. Open: frequency, model, where the
+     report goes (a file on the pod, or the run log only); its git source
+     would be solid-kit.
+   - **B. Event-driven through GitHub**: a relay on the VPS turns the Solid
+     notification into a GitHub event that fires the routine. Needs the
+     relay, a GitHub token on the VPS, and checking that routines accept
+     `repository_dispatch`.
+   - **C. The Claude API called by the relay**, with the connector as a
+     remote MCP server: event-driven, paid by API key.
+   - **D. Hermes** (`hermes-openfab` on the VPS: cron, HMAC webhook with
+     coalescing, MCP), a hyperscope profile.
+   For B–D, first pin on the local CSS 7 (`test/pods`) what ADR 006 leaves
+   open: does a container subscription fire when an existing file is
+   modified, for subfolders, and after a restart. The relay (subscribe as
+   the collective's agent to each followed source and `inbox/`,
+   re-subscribe before 14 days, forward to the runner) would live in the
+   connector. Later: pull and ingest as code, the model only for the
+   confrontation.
+2. **The loop with Xavier**: onboarding through the backoffice (raise first
+   the "Économie du commun" flag naming him co-lead), his contribution, his
+   agent drawing on the graph.
+3. **Before real members**: review `sujets.ttl` (13 topics, all new), remove
+   `test-easy` and `testy` from the roster (and ask about testy's PDF),
+   `foaf:name` of `hyperscope_ndb` → "Nicolas", check `inbox/` gives the
+   agent Read only, give `procedures/` Read only for the agent.
+4. **Manual checks still open**: E 1–10 in [manual tests](manual-tests.md)
+   (today's fixes: free short name, refusal and removal with a reason shown
+   on the member's side, Markdown preview), D 1, 2, 9, 10.
+
+Open decisions for the collective: whether `depots/sources.ttl` stays
+readable by members (it is, and so is in the graph); what leaves the graph
+when a member leaves.
+
+## Where we were (29 Sep 2026)
 
 **E · The collective's graph, with HyperScope as the proof** started on 29
 Sep 2026 (below, under E). The hypothesis: a member's summary, pulled,
