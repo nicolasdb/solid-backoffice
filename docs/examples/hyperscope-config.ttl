@@ -27,5 +27,9 @@
     # schema:description "[One paragraph: what joining means]" ;
     # Reserved: what a member's profile must contain, as a SHACL shape.
     # hs:requires <member-shape.ttl> ;
+    # For agents (the backoffice ignores them): procedures + principles,
+    # and onboarding/FAQ/glossary. Never written into a procedure by hand.
+    hs:procedures <principles/> ;
+    hs:guide <guide/> ;
     # Created inside each member's pod when they share.
     hs:bundleFolder "output2/hyperscope/" .

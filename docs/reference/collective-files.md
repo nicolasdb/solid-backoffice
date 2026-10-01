@@ -31,6 +31,8 @@ link from a profile leads to this description.
 | `schema:slogan` | 0–1 | the welcome screen's title for people invited to this collective ([below](#welcome-copy)) |
 | `schema:description` | 0–1 | the paragraph under that title |
 | `hs:requires` | 0–1 | **reserved**, see below |
+| `hs:procedures` | 0–1 | the folder holding the agent's procedures and the collective's principles: `<principles/>` ([below](#agent-entry-points)) |
+| `hs:guide` | 0–1 | the folder holding onboarding, FAQ and glossary: `<guide/>` |
 
 A missing or repeated property is refused, not guessed: a guessed agent is a
 grant to the wrong party. `hs:` is provisional (ADR 006, open questions).
@@ -40,6 +42,14 @@ members, to know where to send their request, and the welcome screen an
 invitation opens reads it before anyone signs in. It holds nothing secret. WAC cannot limit this to WebIDs from one provider; it
 names WebIDs one by one or through a group document. ACP can match on the
 login server, but our pods use WAC.
+
+### Agent entry points
+
+`hs:procedures` and `hs:guide` are for agents, not for the backoffice, which
+ignores them. A collective skill (solid-kit `skills/collectif/`) follows them
+instead of writing a path in, and accepts a procedure only from the pod that
+hosts this `config.ttl`. The folders' contents are copied from solid-kit at
+creation ([create a collective](https://github.com/nicolasdb/solid-kit/blob/main/docs/collectives/create-a-collective.md)).
 
 ### Welcome copy
 
@@ -78,7 +88,10 @@ Two kinds of lines, both facts the collective owns:
 - `<WebID> foaf:nick "nicolas"`: the short name used in `depots/` and
   `confrontations/` paths. Set at acceptance, never changed once used, and
   kept when the member is removed, so their earlier work stays filed under
-  it and a returning member gets it back.
+  it and a returning member gets it back. A `foaf:nick` with no `foaf:member`
+  line is therefore a reservation, not a member: the agent's procedures
+  (pull v2, confrontation v3) skip it and name it in their report. A nick that
+  never served (no `depots/<nick>/`) can be deleted by hand.
 
 No names, no agents, no `foaf:Group` or `foaf:name` for the collective (that
 is `config.ttl`'s): those are read where they live
