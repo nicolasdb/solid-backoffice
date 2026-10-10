@@ -4,7 +4,36 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (1 Oct 2026, end of day)
+## Where we are (10 Oct 2026)
+
+**Maps of Making, the second collective, is set up for membership only.**
+Pod `https://pod.nicolasdb.eu/mapsofmaking/` (account
+`mom@mapsofmaking.org`), files in [`examples/mapsofmaking/`](examples/mapsofmaking/):
+`config.ttl` public (checked: 200, `public="read"`, same bytes as the
+example), `membres.ttl` empty and owner-only, `inbox/` created from the
+profile panel. No agent, procedures, guide or `sujets.ttl` yet; `hs:agent`
+names `agents/agent#me`, which does not exist, because the parser requires
+one. Founding member Nicolas, then Jason.
+
+**Namespace proposal** (solid-kit ADR 006 §7): `hs:` moves to
+`https://w3id.org/solid-backoffice/vocab#` (one namespace for protocol, app
+and pipeline terms); each collective may own a namespace for its own
+fields, asked through `sb:requires` (SHACL); features as `sb:feature`, and
+`sb:agent` optional for a membership-only collective. Uploaded configs keep
+`hs:` until the migration runs.
+
+**Next, in order:**
+
+1. **Maps of Making live**: join as Nicolas, accept as `mom`, invite
+   Jason; add `schema:slogan` / `schema:description` to its `config.ttl`.
+2. **Deliberate ADR 006 §7**, then migrate: w3id redirect and `vocab.ttl`;
+   `vocab.ts` reads both IRIs, writes the new one; the two configs, the
+   template and the procedures (by ceremony).
+3. **`sb:agent` optional / `sb:feature`**, so a membership-only collective
+   names no agent and shows no sharing.
+4. E's list below, unchanged.
+
+## Where we were (1 Oct 2026, end of day)
 
 **E: the loop ran both ways with procedures that serve any collective.**
 Done today, across four repos:
