@@ -1,45 +1,42 @@
 # Set up a collective's pod
 
-For whoever runs the collective, once, by hand. The backoffice does not do
-this. You need the collective's own account, and a tool that can write
-files and `.acl` documents on its pod.
+For whoever runs the collective, once, by hand. The backoffice has no
+"create a collective" flow, but signed in as the collective's account it does
+every step below: rules are set in Pods (`···` → Who can access it), never by
+uploading an `.acl` (the server holds those; an upload is refused).
 
-1. **Create the account** for the collective on the provider, like a person's.
-2. **Upload `config.ttl`** at the pod root, adapted from
-   [`examples/hyperscope-config.ttl`](../examples/hyperscope-config.ttl).
-3. **Make it public.** Upload `config.ttl.acl` next to it
-   (replace the owner WebID):
+1. **Create the account** for the collective on the provider, like a person's,
+   and sign in to the backoffice with it.
+2. **Create the inbox** from You → "Create my inbox". It makes `inbox/`, lets
+   any signed-in account Append there, then names it `ldp:inbox` in the
+   profile, in that order. `config.ttl` points at the same `inbox/`, so the
+   account and the collective share one.
+3. **Upload `config.ttl`** at the pod root, adapted from
+   [`examples/hyperscope-config.ttl`](../examples/hyperscope-config.ttl)
+   (Maps of Making's, membership only:
+   [`examples/mapsofmaking/`](../examples/mapsofmaking/)): change the name,
+   the `#fragment` and `hs:bundleFolder`. Keep the `hs:` prefix as it is
+   (solid-kit ADR 006 §7).
+4. **Make it public**: Who can access it → **Anyone with the link**, Save.
+   Public, because the invitation's welcome screen reads it before anyone
+   signs in ([why](../reference/collective-files.md#configttl)). It holds
+   nothing secret. Check in a private window: it opens without signing in.
+5. **Upload `membres.ttl`** at the pod root, with only the comments and the
+   prefix ([example](../examples/mapsofmaking/membres.ttl)): accepting a
+   request writes each member's lines. Then Who can access it → **Only me**,
+   Save, even though nothing seems to change: that gives it rules of its own,
+   and accepting is refused while it inherits (`acl-inherited`). Each member
+   gets Read on it as you accept them.
 
-   ```turtle
-   @prefix acl:  <http://www.w3.org/ns/auth/acl#> .
-   @prefix foaf: <http://xmlns.com/foaf/0.1/> .
-
-   <#owner> a acl:Authorization ;
-       acl:agent <https://pod.nicolasdb.eu/hyperscope/profile/card#me> ;
-       acl:accessTo <config.ttl> ;
-       acl:mode acl:Read, acl:Write, acl:Control .
-
-   <#public> a acl:Authorization ;
-       acl:agentClass foaf:Agent ;
-       acl:accessTo <config.ttl> ;
-       acl:mode acl:Read .
-   ```
-
-   Upload it as `text/turtle`; a server may refuse an `.acl` sent as plain
-   text. Public, because the invitation's welcome screen reads it before
-   anyone signs in ([why](../reference/collective-files.md#configttl)). It
-   holds nothing secret.
-4. **Create `membres.ttl`** at the pod root, with only `foaf:member` lines
-   ([example](../examples/hyperscope-membres.ttl)). Give each member Read on
-   it as you accept them.
-5. **Create `inbox/`** and give `acl:AuthenticatedAgent` Append on it, and
-   the collective's agent (`hs:agent`) Read, both with `acl:default` so they
-   apply to the messages inside. Read only: the agent's pull reads the
-   announcements and never deletes; the backoffice deletes a request as the
-   owner.
+   Once the collective has an agent (`hs:agent`), give it Read on `inbox/`
+   too, with `acl:default` so it applies to the messages inside (Pods →
+   technical rules → Edit these rules, desktop only). Read only: the agent's
+   pull reads the announcements and never deletes; the backoffice deletes a
+   request as the owner.
 6. **Give each shared folder rules of its own** once it exists (`depots/`,
-   `confrontations/`, `chantiers/`, `briefs/`, `principles/`): the owner
-   with Control and `acl:default`, the collective's agent as in
+   `confrontations/`, `chantiers/`, `briefs/`, `principles/`): Who can
+   access it → **Only me**, add the collective's agent, Save. The agent's
+   rights are in
    [ADR 006 §5](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md).
    Accepting a member adds them, and each agent their profile declares, to
    every one of these, so accepting is refused while one of them still
