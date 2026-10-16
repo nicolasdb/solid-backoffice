@@ -70,7 +70,12 @@ Nothing already collected is ever removed, by either side.
   - *Only you and your agents*: offered while anyone else is still named.
 
   The screen says when another collective would lose the folder too, and
-  when the collective could still read it through the folder above. One
+  when the collective could still read it through the folder above. A
+  public folder stays public if you keep it so, but it is no longer
+  shared: "shared" means the collective's agent is named in its rules,
+  not that anyone may read it. Stopping also forgets the folder in
+  `settings/collectives.ttl`, so your agents stop writing there for that
+  collective, and the picker is offered again. One
   conditional write, based on the rules read when the question was asked;
   then the collective is told (an `as:Undo` of your announcement, ADR 006
   §1 step 5), so its members table stops listing the folder. Nothing new is

@@ -14,7 +14,8 @@
  *   they are without that agent (the default; a folder shared with two
  *   collectives stays shared with the other one), the folder above's again
  *   (its own `.acl` deleted), or you and your agents only.
- * - Shared: whether the agent can read it, from its own rules or inherited.
+ * - Shared: whether the agent is named with Read, in its own rules or
+ *   inherited ones. Public is not shared.
  *
  * One conditional write each, based on rules read fresh: nothing written
  * over a change made meanwhile.
@@ -203,12 +204,17 @@ export async function restoreRules(plan: StopPlan, owner: string): Promise<void>
   await setAccess(plan.folderUrl, owner, plan.now, own.inherited ? null : own.etag);
 }
 
-/** Whether the agent can read the folder, by its own rules or the ones it inherits. A missing folder: no. */
+/**
+ * Whether the folder is shared with `agent`: the agent is named with Read in
+ * the rules that apply, its own or inherited. A public folder is readable by
+ * anyone, the agent too, but that is not sharing: it says nothing about
+ * this collective, and stopping must still be possible. A missing folder: no.
+ */
 export async function sharedWith(folderUrl: string, owner: string, podUrl: string, agent: string): Promise<boolean> {
   try {
     const rules = await effectiveAccess(folderUrl, owner, podUrl);
     if (!rules) return false;
-    return rules.access.public.includes("read") || rules.access.agents.some((a) => a.webId === agent && a.modes.includes("read"));
+    return rules.access.agents.some((a) => a.webId === agent && a.modes.includes("read"));
   } catch (err) {
     if ((err as { status?: number }).status === 404) return false;
     throw err;
