@@ -4,7 +4,27 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (10 Oct 2026)
+## Where we are (16 Oct 2026)
+
+**G closed**: a member picks the folder they share; stop sharing asks what
+the folder's rules become; a security fix on copied rules. Details and
+what is left in [G](#g--share-the-folder-you-choose--built-run-live-closed-16-oct-2026).
+
+**Next, in order:**
+
+1. **Check folders shared or granted before 16 Oct** (yours, Xavier's,
+   ChaBi's): open each in a private window; any that opens and should not,
+   fix in its access panel.
+2. **`procedure-contribution` reads `settings/collectives.ttl`**, falling
+   back to `hs:bundleFolder` (solid-kit; changed directly while HyperScope
+   is the only collective), then E step 4 with Xavier.
+3. The 10 Oct list below (Maps of Making live, ADR 006 §7, `sb:agent`
+   optional, E).
+4. G's leftovers: moving a shared folder re-announces; the agent folder
+   picker with suggestions and the four questions; items with rules of
+   their own counted; a base `select` style in solid-kit.
+
+## Where we were (10 Oct 2026)
 
 **Maps of Making, the second collective, is set up for membership only.**
 Pod `https://pod.nicolasdb.eu/mapsofmaking/` (account
@@ -32,9 +52,6 @@ fields, asked through `sb:requires` (SHACL); features as `sb:feature`, and
 3. **`sb:agent` optional / `sb:feature`**, so a membership-only collective
    names no agent and shows no sharing.
 4. E's list below, unchanged.
-5. **G, step 1** (share the folder you choose), from Xavier's feedback,
-   before E step 4 goes further with him: built, run it live (manual
-   tests, step 7), then step 4 (the procedure).
 
 ## Where we were (1 Oct 2026, end of day)
 
@@ -646,7 +663,7 @@ The same app with a second `config.ttl` and its own entry page. If that needs
 more than a config line and copy, the backoffice is not generic enough yet, and
 that is the finding.
 
-## G — Share the folder you choose · step 1 built (16 Oct 2026)
+## G — Share the folder you choose · built, run live, closed (16 Oct 2026)
 
 Why: Xavier's first try (E step 4). How sharing works was confusing, and
 `output2/` means nothing to a member. The member should pick the folder they
@@ -704,17 +721,30 @@ Edges:
 - `src/agents-view.ts` stops matching `^output2/` and reads the settings
   file instead.
 
-Order, each step usable:
+Done (PRs #1, #2, #3, and `f271158` pushed to `dev` directly by mistake),
+run live on HyperScope by Nicolas, 16 Oct 2026:
 
-1. Picker, `settings/collectives.ttl` and its README, merged share / stop /
-   reset, Announce. `test:pods`: a folder with existing rules, two
-   collectives, stop, reset. Manual tests section "G". **Built** (branch
-   `claude/g-share-folder`), pods and screen tests green; manual test
-   ("Slice A and B", step 7) not run yet. Not in it: the count of items
-   with rules of their own, and `agents-view.ts`'s `^output2/` note (step 3).
-2. Moving a shared folder re-announces.
-3. Suggestions and reasons in the agent folder picker.
-4. `procedure-contribution` reads the settings file.
+- Picker, `settings/collectives.ttl` (own rules: you, your agents Read)
+  and `settings/README.md`; share merges into the folder's rules;
+  announce reaches the collective ("Shares" shows `shared/MoM/`).
+- **Stop sharing asks** what the rules become: keep the rest (default),
+  follow the folder above, only you and your agents, each in words.
+  Replaced the conditional "Reset to inherit" button, which stayed hidden
+  too often. Stopping forgets the folder in the settings file.
+- **Shared means the agent is named**, not "anyone can read": a public
+  folder stayed "Shared" after stopping, and the picker never came back.
+- **Security fix found on the way**: copying an inheriting item's rules
+  took the pod root's public Read (no `acl:default` on CSS) and wrote it
+  with `acl:default`, making the item public. Sharing (G), an agent's
+  folder (D) and the access panel leaving Inherit (C2) all did it.
+  `parseAcl` now records `inherits`; copies start from `followedBy`.
+  Folders shared or granted before 16 Oct may be public: check them.
+
+Left over, carried to "Where we are": moving a shared folder
+re-announces; suggestions and reasons (four questions) in the agent
+folder picker, with `agents-view.ts`'s `^output2/` note; the count of
+items with rules of their own; `procedure-contribution` reads the
+settings file (solid-kit); a base `select` style in the kit.
 
 ## Replacing the old backoffice
 
