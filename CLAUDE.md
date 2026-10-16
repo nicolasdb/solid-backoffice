@@ -65,9 +65,11 @@ one changes, change the other. Never point it at the real provider.
   requests beside a members table, other messages, the invitation link.
 - `src/lib/sharing.ts` — sharing the folder a member picked with a
   collective's agent (slice G): adds to the folder's rules, never replaces
-  them (the agent Can read, your `acl:delegates` Can edit); stop takes out
-  that agent only; "Reset to inherit" when nothing else is left
-  (`docs/explanation/sharing.md`). `src/lib/shared-folders.ts` keeps the
+  them (the agent Can read, your `acl:delegates` Can edit); stopping asks
+  what the rules become (`stopPlan`: keep the rest, follow the folder
+  above, only you and your agents) (`docs/explanation/sharing.md`). Copies
+  of inherited rules start from `followedBy` (`src/lib/files.ts`): only
+  what a folder passes on with `acl:default`. `src/lib/shared-folders.ts` keeps the
   choice in `settings/collectives.ttl` (you and your agents only);
   `src/lib/settings.ts` writes `settings/README.md`.
 - `src/lib/css-account.ts` — **provider-specific**: account, password login

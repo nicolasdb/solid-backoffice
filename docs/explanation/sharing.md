@@ -59,15 +59,23 @@ Nothing already collected is ever removed, by either side.
 
 - **Delete a file** from your folder: the collective marks it as removed and
   keeps the copies it made.
-- **Stop sharing**: the collective's agent is taken out of the folder's
-  rules, and only it: another collective it is shared with, your agents
-  and anyone else the folder names keep their access. Then the collective
-  is told (an `as:Undo` of your announcement, ADR 006 §1 step 5), so its
-  members table stops listing the folder; nothing new is collected;
-  earlier copies stay.
-- **Reset to inherit**: once nothing is shared, if the folder's own rules
-  say no more than the folder above (your agents aside), the screen offers
-  to delete them, showing what the folder would then follow. Two clicks.
+- **Stop sharing** asks first what the folder's rules become, each choice
+  in words: who can open it after, who loses or gains access.
+  - *Keep everything else as it is* (the default): only the collective's
+    agent leaves the rules. Another collective it is shared with, your
+    agents and anyone else the folder names keep their access.
+  - *Follow the folder above again*: the folder's own `.acl` is deleted,
+    so it follows what the folder above passes on. Offered when it has
+    rules of its own.
+  - *Only you and your agents*: offered while anyone else is still named.
+
+  The screen says when another collective would lose the folder too, and
+  when the collective could still read it through the folder above. One
+  conditional write, based on the rules read when the question was asked;
+  then the collective is told (an `as:Undo` of your announcement, ADR 006
+  §1 step 5), so its members table stops listing the folder. Nothing new is
+  collected; earlier copies stay. The message's Undo puts the rules back
+  exactly as they were, and announces again.
 - **Leave**: your profile stops declaring the membership. Stopping sharing is
   a separate choice, offered at the same time.
 

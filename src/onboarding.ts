@@ -11,9 +11,8 @@
  * A tab switch draws from the last load first and reads behind it (L5).
  */
 import { describePodError, exists, isAuthError } from "./lib/pod";
-import { resetOffer, sharedWith } from "./lib/sharing";
+import { sharedWith } from "./lib/sharing";
 import { readChoices, type FolderChoices } from "./lib/shared-folders";
-import type { Effective } from "./lib/files";
 import { setUpNewcomer } from "./lib/newcomer";
 import { forgetReads } from "./lib/read";
 import {
@@ -58,8 +57,8 @@ export interface CollectiveView {
   /** Whether you picked it: false means the suggestion, which may not exist yet. */
   chosen: boolean;
   published: boolean;
-  /** Not shared, and its own rules say no more than the folder above: what "Reset to inherit" would follow. */
-  resetFrom: Effective | null;
+  /** Other collectives this same folder is shared with: stopping for one says what it does to them. */
+  alsoSharedWith: Collective[];
   /** While "pending": the collective's refusal or removal, found in your own inbox. */
   answer: Answer | null;
 }
@@ -139,19 +138,21 @@ export async function load(webId: string, podUrl: string): Promise<Loaded> {
         isListed(collective, webId),
         sharedWith(folderUrl, webId, podUrl, collective.agent),
       ]);
-      const resetFrom = picked && !published ? await resetOffer(folderUrl, webId, podUrl, profile.delegates).catch(() => null) : null;
       return {
         collective,
         state: membershipState(profile.memberOf.includes(collective.group), listed),
         folderUrl,
         chosen: Boolean(picked),
         published,
-        resetFrom,
+        alsoSharedWith: [],
         answer: null,
       };
     })
   );
   const [{ run, runError }, unadvertisedInbox, all] = await Promise.all([runLoad, inboxCheck, views]);
+  for (const view of all) {
+    view.alsoSharedWith = all.filter((o) => o !== view && o.published && o.folderUrl === view.folderUrl).map((o) => o.collective);
+  }
 
   // "Pending" is all the roster can say to someone it does not list. Whether
   // the collective answered is in your own inbox: read it only then.
