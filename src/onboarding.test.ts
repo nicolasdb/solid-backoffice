@@ -423,7 +423,7 @@ describe("slice A — the member's side of the handshake", () => {
     expect(options[1]).toContain("Anyone with the link loses access.");
     expect(options[2]).toContain("Only you and your agents");
     await click(app, "#stop-go-0");
-    expect(calls).toEqual([`stop ${POD}notes/ keep`, "inbox Undo"]); // rules, then tell
+    expect(calls).toEqual([`stop ${POD}notes/ keep`, "choose null", "inbox Undo"]); // rules, forget the folder, then tell
   });
 
   it("stops the way the person chose; Cancel changes nothing", async () => {
@@ -439,7 +439,7 @@ describe("slice A — the member's side of the handshake", () => {
     await click(app, "#unpublish-0");
     app.querySelector<HTMLInputElement>('input[value="follow"]')!.checked = true;
     await click(app, "#stop-go-0");
-    expect(calls).toEqual([`stop ${POD}notes/ follow`, "inbox Undo"]);
+    expect(calls).toEqual([`stop ${POD}notes/ follow`, "choose null", "inbox Undo"]);
   });
 
   it("says when another collective would lose the folder too", async () => {
@@ -465,6 +465,20 @@ describe("slice A — the member's side of the handshake", () => {
     const panel = app.querySelector<HTMLElement>("#stop-panel-0")!;
     expect(panel.textContent).toContain("Still shared with Maps of Making.");
     expect(panel.querySelectorAll(".stop-option")[1].textContent).toContain("Maps of Making loses access too.");
+  });
+
+  it("a public folder: stopping still stops, and says it stays public", async () => {
+    profile.memberOf = [COLLECTIVE.group];
+    listed = true;
+    choices = { [COLLECTIVE.group]: POD + "shared/MoM/" };
+    agentGrants = [{ webId: COLLECTIVE.agent, modes: ["read"] }];
+    const app = await render(tab(COLLECTIVE));
+    await click(app, "#unpublish-0");
+    const keep = app.querySelectorAll(".stop-option")[0].textContent!;
+    expect(keep).toContain("It stays public");
+    expect(keep).toContain("no longer shared with HyperScope");
+    await click(app, "#stop-go-0");
+    expect(calls).toEqual([`stop ${POD}shared/MoM/ keep`, "choose null", "inbox Undo"]);
   });
 
   it("shows the collective's refusal from your own inbox, with its reason; asking again drops the old answer first", async () => {

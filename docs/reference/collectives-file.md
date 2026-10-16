@@ -33,5 +33,8 @@ Each collective is a subject `<#c-…>` (a short hash of its IRI).
   (solid-kit `procedure-contribution`); with no entry they fall back to
   `hs:bundleFolder`.
 
+An entry is written when you share, and removed when you stop sharing
+(the message's Undo puts it back).
+
 Choosing is not sharing: whether the collective's agent can read the folder
 is in the folder's rules, not here.

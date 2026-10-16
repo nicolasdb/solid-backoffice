@@ -156,6 +156,22 @@ describe("a member sets themselves up (slice A)", () => {
     expect(await anon(folder + "a.md")).toBe(401);
   });
 
+  it("a public folder is shared only while the agent is named: stopping works, and it stays public", async () => {
+    await actAs("neil");
+    const agent = cast.hsagent.webId;
+    const folder = neil.pod + "open/";
+    await ensureContainer(folder);
+    await setAccess(folder, neil.webId, { agents: [], public: ["read"], authenticated: [] }, null);
+    expect(await sharedWith(folder, neil.webId, neil.pod, agent)).toBe(false); // readable, not shared
+
+    await shareFolder(folder, neil.webId, neil.pod, agent, []);
+    expect(await sharedWith(folder, neil.webId, neil.pod, agent)).toBe(true);
+
+    await stopSharingAs(await stopPlan(folder, neil.webId, neil.pod, agent, []), neil.webId, "keep");
+    expect(await sharedWith(folder, neil.webId, neil.pod, agent)).toBe(false);
+    expect((await fetch(folder)).status).toBe(200); // still public, as Neil chose
+  });
+
   it("gives a folder that follows the one above a copy of those rules, plus the grant", async () => {
     await actAs("neil");
     const parent = neil.pod + "work/";

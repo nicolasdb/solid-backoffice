@@ -181,13 +181,14 @@ export function renderStopPanel(plan: StopPlan, i: number, view: CollectiveView,
       <p class="actions"><button type="button" class="ghost" data-stop-cancel>Cancel</button></p>`;
   }
   const keep = plan.options.find((o) => o.choice === "keep")!.rules;
-  const reads = (r: Rules, agent: string) => r.public.includes("read") || r.agents.some((a) => a.webId === agent && a.modes.includes("read"));
   const options = plan.options
     .map((o, n) => {
       const changes = o.choice === "keep" ? [] : changeWords(keep, o.rules, label);
+      const named = (r: Rules, agent: string) => r.agents.some((a) => a.webId === agent && a.modes.includes("read"));
       const notes = [
-        ...alsoSharedWith.filter((c) => reads(keep, c.agent) && !reads(o.rules, c.agent)).map((c) => `${esc(c.name)} loses access too.`),
-        ...(reads(o.rules, collective.agent) ? [`${name} can still read it, through the folder above.`] : []),
+        ...alsoSharedWith.filter((c) => named(keep, c.agent) && !named(o.rules, c.agent)).map((c) => `${esc(c.name)} loses access too.`),
+        ...(named(o.rules, collective.agent) ? [`${name}'s agent is still named, by the folder above.`] : []),
+        ...(o.rules.public.includes("read") ? [`It stays public: anyone with the link, ${name} included, can still read it. It is no longer shared with ${name}.`] : []),
       ];
       const from = o.from ? ` (<code>${esc(pathOf(o.from, ctx.podUrl) || "your pod")}</code>)` : "";
       return `
@@ -365,11 +366,15 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
         const choice = (new FormData(form).get(`stop-${i}`) as StopChoice | null) ?? "keep";
         void run(form.querySelector<HTMLButtonElement>(`#stop-go-${i}`)!, async () => {
           // Revoke, then tell: the collective's "Shares" is read from these messages.
+          // The rules, then forget the folder (your agents stop writing
+          // there for this collective), then tell.
           await stopSharingAs(plan, webId, choice);
+          await chooseFolder(ctx.podUrl, webId, collective.group, null, profile.delegates);
           await sendToInbox(collective.inbox, buildUndoAnnounce(webId, folderUrl, collective.group));
-          toast(`${collective.name} can no longer read the folder. Copies it already made stay.`, {
+          toast(`The folder is no longer shared with ${collective.name}. Copies it already made stay.`, {
             undo: () =>
               void restoreRules(plan, webId)
+                .then(() => chooseFolder(ctx.podUrl, webId, collective.group, folderUrl, profile.delegates))
                 .then(() => sendToInbox(collective.inbox, buildAnnounce(webId, folderUrl, collective.group)))
                 .then(rerender),
           });
