@@ -71,6 +71,12 @@ export interface AccessRules {
    * UI should say so rather than do it silently.
    */
   folderOnly: string[];
+  /**
+   * What reaches the folder's contents: only authorizations with
+   * `acl:default`. A pod root's public Read is written without it on CSS, so
+   * the root is public and what is inside is not. Empty on a file.
+   */
+  inherits: Pick<AccessRules, "agents" | "public" | "authenticated">;
 }
 
 export interface ResourceAccess extends AccessRules {
@@ -108,7 +114,7 @@ export function aclUrlFromLink(linkHeader: string | null, resourceUrl: string): 
 }
 
 function emptyRules(): AccessRules {
-  return { agents: [], public: [], authenticated: [], unknown: [], folderOnly: [] };
+  return { agents: [], public: [], authenticated: [], unknown: [], folderOnly: [], inherits: { agents: [], public: [], authenticated: [] } };
 }
 
 function sortModes(modes: Iterable<Mode>): Mode[] {
@@ -138,6 +144,9 @@ export function parseAcl(
   const agentModes = new Map<string, Set<Mode>>();
   const pub = new Set<Mode>();
   const auth = new Set<Mode>();
+  const inhAgents = new Map<string, Set<Mode>>();
+  const inhPub = new Set<Mode>();
+  const inhAuth = new Set<Mode>();
   const isContainer = resourceUrl.endsWith("/");
 
   for (const [subject, props] of bySubject) {
@@ -184,11 +193,25 @@ export function parseAcl(
       const target = c === FOAF_AGENT ? pub : auth;
       modes.forEach((m) => target.add(m!));
     }
+    if (isContainer && defaults.length > 0) {
+      for (const agent of agents) {
+        if (agent === ownerWebId) continue;
+        const set = inhAgents.get(agent) ?? new Set<Mode>();
+        modes.forEach((m) => set.add(m!));
+        inhAgents.set(agent, set);
+      }
+      for (const c of classes) modes.forEach((m) => (c === FOAF_AGENT ? inhPub : inhAuth).add(m!));
+    }
   }
 
   rules.agents = [...agentModes].map(([webId, set]) => ({ webId, modes: sortModes(set) }));
   rules.public = sortModes(pub);
   rules.authenticated = sortModes(auth);
+  rules.inherits = {
+    agents: [...inhAgents].map(([webId, set]) => ({ webId, modes: sortModes(set) })),
+    public: sortModes(inhPub),
+    authenticated: sortModes(inhAuth),
+  };
   return rules;
 }
 

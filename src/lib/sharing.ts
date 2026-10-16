@@ -20,7 +20,7 @@
  * over a change made meanwhile.
  */
 import { getAccess, PRESETS, readAccess, removeOwnRules, setAccess, type AccessRules, type AgentGrant, type Mode } from "./acl";
-import { effectiveAccess, listFolder, parentOf, type Effective } from "./files";
+import { effectiveAccess, followedBy, listFolder, parentOf, type Effective } from "./files";
 import { ensureContainer, exists } from "./pod";
 
 type Rules = Pick<AccessRules, "agents" | "public" | "authenticated">;
@@ -85,8 +85,7 @@ export async function addGrants(url: string, owner: string, podUrl: string, gran
     const own = await getAccess(url, owner);
     let base: Rules = own;
     if (own.inherited && !fromScratch) {
-      const above = parentOf(url);
-      const followed = above && above.startsWith(podUrl) ? await effectiveAccess(above, owner, podUrl) : null;
+      const followed = await followedBy(url, owner, podUrl);
       if (followed?.access.unknown.length) throw notUnderstood();
       base = followed?.access ?? NOTHING;
     } else if (own.inherited) {
@@ -166,9 +165,7 @@ function sameRules(a: Rules, b: Rules, ignore: string[]): boolean {
 export async function resetOffer(folderUrl: string, owner: string, podUrl: string, delegates: string[]): Promise<Effective | null> {
   const own = await readAccess(folderUrl, owner);
   if (own.inherited || own.unknown.length) return null;
-  const above = parentOf(folderUrl);
-  if (!above || !above.startsWith(podUrl)) return null;
-  const followed = await effectiveAccess(above, owner, podUrl);
+  const followed = await followedBy(folderUrl, owner, podUrl);
   if (!followed || followed.access.unknown.length) return null;
   return sameRules(own, followed.access, [owner, ...delegates]) ? followed : null;
 }

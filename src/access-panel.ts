@@ -29,7 +29,7 @@ import {
   type AgentGrant,
   type Mode,
 } from "./lib/acl";
-import { effectiveAccess, nameOf, parentOf, type Effective } from "./lib/files";
+import { followedBy, nameOf, parentOf, type Effective } from "./lib/files";
 import { trimAddress, webIdName } from "./ui/address";
 import { readTurtle } from "./lib/read";
 import { describePodError } from "./lib/pod";
@@ -82,7 +82,7 @@ export async function loadDraft(url: string, webId: string, podUrl: string): Pro
   // Both at once (ADR 007): what it has, and what it would follow.
   const [own, parent] = await Promise.all([
     readAccess(url, webId),
-    above && above.startsWith(podUrl) ? effectiveAccess(above, webId, podUrl) : Promise.resolve(null),
+    above && above.startsWith(podUrl) ? followedBy(url, webId, podUrl) : Promise.resolve(null),
   ]);
   const access = own.inherited && parent ? parent.access : own;
   const from = own.inherited && parent ? parent.from : url;

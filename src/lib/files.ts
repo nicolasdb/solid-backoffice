@@ -112,20 +112,52 @@ export interface Effective {
 }
 
 /**
- * Which rules apply to `url`: its own `.acl`, else the nearest folder above it
- * that has one (WAC's `acl:default`). `memo` shares each folder's answer
- * between the items of one listing, so a folder of fifty inherited files
- * costs one walk, not fifty. Stops at `root`: nothing above your pod applies.
- *
- * Simplification: a folder's grant written without `acl:default` (the
- * universalAccess bug, `folderOnly`) is counted as if it reached the items;
- * the permissions panel names that case.
+ * Which rules apply to `url`: its own `.acl`, else what the nearest folder
+ * above it that has one passes on (WAC's `acl:default`). From a folder
+ * above, only its inherited rules count (`inherits`): a pod root's public
+ * Read covers the root, not what is inside. `memo` shares each folder's
+ * answer between the items of one listing, so a folder of fifty inherited
+ * files costs one walk, not fifty. Stops at `root`: nothing above your pod
+ * applies.
  */
-export function effectiveAccess(
+export async function effectiveAccess(
   url: string,
   owner: string,
   root: string,
   memo: Map<string, Promise<Effective | null>> = new Map()
+): Promise<Effective | null> {
+  const found = await nearestRules(url, owner, root, memo);
+  if (!found || found.from === url) return found;
+  const { access } = found;
+  return { from: found.from, access: { ...access, ...access.inherits, folderOnly: [] } };
+}
+
+/**
+ * What `url` follows, or would follow without rules of its own: what the
+ * nearest folder above it with an `.acl` passes on (`inherits`). Null on the
+ * pod root, or when nothing above it is in the pod. The base to copy from
+ * when an item gets rules of its own.
+ */
+export async function followedBy(
+  url: string,
+  owner: string,
+  root: string,
+  memo: Map<string, Promise<Effective | null>> = new Map()
+): Promise<Effective | null> {
+  const parent = parentOf(url);
+  if (!parent || url === root || !parent.startsWith(root)) return null;
+  const found = await nearestRules(parent, owner, root, memo);
+  if (!found) return null;
+  const { access } = found;
+  return { from: found.from, access: { ...access, ...access.inherits, folderOnly: [] } };
+}
+
+/** The nearest own `.acl` at or above `url`, as written. */
+function nearestRules(
+  url: string,
+  owner: string,
+  root: string,
+  memo: Map<string, Promise<Effective | null>>
 ): Promise<Effective | null> {
   const known = memo.get(url);
   if (known) return known;
@@ -134,7 +166,7 @@ export function effectiveAccess(
     if (!access.inherited) return { from: url, access };
     const parent = parentOf(url);
     if (!parent || url === root || !parent.startsWith(root)) return null;
-    return effectiveAccess(parent, owner, root, memo);
+    return nearestRules(parent, owner, root, memo);
   })();
   memo.set(url, answer);
   return answer;
