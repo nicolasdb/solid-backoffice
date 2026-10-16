@@ -471,6 +471,26 @@ pre.source code { background: none; padding: 0; }
 
 /* Phone: the tabs move to a bar at the bottom, within thumb reach. */
 /* A member's view of the roster (L4). */
+/* Who, what, why, if not (docs/explanation/four-questions.md): before every grant. */
+.four-questions {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-recessed);
+  border-radius: var(--radius-md);
+  font-size: var(--text-small);
+}
+.four-questions > div { display: contents; }
+.four-questions dt { grid-column: 1; font-weight: 600; color: var(--text-secondary); }
+.four-questions dd { grid-column: 2; margin: 0; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .four-questions { grid-template-columns: 1fr; }
+  .four-questions :is(dt, dd) { grid-column: 1; }
+  .four-questions > div + div dt { margin-top: var(--space-2); }
+}
+
 .roster {
   list-style: none;
   margin: 0;

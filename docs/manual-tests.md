@@ -257,17 +257,19 @@ need one too, or accepting is refused before any write.
    member. "Remove" asks once more. Read the wording of both.
 6. **A message it does not understand.** POST a plain-text body to
    `hyperscope/inbox/`. It shows under "Other messages" and can be deleted.
-7. **Share sets the rules, stop deletes them** (27 Sep 2026). Your
-   profile names your agent (You → May act for you). Share the folder: in Pods,
-   `output2/hyperscope/` shows its own rules: your agent Can edit, the
-   collective's agent Can read, nobody else; your agent can write a file
-   there. Stop sharing: the folder shows "Inherit from parent" (not "Only
-   me"), and its technical rules say it has no `.acl` of its own. Give it
-   something by hand (Anyone with the link), share, stop: back to
-   "Inherit from parent" again. On a new account (no `output2/`): after
-   Share, `output2/` has its own rules (you, your agent Can edit, not
-   public); after Stop sharing, the folder is still not public (open its
-   address in a private window).
+7. **Pick the folder, share, stop** (slice G, 16 Oct 2026). Your profile
+   names your agent (You → May act for you). On the collective's tab, the
+   picker shows its suggestion first, then your folders; read the four
+   questions. Pick a folder that already has someone in its rules (Pods →
+   access panel), share: that person is still there, plus the collective's
+   agent (Can read) and your agent (Can edit); your agent can write a file
+   there. `settings/collectives.ttl` exists, opens for your agent, not in a
+   private window; `settings/README.md` reads well. Stop sharing: only the
+   collective's agent is gone. Take the other person out by hand: "Reset
+   to inherit" is offered, says what it would follow, asks twice. On a new
+   account, share the suggestion (it does not exist yet): it and the
+   folder above are created, not public (private window), before and after
+   Stop sharing.
 8. **The collective hears it** (27 Sep 2026). As the collective, the
    members table shows the folder under "Shares"; the member stops
    sharing; reload: the folder is gone from "Shares", and nothing new sits

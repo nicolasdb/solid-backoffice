@@ -13,29 +13,35 @@ says so.
 
 ## Folder
 
-Each collective gets its own folder under one parent:
-`output2/hyperscope/`, `output2/mom/`. The folder is created when you first
-share, not when you join (joining only writes `org:memberOf` in your profile
-and sends the request). Its name comes from the collective's `config.ttl`
-(`hs:bundleFolder`).
+You pick the folder (slice G, 16 Oct 2026). The collective's `config.ttl`
+only suggests one (`hs:bundleFolder`, such as `output2/hyperscope/`); the
+picker offers it first, then the first two levels of your pod. The root,
+`profile/`, `settings/` and `inbox/` are never offered: apps depend on them.
+A folder can be shared with several collectives.
 
-Sharing gives the folder **rules of its own**, set whole: you (Control,
-as on everything of yours), each agent your profile names
-(`acl:delegates`) Can edit, so it can deliver files, and the collective's
-agent Can read. The folder above it (`output2/`) is secured first when it
-has no rules of its own: you and your agents, nothing else. Otherwise it
-would pass on the pod root's rules, which on a new pod include public Read,
-and stopping would make the folder public without a word. Rules `output2/`
-already has are left as you set them; the pod's root is never touched.
-(Which rules apply where: [access rules](access-rules.md).) The folder belongs to the app, so whatever it followed or
-held before is replaced, not merged. The grant is the consent: it lives on
-your pod and you can remove it there. (Two earlier cuts are overruled: slice
-A's gave only the collective's agent, and your own agent lost its access;
-the next one copied what the folder inherited, and stopping could leave it
-on "Only me". 27 Sep 2026.)
+Before you share, the screen answers the
+[four questions](four-questions.md): who (the collective's agent), what (the
+folder and everything in it, Read only), why (it keeps a copy of each
+version), and what if not.
+
+Your choice is kept in `settings/collectives.ttl`
+([reference](../reference/collectives-file.md)), readable by you and your
+own agents only, so your agent knows where to put your contributions.
+
+Sharing **adds** to the folder's rules, it never replaces them, the same as
+adding a person in the access panel: the collective's agent Can read, each
+agent your profile names (`acl:delegates`) Can edit, so it can deliver
+files, and everyone the folder already named keeps what they had. A folder
+without rules of its own gets a copy of the ones it followed, plus these.
+A folder that does not exist yet is created starting from you and your
+agents only, and so is any missing folder above it: nothing new turns
+public. (Which rules apply where: [access rules](access-rules.md).) The
+grant is the consent: it lives on your pod and you can remove it there.
+(Overruled: until 16 Oct 2026 the folder was the app's, `output2/<name>/`,
+and its rules were set whole.)
 
 Everything you put in that folder is shared, including files added later.
-The screen says so in one line.
+The screen says so.
 
 ## Status
 
@@ -53,14 +59,15 @@ Nothing already collected is ever removed, by either side.
 
 - **Delete a file** from your folder: the collective marks it as removed and
   keeps the copies it made.
-- **Stop sharing**: the folder's own rules are deleted, then the
-  collective is told (an `as:Undo` of your announcement, ADR 006 §1 step
-  5), so its members table stops listing the folder; nothing new is
-  collected; earlier copies stay. "Inherit from parent" is not a rule that
-  could be restored, it is the absence of one: without its own `.acl`, the
-  server applies the nearest folder above that has rules (`output2/`, or
-  the pod's root). `output2/` is secured before, if it still has no rules
-  (a folder shared before 27 Sep), so this never makes it public.
+- **Stop sharing**: the collective's agent is taken out of the folder's
+  rules, and only it: another collective it is shared with, your agents
+  and anyone else the folder names keep their access. Then the collective
+  is told (an `as:Undo` of your announcement, ADR 006 §1 step 5), so its
+  members table stops listing the folder; nothing new is collected;
+  earlier copies stay.
+- **Reset to inherit**: once nothing is shared, if the folder's own rules
+  say no more than the folder above (your agents aside), the screen offers
+  to delete them, showing what the folder would then follow. Two clicks.
 - **Leave**: your profile stops declaring the membership. Stopping sharing is
   a separate choice, offered at the same time.
 

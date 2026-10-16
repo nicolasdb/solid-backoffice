@@ -8,6 +8,7 @@
  * Every write here is on the signed-in user's own pod, except the join
  * request POSTed to a collective's inbox (pocpod0 BP-6, single writer).
  */
+import { nameOf } from "./lib/files";
 import { isValidWebId } from "./lib/acl";
 import {
   buildJoin,
@@ -151,7 +152,7 @@ function collectiveCard(view: CollectiveView): string {
   const line =
     state === "member"
       ? published
-        ? `You share ${collective.bundleFolder}`
+        ? `You share ${nameOf(view.folderUrl)}`
         : "Your folder is not shared with it yet"
       : stateLabel(state, collective.name);
   return card(collective, statePill(state), line);

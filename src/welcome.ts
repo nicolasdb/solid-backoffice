@@ -121,9 +121,7 @@ export function landingCopy(invitation: Invitation | null, provider: string | nu
       { title: "Ask to join", text: "One message to the collective's inbox. The answer lands in yours." },
       {
         title: "Share one folder",
-        text: collective
-          ? `Everything you put in <code>${esc(collective.bundleFolder)}</code> is shared with the collective's agent. Nothing else is.`
-          : "Everything you put in one folder is shared with the collective's agent. Nothing else is.",
+        text: "You pick one folder of your pod. Everything in it is shared with the collective's agent. Nothing else is.",
       },
       { title: "Stop any time", text: "Stopping prevents new copies. It does not remove copies already made." },
     ],

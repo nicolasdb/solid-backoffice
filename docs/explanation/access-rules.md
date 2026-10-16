@@ -38,10 +38,10 @@ from which folder ("Who can access it").
 
 ## In sharing
 
-Sharing uses exactly this. `output2/<collective>/` gets rules of its own
-while shared; stop sharing deletes them, so it inherits from `output2/`,
-which is given rules of its own first when it has none, so that inheriting
-never reaches the root's public Read.
+Sharing uses exactly this. The folder you picked gets rules of its own
+when shared: a copy of what it followed, plus the collective's agent.
+Stopping takes that agent out and leaves the rest; deleting the folder's own
+rules, so it inherits again, is a separate choice ("Reset to inherit").
 → [Sharing](sharing.md#folder)
 
 A file you set apart inside the shared folder keeps its own rules: if they

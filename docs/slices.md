@@ -32,6 +32,9 @@ fields, asked through `sb:requires` (SHACL); features as `sb:feature`, and
 3. **`sb:agent` optional / `sb:feature`**, so a membership-only collective
    names no agent and shows no sharing.
 4. E's list below, unchanged.
+5. **G, step 1** (share the folder you choose), from Xavier's feedback,
+   before E step 4 goes further with him: built, run it live (manual
+   tests, step 7), then step 4 (the procedure).
 
 ## Where we were (1 Oct 2026, end of day)
 
@@ -642,6 +645,73 @@ maybe a script or its own app, with the collective's own landing page).
 The same app with a second `config.ttl` and its own entry page. If that needs
 more than a config line and copy, the backoffice is not generic enough yet, and
 that is the finding.
+
+## G — Share the folder you choose · step 1 built (16 Oct 2026)
+
+Why: Xavier's first try (E step 4). How sharing works was confusing, and
+`output2/` means nothing to a member. The member should pick the folder they
+share, from the collective's panel.
+
+Decided (16 Oct 2026):
+
+- **The member picks the folder.** `hs:bundleFolder` becomes the picker's
+  suggestion, not a rule. Rename the example away from `output2/`.
+  Root, `profile/`, `settings/` and `inbox/` are never offered
+  (`PROTECTED` in `src/lib/move.ts`).
+- **The choice lives in `settings/collectives.ttl`** on the member's pod,
+  one entry per collective (collective IRI → folder), like
+  `settings/following.ttl`. Not the profile (public). The Type Index was
+  considered and set aside: the custom file is simpler. The member's
+  agents (`acl:delegates`) get Read on it so they know where to write.
+- **`settings/README.md`**: written by the backoffice the first time it
+  writes in `settings/`, if missing. It says what the folder is for (apps
+  keep your settings there), and that changing or deleting files there can
+  break apps. It inherits its rules.
+- **Sharing adds or removes one WebID**, merged into the folder's rules,
+  the same as the access panel. This replaces `src/lib/sharing.ts`'s
+  write-whole / delete-`.acl`. A folder without its own rules gets a copy
+  of what it inherited, plus the agent's Read (`acl:default`, so it
+  covers what is inside). Stopping removes that agent only, so a folder
+  shared with two collectives stays shared with the other one. When what
+  is left equals what it would inherit, offer **Reset to inherit**: confirm
+  first, and show what it will then inherit (it may be public).
+  `secureParent` goes: the parent of a picked folder is the member's.
+- **Your agents Can edit the shared folder**: kept, shown as a line
+  ("your agent can deliver here"), not as a side effect.
+- **Agents get no default grant.** The agent folder picker suggests folders
+  (the shared ones first) and says why each one would be needed. Today it
+  explains nothing. Every grant screen answers the
+  [four questions](explanation/four-questions.md): who, what, why, what if
+  not.
+- **Iceberg**: the member never sees `.acl` or Turtle on the visible part.
+  The technical rules stay below, as in Pods.
+- **`procedure-contribution`** (solid-kit): the member's agent reads its
+  folder from `settings/collectives.ttl`, falling back to `hs:bundleFolder`.
+  While HyperScope is the only collective, procedures change directly.
+
+Edges:
+
+- Moving or renaming a shared folder (`move.ts`) sends an Undo for the old
+  URL and an Announce for the new one, and updates `settings/collectives.ttl`.
+- Changing folder works the same way: Undo, then Announce.
+- A public folder: say the collective could already read it.
+- Items inside with their own rules don't inherit the Read: count them and
+  say the collective can't read them.
+- A share inside another shared folder: show it.
+- `src/agents-view.ts` stops matching `^output2/` and reads the settings
+  file instead.
+
+Order, each step usable:
+
+1. Picker, `settings/collectives.ttl` and its README, merged share / stop /
+   reset, Announce. `test:pods`: a folder with existing rules, two
+   collectives, stop, reset. Manual tests section "G". **Built** (branch
+   `claude/g-share-folder`), pods and screen tests green; manual test
+   ("Slice A and B", step 7) not run yet. Not in it: the count of items
+   with rules of their own, and `agents-view.ts`'s `^output2/` note (step 3).
+2. Moving a shared folder re-announces.
+3. Suggestions and reasons in the agent folder picker.
+4. `procedure-contribution` reads the settings file.
 
 ## Replacing the old backoffice
 
