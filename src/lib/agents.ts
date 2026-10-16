@@ -27,7 +27,7 @@
  */
 import { authFetch } from "./auth";
 import { getAccess, isValidWebId, readAccess, setAccess, setAgentAccess, type AgentGrant, type Mode, type ResourceAccess } from "./acl";
-import { effectiveAccess, listFolder, parentOf } from "./files";
+import { followedBy, listFolder } from "./files";
 import { profileEdits, updateOwnProfile } from "./collective";
 import { slugify } from "./pod";
 
@@ -445,8 +445,7 @@ export async function setFolderAccess(folder: string, owner: string, podUrl: str
   const current = await getAccess(folder, owner);
   if (!current.inherited) return setAgentAccess(folder, owner, webId, modes);
   if (!modes.length) return;
-  const parent = parentOf(folder);
-  const followed = parent && folder !== podUrl ? await effectiveAccess(parent, owner, podUrl) : null;
+  const followed = await followedBy(folder, owner, podUrl);
   const from = followed?.access;
   if (from && from.unknown.length) {
     throw new Error(

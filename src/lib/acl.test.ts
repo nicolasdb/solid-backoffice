@@ -121,6 +121,19 @@ describe("serializeAcl → parseAcl", () => {
   });
 });
 
+describe("parseAcl — what a folder passes on", () => {
+  it("counts only grants with acl:default: a CSS pod root's public Read stays on the root", () => {
+    const root = "https://pod.example/neil/";
+    const turtle = `@prefix acl: <http://www.w3.org/ns/auth/acl#>. @prefix foaf: <http://xmlns.com/foaf/0.1/>.
+<#public> a acl:Authorization; acl:agentClass foaf:Agent; acl:accessTo <./>; acl:mode acl:Read.
+<#owner> a acl:Authorization; acl:agent <${root}profile/card#me>; acl:accessTo <./>; acl:default <./>; acl:mode acl:Read, acl:Write, acl:Control.
+<#agent> a acl:Authorization; acl:agent <https://pod.example/a#me>; acl:accessTo <./>; acl:default <./>; acl:mode acl:Read.`;
+    const rules = parseAcl(turtle, root + ".acl", root, root + "profile/card#me");
+    expect(rules.public).toEqual(["read"]);
+    expect(rules.inherits).toEqual({ agents: [{ webId: "https://pod.example/a#me", modes: ["read"] }], public: [], authenticated: [] });
+  });
+});
+
 describe("parseAcl — rule 3: what it does not understand, it reports", () => {
   const prefix = "@prefix acl: <http://www.w3.org/ns/auth/acl#>.\n@prefix foaf: <http://xmlns.com/foaf/0.1/>.\n";
 

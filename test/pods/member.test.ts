@@ -12,6 +12,7 @@ const { getAccess, setAccess, setAuthenticatedAccess } = await import("../../src
 const { resetOffer, resetToInherit, shareFolder, stopSharing, sharedWith } = await import("../../src/lib/sharing");
 const { chooseFolder, choicesUrl, readChoices } = await import("../../src/lib/shared-folders");
 const admin = await import("../../src/lib/admin");
+const { setFolderAccess } = await import("../../src/lib/agents");
 
 const cast = inject("cast");
 const neil = cast.neil;
@@ -106,11 +107,41 @@ describe("a member sets themselves up (slice A)", () => {
     expect(await resetOffer(folder, neil.webId, neil.pod, delegates)).toBeNull();
     const root = await getAccess(neil.pod, neil.webId);
     const now = await getAccess(folder, neil.webId);
-    await setAccess(folder, neil.webId, { agents: [...root.agents, { webId: mine, modes: ["read", "append", "write"] }], public: root.public, authenticated: root.authenticated }, now.etag);
+    await setAccess(folder, neil.webId, { agents: [...root.inherits.agents, { webId: mine, modes: ["read", "append", "write"] }], public: root.inherits.public, authenticated: root.inherits.authenticated }, now.etag);
     const offer = await resetOffer(folder, neil.webId, neil.pod, delegates); // your agents aside, the same
     expect(offer?.from).toBe(neil.pod);
     await resetToInherit(folder, neil.webId);
     expect((await getAccess(folder, neil.webId)).inherited).toBe(true);
+  });
+
+  it("never makes public a folder that follows the pod root: the root's public Read is the root's only", async () => {
+    await actAs("neil");
+    const anon = async (url: string) => (await fetch(url)).status;
+    const root = await getAccess(neil.pod, neil.webId);
+    expect(root.public).toEqual(["read"]); // CSS: the root itself is public…
+    expect(root.inherits.public).toEqual([]); // …what is inside is not
+    const folder = neil.pod + "plain/";
+    await ensureContainer(folder);
+    await current.fetch(folder + "a.md", put("a"));
+    expect(await anon(folder + "a.md")).toBe(401);
+    expect(await sharedWith(folder, neil.webId, neil.pod, cast.hsagent.webId)).toBe(false);
+
+    await shareFolder(folder, neil.webId, neil.pod, cast.hsagent.webId, []);
+    expect((await getAccess(folder, neil.webId)).public).toEqual([]);
+    expect(await anon(folder + "a.md")).toBe(401);
+    expect(await as("hsagent", folder + "a.md")).toBe(200);
+
+    await stopSharing(folder, neil.webId, cast.hsagent.webId);
+    const offer = await resetOffer(folder, neil.webId, neil.pod, []);
+    expect(offer?.from).toBe(neil.pod);
+    expect(offer?.access.public).toEqual([]); // what it would follow: not public
+    await resetToInherit(folder, neil.webId);
+    expect(await anon(folder + "a.md")).toBe(401);
+
+    // An agent given the folder (slice D) copies the same rules: not public either.
+    await setFolderAccess(folder, neil.webId, neil.pod, cast.ines.webId, ["read"]);
+    expect((await getAccess(folder, neil.webId)).public).toEqual([]);
+    expect(await anon(folder + "a.md")).toBe(401);
   });
 
   it("gives a folder that follows the one above a copy of those rules, plus the grant", async () => {
