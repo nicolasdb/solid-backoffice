@@ -178,7 +178,7 @@ describe("the landing", () => {
     expect(app.querySelector(".ladder")!.textContent).toContain("A COLLECTIVE");
   });
 
-  it("names the collective and its folder once its config.ttl is read, keeping what was typed", async () => {
+  it("names the collective once its config.ttl is read, keeping what was typed", async () => {
     serve(config());
     setInvite(CONFIG_URL + "?fresh=1");
     const app = render();
@@ -186,7 +186,7 @@ describe("the landing", () => {
     await settle();
     expect(app.querySelector(".invite-card")!.textContent).toContain("HyperScope");
     expect(app.textContent).toContain("HyperScope invited you.");
-    expect(app.textContent).toContain("output2/hs/");
+    expect(app.textContent).toContain("You pick one folder of your pod."); // the folder is the member's choice (slice G)
     expect(app.querySelector<HTMLInputElement>("#name")!.value).toBe("Zoé");
   });
 

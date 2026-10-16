@@ -18,6 +18,7 @@ import { updateDocument, type ConditionalError } from "./conditional";
 import { readTurtle } from "./read";
 import { listFolder, nameOf, readFile, type FileContent, type Item } from "./files";
 import { NS } from "./vocab";
+import { ensureSettingsReadme } from "./settings";
 
 const DCT = "http://purl.org/dc/terms/";
 const T = {
@@ -133,6 +134,7 @@ export async function changeFollowing(podUrl: string, change: (entries: Followed
     });
     if (res.status === 412) return changeFollowing(podUrl, change);
     if (!res.ok) throw new Error(`Could not create ${url} (${res.status}).`);
+    await ensureSettingsReadme(podUrl);
   }
 }
 

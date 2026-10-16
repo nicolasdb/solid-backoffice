@@ -11,7 +11,9 @@
  * A tab switch draws from the last load first and reads behind it (L5).
  */
 import { describePodError, exists, isAuthError } from "./lib/pod";
-import { sharedWith } from "./lib/sharing";
+import { resetOffer, sharedWith } from "./lib/sharing";
+import { readChoices, type FolderChoices } from "./lib/shared-folders";
+import type { Effective } from "./lib/files";
 import { setUpNewcomer } from "./lib/newcomer";
 import { forgetReads } from "./lib/read";
 import {
@@ -51,8 +53,13 @@ export interface ViewContext {
 export interface CollectiveView {
   collective: Collective;
   state: MembershipState;
+  /** The folder you picked for it, or else its suggestion (`hs:bundleFolder`). */
   folderUrl: string;
+  /** Whether you picked it: false means the suggestion, which may not exist yet. */
+  chosen: boolean;
   published: boolean;
+  /** Not shared, and its own rules say no more than the folder above: what "Reset to inherit" would follow. */
+  resetFrom: Effective | null;
   /** While "pending": the collective's refusal or removal, found in your own inbox. */
   answer: Answer | null;
 }
@@ -121,18 +128,25 @@ export async function load(webId: string, podUrl: string): Promise<Loaded> {
     found.push(collective);
   }
 
+  // Which folder you share with each: your own settings, read once. Unreadable
+  // is treated as no choice made: the suggestion is shown, nothing is written.
+  const choices: Promise<FolderChoices> = found.length ? readChoices(podUrl).catch(() => new Map()) : Promise.resolve(new Map());
   const views = Promise.all(
     found.map(async (collective): Promise<CollectiveView> => {
-      const folderUrl = new URL(collective.bundleFolder, podUrl).href;
+      const picked = (await choices).get(collective.group);
+      const folderUrl = picked ?? new URL(collective.bundleFolder, podUrl).href;
       const [listed, published] = await Promise.all([
         isListed(collective, webId),
         sharedWith(folderUrl, webId, podUrl, collective.agent),
       ]);
+      const resetFrom = picked && !published ? await resetOffer(folderUrl, webId, podUrl, profile.delegates).catch(() => null) : null;
       return {
         collective,
         state: membershipState(profile.memberOf.includes(collective.group), listed),
         folderUrl,
+        chosen: Boolean(picked),
         published,
+        resetFrom,
         answer: null,
       };
     })
@@ -330,7 +344,7 @@ async function compose(
       roster = await loadRoster(view.collective);
       rosters.set(key, roster);
     }
-    body = renderMemberView(view, memberIndex, roster, webId);
+    body = renderMemberView(view, memberIndex, roster, webId, podUrl);
     bind = () => bindMember(app, view, memberIndex, ctx);
   } else if (isPlaces(route)) {
     body = placesFrame();

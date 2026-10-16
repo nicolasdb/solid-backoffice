@@ -94,13 +94,17 @@ describe("following an address", () => {
       .mockResolvedValueOnce(res(404)) // readFollowing: no list yet
       .mockResolvedValueOnce(res(200, listing, { "Content-Type": "text/turtle", ETag: '"l"' })) // the address
       .mockResolvedValueOnce(res(404)) // updateDocument's read
-      .mockResolvedValueOnce(res(201)); // create
+      .mockResolvedValueOnce(res(201)) // create
+      .mockResolvedValueOnce(res(412)); // settings/README.md: already there
     const followed = await follow(POD, X, new Date("2026-09-26T10:00:00Z"));
     expect(followed).toMatchObject({ title: "shared", excerpt: "1 item: guide.md" });
     const [url, init] = mockFetch.mock.calls[3];
     expect(url).toBe(DOC);
     expect(init.headers["If-None-Match"]).toBe("*");
     expect(parseFollowing(init.body, DOC)[0].address).toBe(X);
+    const [readme, put] = mockFetch.mock.calls[4];
+    expect(readme).toBe(POD + "settings/README.md");
+    expect(put.headers["If-None-Match"]).toBe("*"); // never over what is there
   });
 });
 

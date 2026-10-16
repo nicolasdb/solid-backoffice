@@ -63,11 +63,13 @@ one changes, change the other. Never point it at the real provider.
   writes every AS message; `src/lib/vocab.ts` holds the namespaces.
 - `src/admin.ts` — the collective you run, its own tab over `lib/admin.ts`:
   requests beside a members table, other messages, the invitation link.
-- `src/lib/sharing.ts` — sharing a member's folder with a collective's
-  agent: writes the folder's own `.acl` whole (you, your `acl:delegates`
-  Can edit, the agent Can read); stop sharing deletes it, so the folder
-  inherits again. Both first secure `output2/` when it has no rules
-  (`docs/explanation/sharing.md`).
+- `src/lib/sharing.ts` — sharing the folder a member picked with a
+  collective's agent (slice G): adds to the folder's rules, never replaces
+  them (the agent Can read, your `acl:delegates` Can edit); stop takes out
+  that agent only; "Reset to inherit" when nothing else is left
+  (`docs/explanation/sharing.md`). `src/lib/shared-folders.ts` keeps the
+  choice in `settings/collectives.ttl` (you and your agents only);
+  `src/lib/settings.ts` writes `settings/README.md`.
 - `src/lib/css-account.ts` — **provider-specific**: account, password login
   and pod through the CSS account API (J1). Shown only when
   `SIGNUP_PROVIDER` is set. `test/pods/` creates its whole cast with it.

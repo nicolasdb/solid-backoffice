@@ -36,6 +36,10 @@ let profileReads = 0;
 const places: string[] = [];
 /** The signed-in person's own inbox, as readInboxAt parses it. */
 let ownInbox: import("./lib/admin").InboxMessage[] = [];
+/** Settings: the folder picked per collective IRI. */
+let choices: Record<string, string> = {};
+/** What "Reset to inherit" would follow; null: not offered. */
+let resetFrom: unknown = null;
 
 vi.mock("./lib/auth", () => ({ authFetch: vi.fn() }));
 vi.mock("./lib/pod", () => ({
@@ -52,12 +56,25 @@ vi.mock("./lib/acl", () => ({
     void calls.push(`acl ${url} ${agent} ${modes.join(",")}`),
   setAuthenticatedAccess: async (url: string, _o: string, modes: string[]) =>
     void calls.push(`acl ${url} authenticated ${modes.join(",")}`),
+  PRESETS: { read: ["read"], edit: ["read", "append", "write"] },
+  presetOf: (modes: string[]) => (modes.join(",") === "read" ? "read" : null),
 }));
 vi.mock("./lib/sharing", () => ({
   shareFolder: async (url: string, _o: string, _p: string, agent: string) => void calls.push(`acl ${url} ${agent} read`),
-  stopSharing: async (url: string) => void calls.push(`inherit ${url}`),
+  stopSharing: async (url: string, _o: string, agent: string) => void calls.push(`stop ${url} ${agent}`),
   sharedWith: async (_u: string, _o: string, _p: string, agent: string) =>
     agentGrants.some((a) => a.webId === agent && a.modes.includes("read")),
+  shareableFolders: async () => [POD + "notes/", POD + "output2/hyperscope/"],
+  resetOffer: async () => resetFrom,
+  resetToInherit: async (url: string) => void calls.push(`inherit ${url}`),
+  addGrants: async (url: string, _o: string, _p: string, grants: { webId: string }[]) =>
+    void calls.push(`acl ${url} ${grants.map((g) => g.webId).join(",")} read`),
+}));
+vi.mock("./lib/shared-folders", () => ({
+  readChoices: async () => new Map(Object.entries(choices)),
+  chooseFolder: async (_p: string, _o: string, _g: string, folder: string | null, readers: string[]) =>
+    void calls.push(`choose ${folder}${readers.length ? ` readable by ${readers.join(",")}` : ""}`),
+  choicesUrl: (podUrl: string) => podUrl + "settings/collectives.ttl",
 }));
 vi.mock("./lib/collective", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./lib/collective")>();
@@ -161,6 +178,8 @@ beforeEach(() => {
   places.length = 0;
   rosterLeft = {};
   placesCtx = null;
+  choices = {};
+  resetFrom = null;
   sessionStorage.clear();
   invitedTo(COLLECTIVE.configUrl);
 });
@@ -334,28 +353,65 @@ describe("slice A — the member's side of the handshake", () => {
     expect(app.querySelector("#publish-0")).toBeNull();
   });
 
-  it("shares (folder, rules: lib/sharing), then announces", async () => {
+  it("shares the suggested folder: the choice, the grant, then the announcement", async () => {
     profile.inbox = POD + "inbox/";
     profile.memberOf = [COLLECTIVE.group];
     listed = true;
     const app = await render(tab(COLLECTIVE));
     expect(app.textContent).toContain("You are a member.");
+    expect(app.textContent).toContain("output2/hyperscope/ (suggested by HyperScope)");
+    for (const q of ["Who", "What", "Why", "If not"]) expect(app.querySelector(".four-questions")!.textContent).toContain(q);
     await click(app, "#publish-0");
     expect(calls).toEqual([
+      `choose ${POD}output2/hyperscope/`,
       `acl ${POD}output2/hyperscope/ ${COLLECTIVE.agent} read`,
       "inbox Announce",
     ]);
   });
 
-  it("says plainly that stopping does not recall copies", async () => {
+  it("shares the folder picked; your agents may read the choice", async () => {
+    profile.inbox = POD + "inbox/";
+    profile.memberOf = [COLLECTIVE.group];
+    profile.delegates = ["https://pod.example/neil/profile/claude#me"];
+    listed = true;
+    const app = await render(tab(COLLECTIVE));
+    const picker = app.querySelector<HTMLSelectElement>("#folder-0")!;
+    await vi.waitFor(() => expect(picker.options.length).toBe(2)); // the suggestion once, plus notes/
+    expect([...picker.options].map((o) => o.textContent)).toEqual(["output2/hyperscope/ (suggested by HyperScope)", "notes/"]);
+    picker.value = POD + "notes/";
+    await click(app, "#publish-0");
+    expect(calls).toEqual([
+      `choose ${POD}notes/ readable by ${profile.delegates[0]}`,
+      `acl ${POD}notes/ ${COLLECTIVE.agent} read`,
+      "inbox Announce",
+    ]);
+  });
+
+  it("says plainly that stopping does not recall copies; stops that agent only", async () => {
     profile.memberOf = [COLLECTIVE.group];
     listed = true;
+    choices = { [COLLECTIVE.group]: POD + "notes/" };
     agentGrants = [{ webId: COLLECTIVE.agent, modes: ["read"] }];
     const app = await render(tab(COLLECTIVE));
+    expect(app.textContent).toContain("You share notes/ with HyperScope.");
     expect(app.textContent).toContain("does not remove copies already made");
-    expect(app.querySelector('a[href="#/p/output2/hyperscope/"]')).not.toBeNull(); // in Pods, signed in: not the raw address
+    expect(app.querySelector('a[href="#/p/notes/"]')).not.toBeNull(); // in Pods, signed in: not the raw address
     await click(app, "#unpublish-0");
-    expect(calls).toEqual([`inherit ${POD}output2/hyperscope/`, "inbox Undo"]); // revoke, then tell
+    expect(calls).toEqual([`stop ${POD}notes/ ${COLLECTIVE.agent}`, "inbox Undo"]); // revoke, then tell
+  });
+
+  it("offers Reset to inherit when the folder's rules say what the folder above says; two clicks", async () => {
+    profile.memberOf = [COLLECTIVE.group];
+    listed = true;
+    choices = { [COLLECTIVE.group]: POD + "notes/" };
+    resetFrom = { from: POD, access: { agents: [], public: [], authenticated: [] } };
+    const app = await render(tab(COLLECTIVE));
+    expect(app.textContent).toContain("Without them it would follow your pod: Only you.");
+    const reset = app.querySelector<HTMLButtonElement>("#reset-0")!;
+    reset.click();
+    expect(calls).toEqual([]); // the first click only asks
+    await click(app, "#reset-0");
+    expect(calls).toEqual([`inherit ${POD}notes/`]);
   });
 
   it("shows the collective's refusal from your own inbox, with its reason; asking again drops the old answer first", async () => {

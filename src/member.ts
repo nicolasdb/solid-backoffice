@@ -8,16 +8,21 @@
  * member may read once accepted; and its agent, the one WebID the folder is
  * shared with. An unreadable roster is "not yet", never "refused".
  *
- * Orders of writes are unchanged from the checklist they came from, and
- * pinned in src/onboarding.test.ts: folder, grant, then announce.
+ * Sharing (slice G): you pick the folder; the collective's `hs:bundleFolder`
+ * is only the suggestion. Before sharing, the screen answers the four
+ * questions (docs/explanation/four-questions.md). Order of writes, pinned in
+ * src/onboarding.test.ts: the choice, the folder's grant, then the
+ * announcement.
  */
 import { routeHref } from "./router";
-import { shareFolder, stopSharing } from "./lib/sharing";
+import { resetToInherit, shareFolder, shareableFolders, stopSharing } from "./lib/sharing";
+import { chooseFolder } from "./lib/shared-folders";
+import { accessSentence } from "./access-panel";
 import { buildAnnounce, buildJoin, buildUndoAnnounce, profileEdits, sendToInbox, updateOwnProfile, type Collective } from "./lib/collective";
 import { deleteMessage, readPerson, readRoster } from "./lib/admin";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
-import { bindButton } from "./bind";
+import { bindButton, run } from "./bind";
 import { answerLabel, answerPill, bindCopy, collectiveHead, copyable, stateLabel, statePill } from "./steps";
 import { trimAddress } from "./ui/address";
 import type { CollectiveView, ViewContext } from "./onboarding";
@@ -106,10 +111,54 @@ function agentCard(collective: Collective): string {
     </section>`;
 }
 
-export function renderMemberView(view: CollectiveView, i: number, roster: RosterMember[] | null, webId: string): string {
-  const { collective, state, published, answer } = view;
+/** A folder of your pod as a path: `notes/hyperscope/`. */
+function pathOf(folderUrl: string, podUrl: string): string {
+  return folderUrl.startsWith(podUrl) ? folderUrl.slice(podUrl.length) : folderUrl;
+}
+
+/** Who, what, why, and what if not (docs/explanation/four-questions.md). */
+function fourQuestions(name: string, shared: boolean): string {
+  return `
+    <dl class="four-questions">
+      <div><dt>Who</dt><dd>${name}'s agent, shown on the right.</dd></div>
+      <div><dt>What</dt><dd>${shared ? "This folder" : "The folder you pick"} and everything in it. It can read, never write.</dd></div>
+      <div><dt>Why</dt><dd>It keeps a copy of each version, so the collective can draw on your work.</dd></div>
+      <div><dt>If not</dt><dd>Nothing of yours reaches ${name}. Stopping later prevents new copies; it does not remove copies already made.</dd></div>
+    </dl>`;
+}
+
+export function renderMemberView(view: CollectiveView, i: number, roster: RosterMember[] | null, webId: string, podUrl: string): string {
+  const { collective, state, published, answer, folderUrl, resetFrom } = view;
   const name = esc(collective.name);
   const nick = roster?.find((m) => m.webId === webId)?.nick ?? null;
+  const path = pathOf(folderUrl, podUrl);
+
+  const body = published
+    ? `
+      <p class="lead">You share <code>${esc(path)}</code> with ${name}.</p>
+      ${fourQuestions(name, true)}
+      <p class="actions">
+        <a class="button-ghost" href="${routeHref({ name: "places", path })}">Open folder</a>
+        <button id="unpublish-${i}" class="ghost">Stop sharing</button>
+      </p>`
+    : `
+      <p class="lead">Pick the folder you share with ${name}. Only that folder, nothing else of your pod.</p>
+      <label class="field">Folder
+        <select id="folder-${i}" name="folder">
+          <option value="${esc(folderUrl)}" selected>${esc(path)}${view.chosen ? "" : ` (suggested by ${name})`}</option>
+        </select>
+      </label>
+      ${fourQuestions(name, false)}
+      <p class="actions"><button id="publish-${i}">Share this folder</button></p>
+      ${
+        resetFrom
+          ? `<p class="meta">
+               <code>${esc(path)}</code> still has rules of its own, and they say what the folder above says.
+               ${esc(`Without them it would follow ${pathOf(resetFrom.from, podUrl) || "your pod"}: ${accessSentence(resetFrom.access, (id) => trimAddress(id, webId))}`)}
+             </p>
+             <p class="actions"><button id="reset-${i}" class="ghost">Reset to inherit</button></p>`
+          : ""
+      }`;
 
   const sharing = `
     <section class="step">
@@ -117,22 +166,7 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
         <h2>Sharing</h2>
         ${published ? `<span class="pill is-ok">Shared</span>` : `<span class="pill">Not shared</span>`}
       </div>
-      <p class="lead">
-        Your folder <code>${esc(collective.bundleFolder)}</code> is how you share
-        work with ${name}. Its agent reads it and keeps a copy of each version.
-      </p>
-      <p class="meta">
-        Everything you put in this folder is shared. Stopping later prevents new
-        copies; it does not remove copies already made.
-      </p>
-      <p class="actions">
-        ${
-          published
-            ? `<a class="button-ghost" href="${routeHref({ name: "places", path: collective.bundleFolder })}">Open folder</a>
-               <button id="unpublish-${i}" class="ghost">Stop sharing</button>`
-            : `<button id="publish-${i}">Share the folder</button>`
-        }
-      </p>
+      ${body}
       <p class="step-error error" role="alert" hidden></p>
     </section>`;
 
@@ -191,14 +225,34 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
     }, rerender);
   }
 
+  const picker = app.querySelector<HTMLSelectElement>(`#folder-${i}`);
+  if (picker) {
+    // The folders come after the screen is drawn: the suggestion is there at once.
+    void shareableFolders(ctx.podUrl)
+      .then((urls) => {
+        for (const url of urls) {
+          if (url === folderUrl) continue;
+          picker.append(new Option(url.slice(ctx.podUrl.length), url));
+        }
+      })
+      .catch(() => undefined); // the suggestion stays offered
+  }
+
+  const share = async (folder: string) => {
+    // The choice first (readable by you and your agents only), so your agents
+    // know where to write; then the grant, then the announcement.
+    await chooseFolder(ctx.podUrl, webId, collective.group, folder, profile.delegates);
+    await shareFolder(folder, webId, ctx.podUrl, collective.agent, profile.delegates);
+    await sendToInbox(collective.inbox, buildAnnounce(webId, folder, collective.group));
+  };
+
   const publish = app.querySelector<HTMLButtonElement>(`#publish-${i}`);
   if (publish) {
     bindButton(publish, async () => {
       // The grant IS the consent (ADR 006 §1.1): per-WebID, on the member's
-      // own pod, revocable here. Never a group. Your agents keep edit.
-      await shareFolder(folderUrl, webId, ctx.podUrl, collective.agent, profile.delegates);
-      await sendToInbox(collective.inbox, buildAnnounce(webId, folderUrl, collective.group));
-      announce(`Your folder is published to ${collective.name}.`);
+      // own pod, revocable here. Never a group.
+      await share(picker?.value || folderUrl);
+      announce(`Your folder is shared with ${collective.name}.`);
     }, rerender);
   }
 
@@ -206,14 +260,27 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   if (unpublish) {
     bindButton(unpublish, async () => {
       // Revoke, then tell: the collective's "Shares" is read from these messages.
-      await stopSharing(folderUrl, webId, ctx.podUrl, profile.delegates);
+      await stopSharing(folderUrl, webId, collective.agent);
       await sendToInbox(collective.inbox, buildUndoAnnounce(webId, folderUrl, collective.group));
       toast(`${collective.name} can no longer read the folder. Copies it already made stay.`, {
-        undo: () =>
-          void shareFolder(folderUrl, webId, ctx.podUrl, collective.agent, profile.delegates)
-            .then(() => sendToInbox(collective.inbox, buildAnnounce(webId, folderUrl, collective.group)))
-            .then(rerender),
+        undo: () => void share(folderUrl).then(rerender),
       });
     }, rerender);
+  }
+
+  // Resetting takes two clicks: the first one only asks.
+  const reset = app.querySelector<HTMLButtonElement>(`#reset-${i}`);
+  if (reset) {
+    reset.addEventListener("click", () => {
+      if (!reset.dataset.armed) {
+        reset.dataset.armed = "yes";
+        reset.textContent = "Yes, delete its own rules";
+        return;
+      }
+      void run(reset, async () => {
+        await resetToInherit(folderUrl, webId);
+        announce("The folder follows the folder above again.");
+      }, rerender);
+    });
   }
 }
