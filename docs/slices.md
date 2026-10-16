@@ -10,17 +10,38 @@ who accepts them, then everyone's daily work.
 the folder's rules become; a security fix on copied rules. Details and
 what is left in [G](#g--share-the-folder-you-choose--built-run-live-closed-16-oct-2026).
 
+**Later the same day:** contribution v3 (solid-kit PR #5): a member's agent
+deposits in the folder chosen in `settings/collectives.ttl`; no entry means
+nothing is shared, never a fallback to `hs:bundleFolder`. The procedures and
+the `collectif` skill move beside the connector, in solid-css-overlay
+`mcp-connector/` (overlay PR #1, solid-kit PR #6). Xavier's share stays held
+back: `.docx`, `.pdf`, pictures and Markdown with base64 images break the
+pull, because the bytes pass through the LLM. The fix is written and
+deferred until the migration from pocpod0 is confirmed:
+`solid-css-overlay/mcp-connector/docs/collective-pipeline.md` (pull as code,
+derived text, batches for a backlog, the trigger from CSS webhooks on the
+inbox; A → B → D → C). One WebID per agent: the puller is `hs:agent`, the
+confronter has its own.
+
 **Next, in order:**
 
 1. **Check folders shared or granted before 16 Oct** (yours, Xavier's,
    ChaBi's): open each in a private window; any that opens and should not,
    fix in its access panel.
-2. **`procedure-contribution` reads `settings/collectives.ttl`**, falling
-   back to `hs:bundleFolder` (solid-kit; changed directly while HyperScope
-   is the only collective), then E step 4 with Xavier.
-3. The 10 Oct list below (Maps of Making live, ADR 006 §7, `sb:agent`
+2. **Merge** solid-kit #5, then overlay #1; solid-kit #6 once the overlay's
+   `main` holds `mcp-connector/` (its links point there).
+3. **Bring the collective's docs here** from solid-kit: `guide/` (copied to
+   a collective's pod as `hs:guide`), `docs/collectives/create-a-collective.md`
+   (merge with `docs/how-to/set-up-a-collective.md`) and
+   `templates/collective/config.ttl` (beside `docs/examples/`): they follow
+   the backoffice's config, with a link to the connector's procedures.
+4. **The pipeline** (overlay, after the migration): A → B → D (D includes
+   the summary before sharing, here in the Share panel) → C. Then copy the
+   procedures to HyperScope's pod (`principles/`, contribution v3 included),
+   then E step 4 with Xavier.
+5. The 10 Oct list below (Maps of Making live, ADR 006 §7, `sb:agent`
    optional, E).
-4. G's leftovers: moving a shared folder re-announces; the agent folder
+6. G's leftovers: moving a shared folder re-announces; the agent folder
    picker with suggestions and the four questions; items with rules of
    their own counted; a base `select` style in solid-kit.
 
