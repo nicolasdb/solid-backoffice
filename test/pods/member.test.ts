@@ -9,7 +9,7 @@ const { loadCollective, readOwnProfile, updateOwnProfile, profileEdits, sendToIn
   await import("../../src/lib/collective");
 const { ensureContainer } = await import("../../src/lib/pod");
 const { getAccess, setAccess, setAuthenticatedAccess } = await import("../../src/lib/acl");
-const { resetOffer, resetToInherit, shareFolder, stopSharing, sharedWith } = await import("../../src/lib/sharing");
+const { restoreRules, shareFolder, stopPlan, stopSharing, stopSharingAs, sharedWith } = await import("../../src/lib/sharing");
 const { chooseFolder, choicesUrl, readChoices } = await import("../../src/lib/shared-folders");
 const admin = await import("../../src/lib/admin");
 const { setFolderAccess } = await import("../../src/lib/agents");
@@ -103,14 +103,25 @@ describe("a member sets themselves up (slice A)", () => {
     await stopSharing(folder, neil.webId, other);
     await stopSharing(folder, neil.webId, other); // already out: nothing to do
 
-    // Someone else is still named: the folder says more than the one above.
-    expect(await resetOffer(folder, neil.webId, neil.pod, delegates)).toBeNull();
-    const root = await getAccess(neil.pod, neil.webId);
-    const now = await getAccess(folder, neil.webId);
-    await setAccess(folder, neil.webId, { agents: [...root.inherits.agents, { webId: mine, modes: ["read", "append", "write"] }], public: root.inherits.public, authenticated: root.inherits.authenticated }, now.etag);
-    const offer = await resetOffer(folder, neil.webId, neil.pod, delegates); // your agents aside, the same
-    expect(offer?.from).toBe(neil.pod);
-    await resetToInherit(folder, neil.webId);
+    // Stopping asks what the rules become: each choice, written as planned.
+    await shareFolder(folder, neil.webId, neil.pod, agent, delegates);
+    const plan = await stopPlan(folder, neil.webId, neil.pod, agent, delegates);
+    expect(plan.options.map((o) => o.choice)).toEqual(["keep", "follow", "only"]); // the outsider is still named
+    expect(plan.options[1].from).toBe(neil.pod);
+    await stopSharingAs(plan, neil.webId, "only");
+    expect(await as("hsagent", folder)).toBe(403);
+    expect(await as("outsider", folder)).toBe(403); // only Neil and his agent now
+    expect(await as("ines", folder)).toBe(200);
+    await restoreRules(plan, neil.webId); // the toast's Undo: back as it was, the agent too
+    expect(await as("hsagent", folder)).toBe(200);
+    expect(await as("outsider", folder)).toBe(200);
+
+    const again = await stopPlan(folder, neil.webId, neil.pod, agent, delegates);
+    await setAccess(folder, neil.webId, { agents: [], public: [], authenticated: [] }, again.basedOn); // changed meanwhile
+    await expect(stopSharingAs(again, neil.webId, "follow")).rejects.toMatchObject({ status: 412 });
+    const fresh = await stopPlan(folder, neil.webId, neil.pod, agent, delegates);
+    expect(fresh.options.map((o) => o.choice)).toEqual(["keep", "follow"]); // nobody else named: no "only"
+    await stopSharingAs(fresh, neil.webId, "follow");
     expect((await getAccess(folder, neil.webId)).inherited).toBe(true);
   });
 
@@ -131,12 +142,13 @@ describe("a member sets themselves up (slice A)", () => {
     expect(await anon(folder + "a.md")).toBe(401);
     expect(await as("hsagent", folder + "a.md")).toBe(200);
 
-    await stopSharing(folder, neil.webId, cast.hsagent.webId);
-    const offer = await resetOffer(folder, neil.webId, neil.pod, []);
-    expect(offer?.from).toBe(neil.pod);
-    expect(offer?.access.public).toEqual([]); // what it would follow: not public
-    await resetToInherit(folder, neil.webId);
+    const plan = await stopPlan(folder, neil.webId, neil.pod, cast.hsagent.webId, []);
+    const follow = plan.options.find((o) => o.choice === "follow")!;
+    expect(follow.from).toBe(neil.pod);
+    expect(follow.rules.public).toEqual([]); // what it would follow: not public
+    await stopSharingAs(plan, neil.webId, "follow");
     expect(await anon(folder + "a.md")).toBe(401);
+    expect(await as("hsagent", folder + "a.md")).toBe(403);
 
     // An agent given the folder (slice D) copies the same rules: not public either.
     await setFolderAccess(folder, neil.webId, neil.pod, cast.ines.webId, ["read"]);

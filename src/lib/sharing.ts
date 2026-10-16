@@ -10,17 +10,17 @@
  *   plus these. A folder the app creates for it starts from you and your
  *   agents only, and so does any folder above it the app creates on the way:
  *   nothing new is public.
- * - Stop sharing: that agent leaves the folder's rules, nothing else does, so
- *   a folder shared with two collectives stays shared with the other one.
- * - Reset to inherit: offered only when what is left says the same as the
- *   folder above (your agents aside); it deletes the folder's own `.acl`.
+ * - Stop sharing asks what the folder's rules become (`stopPlan`): kept as
+ *   they are without that agent (the default; a folder shared with two
+ *   collectives stays shared with the other one), the folder above's again
+ *   (its own `.acl` deleted), or you and your agents only.
  * - Shared: whether the agent can read it, from its own rules or inherited.
  *
  * One conditional write each, based on rules read fresh: nothing written
  * over a change made meanwhile.
  */
-import { getAccess, PRESETS, readAccess, removeOwnRules, setAccess, type AccessRules, type AgentGrant, type Mode } from "./acl";
-import { effectiveAccess, followedBy, listFolder, parentOf, type Effective } from "./files";
+import { getAccess, PRESETS, removeOwnRules, setAccess, type AccessRules, type AgentGrant, type Mode } from "./acl";
+import { effectiveAccess, followedBy, listFolder, parentOf } from "./files";
 import { ensureContainer, exists } from "./pod";
 
 type Rules = Pick<AccessRules, "agents" | "public" | "authenticated">;
@@ -143,38 +143,64 @@ export async function stopSharing(folderUrl: string, owner: string, agent: strin
   }
 }
 
-/** The same rules, your agents and you aside: the comparison behind "Reset to inherit". */
-function sameRules(a: Rules, b: Rules, ignore: string[]): boolean {
-  const key = (r: Rules) =>
-    JSON.stringify({
-      agents: r.agents
-        .filter((g) => !ignore.includes(g.webId))
-        .map((g) => `${g.webId} ${[...g.modes].sort().join(",")}`)
-        .sort(),
-      public: [...r.public].sort(),
-      authenticated: [...r.authenticated].sort(),
-    });
-  return key(a) === key(b);
+export type StopChoice = "keep" | "follow" | "only";
+
+/** What the folder's rules can become when sharing stops; the screen asks which. */
+export interface StopPlan {
+  folderUrl: string;
+  /** The folder's own rules as read; null when it has none. */
+  basedOn: string | null;
+  /** Without rules of its own: the folder the agent reads it through. Stopping cannot change that here. */
+  through: string | null;
+  /** The rules now, the collective's agent included. */
+  now: Rules;
+  /** Each choice offered, with the rules it leaves. "keep" is always there. */
+  options: { choice: StopChoice; rules: Rules; from?: string }[];
 }
 
 /**
- * What the folder would follow, when its own rules say nothing more than
- * that (your agents aside): then "Reset to inherit" is offered. Null when it
- * has no rules of its own, or they say something else.
+ * Reads the folder's rules fresh and says what stopping may leave:
+ * - keep: the same, without `agent`;
+ * - follow: what the folder above passes on, when the folder has rules of
+ *   its own (they are deleted);
+ * - only: you and your agents, when anyone else would still be named.
  */
-export async function resetOffer(folderUrl: string, owner: string, podUrl: string, delegates: string[]): Promise<Effective | null> {
-  const own = await readAccess(folderUrl, owner);
-  if (own.inherited || own.unknown.length) return null;
+export async function stopPlan(folderUrl: string, owner: string, podUrl: string, agent: string, delegates: string[]): Promise<StopPlan> {
+  const own = await getAccess(folderUrl, owner);
   const followed = await followedBy(folderUrl, owner, podUrl);
-  if (!followed || followed.access.unknown.length) return null;
-  return sameRules(own, followed.access, [owner, ...delegates]) ? followed : null;
+  if (own.inherited) {
+    const now = followed?.access ?? NOTHING;
+    return { folderUrl, basedOn: null, through: followed?.from ?? null, now, options: [{ choice: "keep", rules: now }] };
+  }
+  const keep = withoutAgent(own, agent);
+  const options: StopPlan["options"] = [{ choice: "keep", rules: keep }];
+  if (followed && !followed.access.unknown.length) {
+    const { agents, public: pub, authenticated } = followed.access;
+    options.push({ choice: "follow", rules: { agents, public: pub, authenticated }, from: followed.from });
+  }
+  const yours = keep.agents.filter((a) => delegates.includes(a.webId));
+  const others = keep.agents.length > yours.length || keep.public.length > 0 || keep.authenticated.length > 0;
+  if (others) options.push({ choice: "only", rules: { agents: yours, public: [], authenticated: [] } });
+  return { folderUrl, basedOn: own.etag, through: null, now: { agents: own.agents, public: own.public, authenticated: own.authenticated }, options };
 }
 
-/** Deletes the folder's own rules, so it follows the folder above again. */
-export async function resetToInherit(folderUrl: string, owner: string): Promise<void> {
-  const own = await getAccess(folderUrl, owner);
-  if (own.inherited) return;
-  await removeOwnRules(folderUrl, own.etag);
+/**
+ * Stops sharing the way the person chose, in one conditional write based on
+ * the rules the plan read: changed meanwhile, nothing is written.
+ */
+export async function stopSharingAs(plan: StopPlan, owner: string, choice: StopChoice): Promise<void> {
+  if (plan.basedOn === null) return; // nothing of its own to change
+  const option = plan.options.find((o) => o.choice === choice);
+  if (!option) throw new Error("That choice is not offered for this folder.");
+  if (choice === "follow") return removeOwnRules(plan.folderUrl, plan.basedOn);
+  await setAccess(plan.folderUrl, owner, option.rules, plan.basedOn);
+}
+
+/** Puts the folder's own rules back as the plan read them (the toast's Undo). */
+export async function restoreRules(plan: StopPlan, owner: string): Promise<void> {
+  if (plan.basedOn === null) return;
+  const own = await getAccess(plan.folderUrl, owner);
+  await setAccess(plan.folderUrl, owner, plan.now, own.inherited ? null : own.etag);
 }
 
 /** Whether the agent can read the folder, by its own rules or the ones it inherits. A missing folder: no. */

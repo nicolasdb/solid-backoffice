@@ -15,7 +15,8 @@
  * announcement.
  */
 import { routeHref } from "./router";
-import { resetToInherit, shareFolder, shareableFolders, stopSharing } from "./lib/sharing";
+import { restoreRules, shareFolder, shareableFolders, stopPlan, stopSharingAs, type StopChoice, type StopPlan } from "./lib/sharing";
+import { presetOf, type AccessRules } from "./lib/acl";
 import { chooseFolder } from "./lib/shared-folders";
 import { accessSentence } from "./access-panel";
 import { buildAnnounce, buildJoin, buildUndoAnnounce, profileEdits, sendToInbox, updateOwnProfile, type Collective } from "./lib/collective";
@@ -127,8 +128,97 @@ function fourQuestions(name: string, shared: boolean): string {
     </dl>`;
 }
 
+type Rules = Pick<AccessRules, "agents" | "public" | "authenticated">;
+
+function can(modes: readonly string[]): string {
+  const preset = presetOf([...modes] as AccessRules["public"]);
+  return preset === "edit" ? "can edit" : preset === "read" ? "can read" : `may ${modes.join(", ")}`;
+}
+
+/** What changes from `before` to `after`, in words: who loses access, who gains it. */
+export function changeWords(before: Rules, after: Rules, label: (webId: string) => string): string[] {
+  const words: string[] = [];
+  for (const b of before.agents) {
+    const a = after.agents.find((x) => x.webId === b.webId);
+    if (!a) words.push(`${label(b.webId)} loses access.`);
+    else if (can(a.modes) !== can(b.modes)) words.push(`${label(b.webId)} ${can(a.modes)} instead.`);
+  }
+  for (const a of after.agents) if (!before.agents.some((b) => b.webId === a.webId)) words.push(`${label(a.webId)} ${can(a.modes)}.`);
+  const has = (r: Rules, k: "public" | "authenticated") => r[k].includes("read");
+  const who = { public: "Anyone with the link", authenticated: "Anyone signed in" } as const;
+  for (const k of ["public", "authenticated"] as const) {
+    if (has(before, k) && !has(after, k)) words.push(`${who[k]} loses access.`);
+    if (!has(before, k) && has(after, k)) words.push(`${who[k]} can read.`);
+  }
+  return words;
+}
+
+const CHOICE_TITLE: Record<StopChoice, string> = {
+  keep: "Keep everything else as it is",
+  follow: "Follow the folder above again",
+  only: "Only you and your agents",
+};
+
+/**
+ * The question Stop sharing asks: what the folder's rules become. Each
+ * choice says, in words, who can open the folder after it and what changes.
+ */
+export function renderStopPanel(plan: StopPlan, i: number, view: CollectiveView, ctx: { webId: string; podUrl: string; delegates: string[] }): string {
+  const { collective, alsoSharedWith } = view;
+  const name = esc(collective.name);
+  const path = pathOf(plan.folderUrl, ctx.podUrl);
+  const label = (id: string) => {
+    if (id === collective.agent) return `${collective.name}'s agent`;
+    const other = alsoSharedWith.find((c) => c.agent === id);
+    if (other) return `${other.name}'s agent`;
+    if (ctx.delegates.includes(id)) return ctx.delegates.length > 1 ? `your agent ${trimAddress(id, ctx.webId)}` : "your agent";
+    return trimAddress(id, ctx.webId);
+  };
+  if (plan.through) {
+    return `
+      <p class="lead">${name} reads <code>${esc(path)}</code> through <code>${esc(pathOf(plan.through, ctx.podUrl) || "your pod")}</code>, the folder above: this folder has no rules of its own.</p>
+      <p class="meta">Change who can open <code>${esc(pathOf(plan.through, ctx.podUrl) || "your pod")}</code> in Pods.</p>
+      <p class="actions"><button type="button" class="ghost" data-stop-cancel>Cancel</button></p>`;
+  }
+  const keep = plan.options.find((o) => o.choice === "keep")!.rules;
+  const reads = (r: Rules, agent: string) => r.public.includes("read") || r.agents.some((a) => a.webId === agent && a.modes.includes("read"));
+  const options = plan.options
+    .map((o, n) => {
+      const changes = o.choice === "keep" ? [] : changeWords(keep, o.rules, label);
+      const notes = [
+        ...alsoSharedWith.filter((c) => reads(keep, c.agent) && !reads(o.rules, c.agent)).map((c) => `${esc(c.name)} loses access too.`),
+        ...(reads(o.rules, collective.agent) ? [`${name} can still read it, through the folder above.`] : []),
+      ];
+      const from = o.from ? ` (<code>${esc(pathOf(o.from, ctx.podUrl) || "your pod")}</code>)` : "";
+      return `
+        <label class="stop-option">
+          <input type="radio" name="stop-${i}" value="${o.choice}"${n === 0 ? " checked" : ""} />
+          <span>
+            <strong>${CHOICE_TITLE[o.choice]}${from}</strong>
+            <span class="meta">${esc(accessSentence(o.rules, label))}${changes.length ? ` ${esc(changes.join(" "))}` : ""}</span>
+            ${notes.length ? `<span class="meta is-warn">${notes.join(" ")}</span>` : ""}
+          </span>
+        </label>`;
+    })
+    .join("");
+  const still = alsoSharedWith.length ? `<p class="meta">Still shared with ${alsoSharedWith.map((c) => esc(c.name)).join(" and ")}.</p>` : "";
+  return `
+    <form class="stack" id="stop-form-${i}">
+      <fieldset class="stop-options">
+        <legend>Stop sharing <code>${esc(path)}</code> with ${name}. After this, who can open the folder?</legend>
+        ${options}
+      </fieldset>
+      ${still}
+      <p class="meta">Copies ${name} already made stay.</p>
+      <p class="actions">
+        <button type="button" class="ghost" data-stop-cancel>Cancel</button>
+        <button type="submit" id="stop-go-${i}">Stop sharing</button>
+      </p>
+    </form>`;
+}
+
 export function renderMemberView(view: CollectiveView, i: number, roster: RosterMember[] | null, webId: string, podUrl: string): string {
-  const { collective, state, published, answer, folderUrl, resetFrom } = view;
+  const { collective, state, published, answer, folderUrl } = view;
   const name = esc(collective.name);
   const nick = roster?.find((m) => m.webId === webId)?.nick ?? null;
   const path = pathOf(folderUrl, podUrl);
@@ -140,24 +230,19 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
       <p class="actions">
         <a class="button-ghost" href="${routeHref({ name: "places", path })}">Open folder</a>
         <button id="unpublish-${i}" class="ghost">Stop sharing</button>
-      </p>`
+      </p>
+      <div class="stop-panel" id="stop-panel-${i}" hidden></div>`
     : `
       <p class="lead">Pick the folder you share with ${name}. Only that folder, nothing else of your pod.</p>
-      <label class="field">Folder
-        <select id="folder-${i}" name="folder">
+      <div class="field share-picker">
+        <label for="folder-${i}">Folder</label>
+        <select id="folder-${i}" name="folder" aria-describedby="folder-${i}-note">
           <option value="${esc(folderUrl)}" selected>${esc(path)}${view.chosen ? "" : ` (suggested by ${name})`}</option>
         </select>
-      </label>
+        <p class="meta" id="folder-${i}-note">${view.chosen ? "The folder you picked last time." : `${name} suggests this one; any folder of yours will do.`} Created if it does not exist yet.</p>
+      </div>
       ${fourQuestions(name, false)}
       <p class="actions"><button id="publish-${i}">Share this folder</button></p>
-      ${
-        resetFrom
-          ? `<p class="meta">
-               <code>${esc(path)}</code> still has rules of its own, and they say what the folder above says.
-               ${esc(`Without them it would follow ${pathOf(resetFrom.from, podUrl) || "your pod"}: ${accessSentence(resetFrom.access, (id) => trimAddress(id, webId))}`)}
-             </p>
-             <p class="actions"><button id="reset-${i}" class="ghost">Reset to inherit</button></p>`
-          : ""
       }`;
 
   const sharing = `
@@ -256,31 +341,42 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
     }, rerender);
   }
 
+  // Stopping asks first what the folder's rules become (renderStopPanel).
   const unpublish = app.querySelector<HTMLButtonElement>(`#unpublish-${i}`);
-  if (unpublish) {
+  const panel = app.querySelector<HTMLElement>(`#stop-panel-${i}`);
+  if (unpublish && panel) {
+    const actions = unpublish.closest<HTMLElement>(".actions");
+    const close = () => {
+      panel.hidden = true;
+      panel.innerHTML = "";
+      if (actions) actions.hidden = false;
+      unpublish.focus();
+    };
     bindButton(unpublish, async () => {
-      // Revoke, then tell: the collective's "Shares" is read from these messages.
-      await stopSharing(folderUrl, webId, collective.agent);
-      await sendToInbox(collective.inbox, buildUndoAnnounce(webId, folderUrl, collective.group));
-      toast(`${collective.name} can no longer read the folder. Copies it already made stay.`, {
-        undo: () => void share(folderUrl).then(rerender),
+      const plan = await stopPlan(folderUrl, webId, ctx.podUrl, collective.agent, profile.delegates);
+      panel.innerHTML = renderStopPanel(plan, i, view, { webId, podUrl: ctx.podUrl, delegates: profile.delegates });
+      panel.hidden = false;
+      if (actions) actions.hidden = true;
+      panel.querySelectorAll<HTMLButtonElement>("[data-stop-cancel]").forEach((b) => b.addEventListener("click", close));
+      panel.querySelector<HTMLInputElement>("input[type=radio]")?.focus();
+      const form = panel.querySelector<HTMLFormElement>(`#stop-form-${i}`);
+      form?.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const choice = (new FormData(form).get(`stop-${i}`) as StopChoice | null) ?? "keep";
+        void run(form.querySelector<HTMLButtonElement>(`#stop-go-${i}`)!, async () => {
+          // Revoke, then tell: the collective's "Shares" is read from these messages.
+          await stopSharingAs(plan, webId, choice);
+          await sendToInbox(collective.inbox, buildUndoAnnounce(webId, folderUrl, collective.group));
+          toast(`${collective.name} can no longer read the folder. Copies it already made stay.`, {
+            undo: () =>
+              void restoreRules(plan, webId)
+                .then(() => sendToInbox(collective.inbox, buildAnnounce(webId, folderUrl, collective.group)))
+                .then(rerender),
+          });
+        }, rerender);
       });
-    }, rerender);
-  }
-
-  // Resetting takes two clicks: the first one only asks.
-  const reset = app.querySelector<HTMLButtonElement>(`#reset-${i}`);
-  if (reset) {
-    reset.addEventListener("click", () => {
-      if (!reset.dataset.armed) {
-        reset.dataset.armed = "yes";
-        reset.textContent = "Yes, delete its own rules";
-        return;
-      }
-      void run(reset, async () => {
-        await resetToInherit(folderUrl, webId);
-        announce("The folder follows the folder above again.");
-      }, rerender);
+    }, () => {
+      unpublish.disabled = false; // nothing redraws here: the panel opened instead
     });
   }
 }

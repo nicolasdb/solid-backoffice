@@ -38,8 +38,12 @@ const places: string[] = [];
 let ownInbox: import("./lib/admin").InboxMessage[] = [];
 /** Settings: the folder picked per collective IRI. */
 let choices: Record<string, string> = {};
-/** What "Reset to inherit" would follow; null: not offered. */
-let resetFrom: unknown = null;
+/** What stopPlan reads: the folder's rules and the choices they allow. */
+const OUTSIDER = "https://pod.example/ana/profile/card#me";
+const shareRules = (agents: { webId: string; modes: string[] }[], pub: string[] = []) => ({ agents, public: pub, authenticated: [] });
+let plan: Record<string, unknown> = {};
+/** Collectives besides COLLECTIVE that loadCollective knows. */
+let extraCollectives: (typeof COLLECTIVE)[] = [];
 
 vi.mock("./lib/auth", () => ({ authFetch: vi.fn() }));
 vi.mock("./lib/pod", () => ({
@@ -65,8 +69,9 @@ vi.mock("./lib/sharing", () => ({
   sharedWith: async (_u: string, _o: string, _p: string, agent: string) =>
     agentGrants.some((a) => a.webId === agent && a.modes.includes("read")),
   shareableFolders: async () => [POD + "notes/", POD + "output2/hyperscope/"],
-  resetOffer: async () => resetFrom,
-  resetToInherit: async (url: string) => void calls.push(`inherit ${url}`),
+  stopPlan: async (url: string) => ({ ...plan, folderUrl: url }),
+  stopSharingAs: async (p: { folderUrl: string }, _o: string, choice: string) => void calls.push(`stop ${p.folderUrl} ${choice}`),
+  restoreRules: async (p: { folderUrl: string }) => void calls.push(`restore ${p.folderUrl}`),
   addGrants: async (url: string, _o: string, _p: string, grants: { webId: string }[]) =>
     void calls.push(`acl ${url} ${grants.map((g) => g.webId).join(",")} read`),
 }));
@@ -90,6 +95,8 @@ vi.mock("./lib/collective", async (importOriginal) => {
         throw Object.assign(new Error(`Could not read ${address} (${configStatus}).`), { status: configStatus, address });
       }
       if (address === COLLECTIVE.configUrl || address === COLLECTIVE.group) return COLLECTIVE;
+      const extra = extraCollectives.find((c) => address === c.configUrl || address === c.group);
+      if (extra) return extra;
       throw Object.assign(new Error("not a collective"), { address });
     },
     isListed: async () => listed,
@@ -179,7 +186,17 @@ beforeEach(() => {
   rosterLeft = {};
   placesCtx = null;
   choices = {};
-  resetFrom = null;
+  extraCollectives = [];
+  plan = {
+    basedOn: '"e1"',
+    through: null,
+    now: shareRules([{ webId: COLLECTIVE.agent, modes: ["read"] }, { webId: OUTSIDER, modes: ["read"] }], ["read"]),
+    options: [
+      { choice: "keep", rules: shareRules([{ webId: OUTSIDER, modes: ["read"] }], ["read"]) },
+      { choice: "follow", rules: shareRules([]), from: POD },
+      { choice: "only", rules: shareRules([]) },
+    ],
+  };
   sessionStorage.clear();
   invitedTo(COLLECTIVE.configUrl);
 });
@@ -387,7 +404,7 @@ describe("slice A — the member's side of the handshake", () => {
     ]);
   });
 
-  it("says plainly that stopping does not recall copies; stops that agent only", async () => {
+  it("asks what the folder's rules become before stopping; keeps everything else by default", async () => {
     profile.memberOf = [COLLECTIVE.group];
     listed = true;
     choices = { [COLLECTIVE.group]: POD + "notes/" };
@@ -397,21 +414,57 @@ describe("slice A — the member's side of the handshake", () => {
     expect(app.textContent).toContain("does not remove copies already made");
     expect(app.querySelector('a[href="#/p/notes/"]')).not.toBeNull(); // in Pods, signed in: not the raw address
     await click(app, "#unpublish-0");
-    expect(calls).toEqual([`stop ${POD}notes/ ${COLLECTIVE.agent}`, "inbox Undo"]); // revoke, then tell
+    expect(calls).toEqual([]); // the first click only asks
+    const panel = app.querySelector<HTMLElement>("#stop-panel-0")!;
+    expect(panel.hidden).toBe(false);
+    const options = [...panel.querySelectorAll<HTMLLabelElement>(".stop-option")].map((l) => l.textContent!.replace(/\s+/g, " ").trim());
+    expect(options[0]).toContain("Keep everything else as it is");
+    expect(options[1]).toContain("Follow the folder above again");
+    expect(options[1]).toContain("Anyone with the link loses access.");
+    expect(options[2]).toContain("Only you and your agents");
+    await click(app, "#stop-go-0");
+    expect(calls).toEqual([`stop ${POD}notes/ keep`, "inbox Undo"]); // rules, then tell
   });
 
-  it("offers Reset to inherit when the folder's rules say what the folder above says; two clicks", async () => {
+  it("stops the way the person chose; Cancel changes nothing", async () => {
     profile.memberOf = [COLLECTIVE.group];
     listed = true;
     choices = { [COLLECTIVE.group]: POD + "notes/" };
-    resetFrom = { from: POD, access: { agents: [], public: [], authenticated: [] } };
+    agentGrants = [{ webId: COLLECTIVE.agent, modes: ["read"] }];
     const app = await render(tab(COLLECTIVE));
-    expect(app.textContent).toContain("Without them it would follow your pod: Only you.");
-    const reset = app.querySelector<HTMLButtonElement>("#reset-0")!;
-    reset.click();
-    expect(calls).toEqual([]); // the first click only asks
-    await click(app, "#reset-0");
-    expect(calls).toEqual([`inherit ${POD}notes/`]);
+    await click(app, "#unpublish-0");
+    app.querySelector<HTMLButtonElement>("[data-stop-cancel]")!.click();
+    expect(app.querySelector<HTMLElement>("#stop-panel-0")!.hidden).toBe(true);
+    expect(calls).toEqual([]);
+    await click(app, "#unpublish-0");
+    app.querySelector<HTMLInputElement>('input[value="follow"]')!.checked = true;
+    await click(app, "#stop-go-0");
+    expect(calls).toEqual([`stop ${POD}notes/ follow`, "inbox Undo"]);
+  });
+
+  it("says when another collective would lose the folder too", async () => {
+    const OTHER = {
+      ...COLLECTIVE,
+      configUrl: "https://pod.example/mom/config.ttl",
+      group: "https://pod.example/mom/config.ttl#mom",
+      name: "Maps of Making",
+      agent: "https://pod.example/mom/agent#me",
+      inbox: "https://pod.example/mom/inbox/",
+    };
+    profile.memberOf = [COLLECTIVE.group, OTHER.group];
+    listed = true;
+    extraCollectives = [OTHER];
+    choices = { [COLLECTIVE.group]: POD + "notes/", [OTHER.group]: POD + "notes/" };
+    agentGrants = [{ webId: COLLECTIVE.agent, modes: ["read"] }, { webId: OTHER.agent, modes: ["read"] }];
+    plan.options = [
+      { choice: "keep", rules: shareRules([{ webId: OTHER.agent, modes: ["read"] }]) },
+      { choice: "only", rules: shareRules([]) },
+    ];
+    const app = await render(tab(COLLECTIVE));
+    await click(app, "#unpublish-0");
+    const panel = app.querySelector<HTMLElement>("#stop-panel-0")!;
+    expect(panel.textContent).toContain("Still shared with Maps of Making.");
+    expect(panel.querySelectorAll(".stop-option")[1].textContent).toContain("Maps of Making loses access too.");
   });
 
   it("shows the collective's refusal from your own inbox, with its reason; asking again drops the old answer first", async () => {

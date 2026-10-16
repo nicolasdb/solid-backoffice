@@ -471,6 +471,41 @@ pre.source code { background: none; padding: 0; }
 
 /* Phone: the tabs move to a bar at the bottom, within thumb reach. */
 /* A member's view of the roster (L4). */
+/* The folder a member shares: the same box as a text input, paths in mono. */
+.share-picker { max-width: none; }
+.share-picker select {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+}
+.share-picker select:hover { border-color: var(--text-tertiary); }
+.share-picker .meta { margin: 0; }
+
+/* Stop sharing asks what the folder's rules become: one choice per row. */
+.stop-panel { margin-top: var(--space-2); }
+.stop-options { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.stop-options legend { margin-bottom: var(--space-2); padding: 0; color: var(--text-primary); }
+.stop-option {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.stop-option:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.stop-option input { margin-top: 0.3em; }
+.stop-option > span { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.stop-option .meta { margin: 0; overflow-wrap: anywhere; }
+
 /* Who, what, why, if not (docs/explanation/four-questions.md): before every grant. */
 .four-questions {
   display: grid;

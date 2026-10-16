@@ -675,6 +675,9 @@ Decided (16 Oct 2026):
   shared with two collectives stays shared with the other one. When what
   is left equals what it would inherit, offer **Reset to inherit**: confirm
   first, and show what it will then inherit (it may be public).
+  *Changed after the live check (16 Oct 2026):* Stop sharing always asks
+  what the rules become: keep the rest (default), follow the folder
+  above, or only you and your agents, each in words.
   `secureParent` goes: the parent of a picked folder is the member's.
 - **Your agents Can edit the shared folder**: kept, shown as a line
   ("your agent can deliver here"), not as a side effect.

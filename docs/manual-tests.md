@@ -264,9 +264,13 @@ need one too, or accepting is refused before any write.
    access panel), share: that person is still there, plus the collective's
    agent (Can read) and your agent (Can edit); your agent can write a file
    there. `settings/collectives.ttl` exists, opens for your agent, not in a
-   private window; `settings/README.md` reads well. Stop sharing: only the
-   collective's agent is gone. Take the other person out by hand: "Reset
-   to inherit" is offered, says what it would follow, asks twice. On a new
+   private window; `settings/README.md` reads well. Stop sharing asks
+   what the rules become; read every choice's words against the access
+   panel. Keep: only the collective's agent is gone. Share again, stop,
+   "Follow the folder above again": the folder shows "Inherit from
+   parent". Undo from the message: the rules are back as they were. A
+   folder right under your pod root is never public after any of these
+   (private window). On a new
    account, share the suggestion (it does not exist yet): it and the
    folder above are created, not public (private window), before and after
    Stop sharing.
