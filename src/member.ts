@@ -143,11 +143,13 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
       </p>`
     : `
       <p class="lead">Pick the folder you share with ${name}. Only that folder, nothing else of your pod.</p>
-      <label class="field">Folder
-        <select id="folder-${i}" name="folder">
+      <div class="field share-picker">
+        <label for="folder-${i}">Folder</label>
+        <select id="folder-${i}" name="folder" aria-describedby="folder-${i}-note">
           <option value="${esc(folderUrl)}" selected>${esc(path)}${view.chosen ? "" : ` (suggested by ${name})`}</option>
         </select>
-      </label>
+        <p class="meta" id="folder-${i}-note">${view.chosen ? "The folder you picked last time." : `${name} suggests this one; any folder of yours will do.`} Created if it does not exist yet.</p>
+      </div>
       ${fourQuestions(name, false)}
       <p class="actions"><button id="publish-${i}">Share this folder</button></p>
       ${

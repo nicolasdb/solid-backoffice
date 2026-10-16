@@ -471,6 +471,21 @@ pre.source code { background: none; padding: 0; }
 
 /* Phone: the tabs move to a bar at the bottom, within thumb reach. */
 /* A member's view of the roster (L4). */
+/* The folder a member shares: the same box as a text input, paths in mono. */
+.share-picker { max-width: none; }
+.share-picker select {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+}
+.share-picker select:hover { border-color: var(--text-tertiary); }
+.share-picker .meta { margin: 0; }
+
 /* Who, what, why, if not (docs/explanation/four-questions.md): before every grant. */
 .four-questions {
   display: grid;
