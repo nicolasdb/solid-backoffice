@@ -56,7 +56,7 @@ already ask a contribution to start with, shown as fields by the preview):
 ---
 source: rapport-2026.docx        # the original, relative to this file
 converted: 2026-10-17
-converter: mammoth 1.8 + turndown 7.2
+converter: mammoth 1.13.0 + turndown 7.2.4
 ---
 ```
 
@@ -250,12 +250,18 @@ Noted, not solved; each is taken up when the path it belongs to is built.
 - **Editing after conversion**: when the Markdown copy is edited, is the
   `.docx` beside it still useful, and should the preview say "older"?
 - **The Google Docs skill** (beta): its header and image layout, to align
-  with I2's so the preview and the pipeline treat both alike.
+  with I2's so the preview and the pipeline treat both alike. Pods reads
+  `source` and `converted` (I3): a skill that names its date otherwise
+  gets the line without a date.
+- **mammoth's blind spots**, seen once I2 runs on real files: comments
+  and footnotes, tracked changes (mammoth reads the text as it would
+  print), text boxes, equations. The copy says nothing of what it left
+  out beyond "some Word formatting had no Markdown equivalent".
 - **Telling members**: one page in the members' `guide/`
   (`templates/collective/guide/`) on the ways into a pod: upload as is,
-  make a Markdown copy, the Google Docs skill, and what each keeps. Written
-  once two paths exist.
+  make a Markdown copy, the Google Docs skill, and what each keeps. Due:
+  since I2 (17 Oct) two paths exist.
 - **Legacy `.doc`**: neither pandoc nor mammoth reads it; LibreOffice
   could convert it. Wait for a member who has one.
 
-Where this sits in the plan: [slices, I](../slices.md#i--documents-in-pods-word-then-pdf).
+Where this sits in the plan: [slices, I](../slices.md#i--documents-in-pods-word-then-pdf--built-17-oct-2026).

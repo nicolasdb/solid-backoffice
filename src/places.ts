@@ -51,7 +51,9 @@ import { bindEditor, canEdit, isDirty, renderEditor, renderEditorActions, startE
 import { forgetAclLocations, type AccessRules } from "./lib/acl";
 import { describePodError, isAuthError } from "./lib/pod";
 import { routeHref, type Route } from "./router";
-import { renderMarkdown } from "./ui/markdown";
+import { renderMarkdown, sanitizeHtml, splitFrontMatter } from "./ui/markdown";
+import { drawPictures, forgetPictures } from "./ui/pictures";
+import { convertedFrom, copyNames, isWord, saveWordCopy, wordToHtml } from "./lib/word";
 import { diagramExpanded, drawDiagrams, forgetDiagrams } from "./ui/mermaid";
 import { busy } from "./ui/typing";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
@@ -133,6 +135,12 @@ let generation = 0;
 let objectUrls: string[] = [];
 /** Public sounds and videos played from their address, which streams. */
 const streams = new Set<string>();
+/** Word files shown as pages, sanitized, by address and version. */
+const pages = new Map<string, string | Error>();
+/** Files picked for upload, Word files among them: waiting for keep or convert (I2). */
+let wordChoice: { files: File[] } | null = null;
+/** A Markdown copy of a Word file being made (I2, from its page). */
+let copying: string | null = null;
 
 export function forgetPlaces(): void {
   naming.clear();
@@ -163,8 +171,12 @@ export function forgetPlaces(): void {
   ctx = null;
   releaseObjectUrls();
   streams.clear();
+  pages.clear();
+  wordChoice = null;
+  copying = null;
   forgetAclLocations();
   forgetDiagrams();
+  forgetPictures();
 }
 
 function releaseObjectUrls(): void {
@@ -221,6 +233,7 @@ const KIND_LABEL: Record<string, string> = {
   image: "Image",
   svg: "SVG",
   pdf: "PDF",
+  word: "Word",
   audio: "Audio",
   video: "Video",
   other: "File",
@@ -475,9 +488,33 @@ function renderFolder(url: string): string {
         </div>
       </div>
       ${renderCreate()}
+      ${renderWordChoice()}
       <p class="meta" id="upload-status" role="status" hidden></p>
       <div id="places-list" class="places-list">${renderColumns()}${list}</div>
     </section>`;
+}
+
+/** Word files among those picked: keep them, or convert (I2). Keeping is the default. */
+function renderWordChoice(): string {
+  if (!wordChoice) return "";
+  const words = wordChoice.files.filter(isWord);
+  const first = copyNames(words[0].name);
+  const count = wordChoice.files.length;
+  const what = words.length === 1 ? esc(words[0].name) : `${words.length} Word files`;
+  return `
+    <form class="panel-block word-choice" id="word-choice" novalidate>
+      <fieldset>
+        <legend>${what}: keep as Word, or copy to Markdown?</legend>
+        <label><input type="radio" name="word" value="keep" checked> Keep the Word file</label>
+        <label><input type="radio" name="word" value="both"> Keep it, and add a Markdown copy</label>
+        <label><input type="radio" name="word" value="markdown"> Only the Markdown copy (the Word file stays on your device)</label>
+      </fieldset>
+      <p class="meta">A copy is ${esc(first.note)}, with its images in ${esc(first.images)}/, made in this browser. Headings, lists, tables and images carry over; Word's layout, comments and tracked changes do not.</p>
+      <div class="actions">
+        <button type="submit" class="small">Upload ${count === 1 ? "it" : `${count} files`}</button>
+        <button type="button" class="ghost small" id="word-cancel">Cancel</button>
+      </div>
+    </form>`;
 }
 
 function renderCreate(): string {
@@ -570,6 +607,7 @@ function kindFromItem(item: Item | undefined): string {
   if (/svg/.test(type)) return "svg";
   if (type.startsWith("image/")) return "image";
   if (/pdf/.test(type)) return "pdf";
+  if (/wordprocessingml/.test(type) || /\.docx$/i.test(item?.url ?? "")) return "word";
   if (type.startsWith("audio/")) return "audio";
   if (type.startsWith("video/")) return "video";
   if (type.startsWith("text/") || /toml/.test(type) || /\.toml$/i.test(item?.url ?? "")) return "text";
@@ -581,7 +619,13 @@ function renderPreview(file: FileContent): string {
   if (file.withheld) return renderWithheld(file);
   switch (file.kind) {
     case "markdown":
-      return `<article class="prose preview" aria-label="Preview of ${esc(nameOf(file.url))}">${renderMarkdown(file.text ?? "")}</article>`;
+      return `${convertedLine(file)}<article class="prose preview" data-base="${esc(file.url)}" aria-label="Preview of ${esc(nameOf(file.url))}">${renderMarkdown(file.text ?? "")}</article>`;
+    case "word": {
+      const page = pages.get(pageKey(file));
+      if (page instanceof Error) return `<div class="preview empty-state"><p class="lead">This Word file could not be shown: ${esc(page.message)}</p><p class="meta">Download it to open it on your device.</p></div>`;
+      return `<p class="meta">A preview: Word's layout, fonts and comments are not shown. Read only.</p>
+        <article class="prose preview word" data-word="${esc(file.url)}" aria-label="Preview of ${esc(nameOf(file.url))}"${page ? "" : ' aria-busy="true"'}>${page ?? `<p class="meta">Reading the Word file…</p>`}</article>`;
+    }
     case "json": {
       let text = file.text ?? "";
       try {
@@ -603,6 +647,50 @@ function renderPreview(file: FileContent): string {
       return renderMedia(file, objectUrl(file));
     default:
       return renderWithheld(file);
+  }
+}
+
+/** "Converted from rapport.docx on 17 Oct 2026", over a copy's header (I3). */
+function convertedLine(file: FileContent): string {
+  const from = convertedFrom(splitFrontMatter(file.text ?? "").fields);
+  if (!from) return "";
+  const day = from.on && /^\d{4}-\d{2}-\d{2}/.test(from.on) ? new Date(from.on.slice(0, 10) + "T12:00:00") : null;
+  const on = day && !isNaN(day.getTime()) ? ` on ${day.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : "";
+  const source = /^https?:\/\//i.test(from.source)
+    ? `<a href="${esc(from.source)}" target="_blank" rel="noopener noreferrer">${esc(sourceLabel(from.source))}</a>`
+    : esc(from.source);
+  return `<p class="meta converted-from">Converted from ${source}${on}. The original is the reference; this copy may have been edited since.</p>`;
+}
+
+function sourceLabel(url: string): string {
+  return /^https:\/\/docs\.google\.com\//.test(url) ? "a Google Doc" : url;
+}
+
+function pageKey(file: FileContent): string {
+  return `${file.url} ${file.etag ?? ""}`;
+}
+
+/** Fills each Word file's page once mammoth has read it (loaded on demand). */
+async function drawWord(root: HTMLElement): Promise<void> {
+  for (const article of root.querySelectorAll<HTMLElement>("[data-word][aria-busy]")) {
+    const url = article.dataset.word!;
+    const file = files.get(url) ?? opened.get(url)?.file;
+    if (!file?.blob) continue;
+    const key = pageKey(file);
+    if (!pages.has(key)) {
+      try {
+        pages.set(key, sanitizeHtml(await wordToHtml(await file.blob.arrayBuffer())));
+      } catch (err) {
+        pages.set(key, err instanceof Error ? err : new Error(String(err)));
+      }
+    }
+    const page = pages.get(key)!;
+    if (!article.isConnected) continue;
+    if (page instanceof Error) redraw();
+    else {
+      article.innerHTML = page;
+      article.removeAttribute("aria-busy");
+    }
   }
 }
 
@@ -667,6 +755,7 @@ function renderFile(url: string): string {
   const actions = edit
     ? renderEditorActions(edit)
     : `${file && canEdit(file) ? `<button class="small" type="button" id="edit">Edit</button>` : ""}
+       ${file?.kind === "word" && file.blob ? `<button class="ghost small" type="button" id="word-copy"${copying ? " disabled" : ""}>${copying ? "Making the copy…" : "Make a Markdown copy"}</button>` : ""}
        <button class="ghost small" type="button" id="download" data-url="${esc(url)}">Download</button>
        <button class="ghost small" type="button" data-menu="${esc(url)}" aria-haspopup="dialog" aria-label="More for ${esc(nameOf(url))}">···</button>`;
   return `
@@ -749,6 +838,8 @@ function draw(focus: boolean): void {
   frame.innerHTML = renderPlaces();
   bind();
   void drawDiagrams(frame);
+  void drawPictures(frame);
+  void drawWord(frame);
   if (focus) focusView(frame);
 }
 
@@ -762,6 +853,7 @@ function inUse(): boolean {
     Boolean(draft?.dirty) ||
     isDirty(editing) ||
     Boolean(creating) ||
+    Boolean(wordChoice) ||
     Boolean(changes.change) ||
     Boolean(followForm) ||
     Boolean(changes.change) ||
@@ -1190,27 +1282,80 @@ function bindWrites(): void {
 
   const picker = frame.querySelector<HTMLInputElement>("#upload-input");
   frame.querySelector("#upload")?.addEventListener("click", () => picker?.click());
-  picker?.addEventListener("change", async () => {
-    const chosen = [...(picker.files ?? [])];
-    if (!chosen.length) return;
+  const upload = async (chosen: File[], word: "keep" | "both" | "markdown") => {
     const status = frame!.querySelector<HTMLElement>("#upload-status")!;
     status.hidden = false;
     const failed: string[] = [];
+    let copies = 0;
+    let lossy = false;
     for (const [i, file] of chosen.entries()) {
       status.textContent = `Uploading ${i + 1} of ${chosen.length}: ${file.name}…`;
       try {
-        await uploadFile(here, file);
+        const convert = word !== "keep" && isWord(file);
+        if (!convert || word === "both") await uploadFile(here, file);
+        if (convert) {
+          status.textContent = `Copying ${file.name} to Markdown…`;
+          const copy = await saveWordCopy(here, file.name, await file.arrayBuffer());
+          copies++;
+          lossy ||= copy.warnings.length > 0;
+        }
       } catch (err) {
         failed.push(describePodError(err));
       }
     }
     const done = chosen.length - failed.length;
+    const copied = copies ? ` ${copies} Markdown cop${copies === 1 ? "y" : "ies"} made${lossy ? "; some Word formatting had no Markdown equivalent" : ""}.` : "";
     toast(
       failed.length
-        ? `${done} of ${chosen.length} uploaded. ${failed.join(" ")}`
-        : `${done} file${done === 1 ? "" : "s"} uploaded.`
+        ? `${done} of ${chosen.length} uploaded.${copied} ${failed.join(" ")}`
+        : `${done} file${done === 1 ? "" : "s"} uploaded.${copied}`
     );
     await showPlaces(route, false);
+  };
+  picker?.addEventListener("change", async () => {
+    const chosen = [...(picker.files ?? [])];
+    if (!chosen.length) return;
+    if (chosen.some(isWord)) {
+      wordChoice = { files: chosen };
+      draw(false);
+      frame?.querySelector<HTMLInputElement>('#word-choice input[name="word"]')?.focus();
+      return;
+    }
+    await upload(chosen, "keep");
+  });
+  frame.querySelector("#word-cancel")?.addEventListener("click", () => {
+    wordChoice = null;
+    draw(false);
+    frame?.querySelector<HTMLElement>("#upload")?.focus();
+  });
+  frame.querySelector<HTMLFormElement>("#word-choice")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!wordChoice) return;
+    const form = e.target as HTMLFormElement;
+    const word = (form.querySelector<HTMLInputElement>('input[name="word"]:checked')?.value ?? "keep") as "keep" | "both" | "markdown";
+    const chosen = wordChoice.files;
+    wordChoice = null;
+    form.querySelectorAll("button, input").forEach((el) => ((el as HTMLButtonElement).disabled = true));
+    await upload(chosen, word);
+  });
+
+  frame.querySelector("#word-copy")?.addEventListener("click", async () => {
+    const file = files.get(here);
+    const folder = parentOf(here);
+    if (!file?.blob || !folder || copying) return;
+    copying = here;
+    draw(false);
+    try {
+      const copy = await saveWordCopy(folder, nameOf(here), await file.blob.arrayBuffer());
+      toast(`Made ${nameOf(copy.url)}${copy.warnings.length ? "; some Word formatting had no Markdown equivalent" : ""}.`);
+      listings.delete(folder);
+      location.hash = hrefOf(copy.url);
+    } catch (err) {
+      toast(`No copy made: ${describePodError(err)}`);
+      draw(false);
+    } finally {
+      copying = null;
+    }
   });
 
   frame.querySelector("#edit")?.addEventListener("click", () => {

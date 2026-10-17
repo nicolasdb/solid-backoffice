@@ -11,7 +11,7 @@ const POD = "https://pod.example/amina/";
 const WEBID = POD + "profile/card#me";
 const AGENT = "https://pod.example/hs/agent#me";
 
-type Doc = { status?: number; body?: string; type?: string; etag?: string; length?: number };
+type Doc = { status?: number; body?: string | ArrayBuffer; type?: string; etag?: string; length?: number };
 let pod: Record<string, Doc> = {};
 /** URLs whose answers wait until `release()`. */
 let held: ((url: string) => boolean) | null = null;
@@ -58,10 +58,14 @@ async function answer(url: string, init: RequestInit = {}): Promise<Response> {
   if (doc.length !== undefined) headers["Content-Length"] = String(doc.length);
   const match = (init.headers as Record<string, string> | undefined)?.["If-None-Match"];
   if (match && match === doc.etag) return new Response(null, { status: 304, headers });
-  return new Response(method === "HEAD" ? null : (doc.body ?? ""), { status: 200, headers });
+  const response = new Response(method === "HEAD" ? null : (doc.body ?? ""), { status: 200, headers });
+  // Bytes as a Blob of this window's realm: undici's would hand JSZip a foreign ArrayBuffer.
+  if (doc.body instanceof ArrayBuffer) response.blob = async () => new Blob([doc.body as ArrayBuffer], { type: headers["Content-Type"] });
+  return response;
 }
 vi.mock("./lib/auth", () => ({ authFetch: (url: string, init?: RequestInit) => answer(url, init) }));
 
+const { docx } = await import("./lib/docx.fixture");
 const { mountPlaces, showPlaces, forgetPlaces, whoCanRead, when, sortItems } = await import("./places");
 const { forgetReads } = await import("./lib/read");
 
@@ -368,6 +372,60 @@ describe("C1 — a file opens in Preview", () => {
     menuFor(POD + "projects/public.md");
     await until(() => app.querySelector("#change-access:not([disabled])"));
     expect(chips()).toEqual(["You", "Anyone with the link"]);
+  });
+});
+
+describe("I — Word files", () => {
+  const WORD = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+  it("shows a Word file as a page, and copies it to Markdown beside it", async () => {
+    pod[POD + "projects/"] = { body: listing(["rapport.docx"]), etag: '"p2"' };
+    pod[POD + "projects/rapport.docx"] = { body: await docx(), type: WORD, etag: '"w"' };
+    await mount("projects/rapport.docx");
+    await until(() => app.querySelector(".preview.word:not([aria-busy]) h1"));
+    expect(app.querySelector(".pill")!.textContent).toBe("Word");
+    expect(app.querySelector(".preview.word h1")!.textContent).toBe("Rapport 2026");
+    expect(app.querySelector(".preview.word")!.innerHTML).not.toContain("javascript:");
+
+    app.querySelector<HTMLButtonElement>("#word-copy")!.click();
+    await until(() => location.hash === "#/p/projects/rapport.md");
+    expect(writes.map((w) => [w.url, w.ifNoneMatch])).toEqual([
+      [POD + "projects/rapport-images/image1.png", "*"],
+      [POD + "projects/rapport.md", "*"],
+    ]);
+    expect(pod[POD + "projects/rapport.docx"].etag).toBe('"w"'); // the original, untouched
+  });
+
+  it("says where a copy came from, and shows the images beside it", async () => {
+    pod[POD + "projects/rapport.md"] = {
+      body: "---\nsource: rapport.docx\nconverted: 2026-10-17\nconverter: mammoth\n---\n\n![A map](rapport-images/image1.png)",
+      type: "text/markdown",
+      etag: '"c"',
+    };
+    pod[POD + "projects/rapport-images/image1.png"] = { body: "png", type: "image/png" };
+    await mount("projects/rapport.md");
+    await until(() => app.querySelector(".preview img[src]"));
+    expect(app.querySelector(".converted-from")!.textContent).toMatch(/^Converted from rapport\.docx on 17 Oct 2026\./);
+    expect(app.querySelector(".preview img")!.getAttribute("src")).toBe("blob:fake");
+    expect(requests).toContain(`GET ${POD}projects/rapport-images/image1.png`);
+  });
+
+  it("asks at upload: keep the Word file, keep it and copy, or only the copy", async () => {
+    await mount("projects/");
+    await reading;
+    const input = app.querySelector<HTMLInputElement>("#upload-input")!;
+    const word = new File([await docx()], "rapport.docx", { type: WORD });
+    Object.defineProperty(input, "files", { value: [word, new File(["x"], "new.txt", { type: "text/plain" })] });
+    input.dispatchEvent(new Event("change"));
+    await until(() => app.querySelector("#word-choice"));
+    expect(writes).toEqual([]); // nothing sent before the choice
+    expect(app.querySelector<HTMLInputElement>('#word-choice input[value="keep"]')!.checked).toBe(true);
+
+    app.querySelector<HTMLInputElement>('#word-choice input[value="markdown"]')!.checked = true;
+    app.querySelector<HTMLFormElement>("#word-choice")!.dispatchEvent(new Event("submit", { cancelable: true }));
+    await until(() => document.querySelector(".toast"));
+    expect(writes.map((w) => w.url)).toEqual([POD + "projects/rapport-images/image1.png", POD + "projects/rapport.md", POD + "projects/new.txt"]);
+    expect(document.querySelector(".toast")!.textContent).toMatch(/2 files uploaded\. 1 Markdown copy made/);
   });
 });
 
@@ -794,14 +852,14 @@ ${entries}`;
     await until(() => document.querySelector(".toast-undo"));
     expect(pod[LIST].body).not.toContain(X);
     document.querySelector<HTMLButtonElement>(".toast-undo")!.click();
-    await until(() => pod[LIST].body!.includes(X));
+    await until(() => String(pod[LIST].body).includes(X));
   });
 
   it("marks a favourite", async () => {
     await go({ name: "followed", address: X });
     await until(() => writes.length);
     app.querySelector<HTMLButtonElement>("#favourite")!.click();
-    await until(() => pod[LIST].body!.includes("favourite"));
+    await until(() => String(pod[LIST].body).includes("favourite"));
     await until(() => app.querySelector("#favourite")?.getAttribute("aria-pressed") === "true");
     expect(document.querySelector(".toast")!.textContent).toContain("Added to your favourites.");
     expect(app.querySelector("#favourite")!.textContent).toBe("Remove from favourites");

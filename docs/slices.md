@@ -58,12 +58,11 @@ create-a-collective was merged into the how-to and the reference's pod tree.
        ("HyperScope's agent") keeps priority over `foaf:name`, which the
        agent declares about itself.
    - **Mermaid**: built 17 Oct, to run live ([H](#h--mermaid-in-the-markdown-preview--built-17-oct-2026)).
-5. **Documents, Word then PDF** ([I](#i--documents-in-pods-word-then-pdf)): free to start, after H.
+5. **Documents, Word then PDF** ([I](#i--documents-in-pods-word-then-pdf--built-17-oct-2026)): built 17 Oct,
+   to run live. Pipeline B still handles the `.docx` a member shares
+   unconverted, so I helps Xavier's share without unblocking it.
 6. **Media** ([J](#j--media-in-pods-images-audio-video--built-17-oct-2026)): built 17 Oct,
    to run live.
-   I1 (preview) and I2 (a Markdown copy) depend on nothing outside this
-   repo; pipeline B still handles the `.docx` a member shares unconverted,
-   so I helps Xavier's share without unblocking it.
 
 ## Where we were (10 Oct 2026)
 
@@ -818,7 +817,28 @@ Mermaid 12 pulls KaTeX, which `npm audit` flags (prototype pollution,
 moderate); math in labels is not used, an override waits for a fixed
 release.
 
-## I — Documents in Pods: Word, then PDF
+## I — Documents in Pods: Word, then PDF · built (17 Oct 2026)
+
+Built 17 Oct, not yet run live ([manual test I](manual-tests.md#i--word-files-in-pods)):
+`src/lib/word.ts` (mammoth 1.13 + Turndown 7.2 and its GFM tables, loaded
+on demand), `src/ui/pictures.ts`, Pods (`src/places.ts`). Differences
+from the plan below:
+
+- The copy of a `.docx` already on the pod is a button on the file's page
+  ("Make a Markdown copy", beside Download), not in the `···` menu: the
+  page already holds the bytes.
+- Copies list items as `- item` (Turndown writes `-   item`), take a
+  table's first row as its header (Word rarely marks one; Markdown needs
+  one), and keep only the words of a `javascript:` link.
+- **Images beside a note now show in every Markdown preview** (needed for
+  "Markdown only"): a relative image is read from the pod with the
+  member's WebID, same server only. It also fixes notes written by hand
+  or by the `gdoc-to-solid-md` skill.
+- One choice per upload covers every Word file picked with it.
+- I4 came with J.
+- `npm audit` flags `sprintf-js` (moderate, a denial of service), pulled
+  by mammoth's command line through `argparse`; the browser build never
+  loads it.
 
 Why: members arrive with `.docx` (Xavier's share), and Google Docs export
 to it. Keep or convert, and why no option is closed:

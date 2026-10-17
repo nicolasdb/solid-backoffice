@@ -716,6 +716,29 @@ member through the new flow.
 7. **TOML.** A `.toml` file opens as source, Edit works, and a saved file
    keeps its type.
 
+## I · Word files in Pods
+
+Have a real `.docx` with a heading, a nested list, a table and an image
+(Xavier's report, or a Google Doc downloaded as Word).
+
+1. **Preview.** Upload it with "Keep the Word file" (the default): it
+   opens as a page, headings, lists, table and image shown, with the line
+   "A preview…". Network: the converter (`lib-…js`) loads only now.
+2. **Keep and copy.** Upload it again under another name with "Keep it,
+   and add a Markdown copy": the `.docx`, `<name>.md` and
+   `<name>-images/` appear. The copy opens with "Converted from
+   <name>.docx on <today>", the header's fields, and its images.
+3. **Copy only.** Upload a third name with "Only the Markdown copy": no
+   `.docx` on the pod; the note and its images are there.
+4. **Refused.** On the first file's page, "Make a Markdown copy" twice:
+   the second says `<name>.md` is already there; nothing is overwritten.
+5. **Edit the copy.** Edit `<name>.md`: the preview beside the source
+   keeps its images.
+6. **Google Docs skill.** Open a note written by `gdoc-to-solid-md`: the
+   line says "Converted from a Google Doc", linked to it, and its images
+   show.
+7. **Phone.** The choice at upload is readable and usable on a phone.
+
 ## J · Media in Pods
 
 1. **Images.** Upload a JPEG, a WebP and an SVG: each previews; the SVG

@@ -175,7 +175,7 @@ function nearestRules(
 
 /* ── Contents ──────────────────────────────────────────────────────────── */
 
-export type FileKind = "markdown" | "text" | "json" | "image" | "svg" | "pdf" | "audio" | "video" | "other";
+export type FileKind = "markdown" | "text" | "json" | "image" | "svg" | "pdf" | "word" | "audio" | "video" | "other";
 
 export interface FileContent {
   url: string;
@@ -199,8 +199,11 @@ export interface FileContent {
 /** Past this, a text file is offered as a download rather than shown. */
 export const PREVIEW_LIMIT = 1_000_000;
 
-/** Past this, an image, PDF, sound or video is shown only when asked. */
+/** Past this, an image, PDF, Word file, sound or video is shown only when asked. */
 export const MEDIA_PREVIEW_LIMIT = 20 * 1024 * 1024;
+
+/** A Word file (`.docx`); `lib/word.ts` shows and copies it. */
+export const WORD_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 /** Text served under an `application/` type: shown and edited as source. */
 const TEXT_TYPES = new Set(["application/n-triples", "application/n-quads", "application/toml"]);
@@ -212,6 +215,7 @@ export function kindOf(contentType: string, url = ""): FileKind {
   if (type === "image/svg+xml" || /\.svg$/i.test(url)) return "svg";
   if (type.startsWith("image/")) return "image";
   if (type === "application/pdf" || /\.pdf$/i.test(url)) return "pdf";
+  if (type === WORD_TYPE || /\.docx$/i.test(url)) return "word";
   if (type.startsWith("audio/")) return "audio";
   if (type.startsWith("video/")) return "video";
   if (type.startsWith("text/") || TEXT_TYPES.has(type) || /\.toml$/i.test(url)) return "text";
@@ -277,7 +281,7 @@ export interface FileError extends Error {
   status?: number;
 }
 
-function fileError(code: FileError["code"], message: string, status?: number): FileError {
+export function fileError(code: FileError["code"], message: string, status?: number): FileError {
   return Object.assign(new Error(message), { code, status });
 }
 
@@ -328,12 +332,13 @@ export function typeFor(name: string): string {
     webm: "video/webm",
     mov: "video/quicktime",
     pdf: "application/pdf",
+    docx: WORD_TYPE,
   };
   return types[ext] ?? (ext ? "application/octet-stream" : "text/plain");
 }
 
 /** PUT that creates, never replaces: 412 when something is already there. */
-async function createOnly(url: string, body: BodyInit, contentType: string): Promise<void> {
+export async function createOnly(url: string, body: BodyInit, contentType: string): Promise<void> {
   const res = await authFetch(url, {
     method: "PUT",
     headers: { "Content-Type": contentType, "If-None-Match": "*" },

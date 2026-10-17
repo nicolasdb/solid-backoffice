@@ -1294,6 +1294,11 @@ button.menu-item.is-warn { color: var(--warn); }
 .create-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
 .create-row .field { flex: 1 1 16rem; }
 .create-row .error { flex-basis: 100%; margin: 0; }
+/* I2: a Word file at upload, kept or copied to Markdown. */
+.word-choice { margin-block: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface-recessed); border-radius: var(--radius-md); }
+.word-choice fieldset { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; border: 0; }
+.word-choice legend { margin-bottom: var(--space-2); font-weight: 600; }
+.word-choice label { display: flex; align-items: center; gap: var(--space-2); }
 
 .seg { display: inline-flex; border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .seg button {

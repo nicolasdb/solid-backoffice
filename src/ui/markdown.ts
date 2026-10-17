@@ -11,6 +11,11 @@
  * not as Markdown: rendered as Markdown it becomes a rule, a paragraph and a
  * list. Only `key: value` and `- item` lines are read; the rest is shown as
  * written. Values go through the same sanitizing as the body.
+ *
+ * An image with a relative address (a converted copy's `rapport-images/…`)
+ * is a file on the pod, read with the member's WebID: its address moves to
+ * `data-src`, so the browser does not ask this app's own site for it, and
+ * `src/ui/pictures.ts` fills it in.
  */
 import { marked } from "marked";
 import DOMPurify from "dompurify";
@@ -20,17 +25,26 @@ const SAFE_URI = /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i;
 let hooked = false;
 
 export function renderMarkdown(source: string): string {
+  const { fields, body } = splitFrontMatter(source);
+  return sanitizeHtml((fields ? frontMatterHtml(fields) : "") + marked.parse(body, { async: false, gfm: true }));
+}
+
+/** Any HTML made from a pod's file (Markdown, a Word file), made safe to show. */
+export function sanitizeHtml(html: string): string {
   if (!hooked) {
     DOMPurify.addHook("afterSanitizeAttributes", (node) => {
       if (node.tagName === "A" && node.hasAttribute("href")) {
         node.setAttribute("target", "_blank");
         node.setAttribute("rel", "noopener noreferrer");
       }
+      const src = node.tagName === "IMG" ? node.getAttribute("src") : null;
+      if (src && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(src)) {
+        node.setAttribute("data-src", src);
+        node.removeAttribute("src");
+      }
     });
     hooked = true;
   }
-  const { fields, body } = splitFrontMatter(source);
-  const html = (fields ? frontMatterHtml(fields) : "") + marked.parse(body, { async: false, gfm: true });
   return DOMPurify.sanitize(html, {
     ALLOWED_URI_REGEXP: SAFE_URI,
     FORBID_TAGS: ["style", "form", "input", "button", "textarea", "select", "iframe", "object", "embed"],

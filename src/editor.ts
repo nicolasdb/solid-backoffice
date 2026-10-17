@@ -16,6 +16,7 @@ import { nameOf, readFile, saveFile, type FileContent } from "./lib/files";
 import { describePodError } from "./lib/pod";
 import { renderMarkdown } from "./ui/markdown";
 import { drawDiagrams } from "./ui/mermaid";
+import { drawPictures } from "./ui/pictures";
 import { esc } from "./ui/patterns";
 
 export type EditorView = "source" | "side" | "preview";
@@ -116,7 +117,7 @@ export function renderEditor(editing: Editing): string {
       </div>
       <div class="editor-preview">
         <span class="label-mono">Preview</span>
-        <article class="prose preview" id="editor-preview" aria-label="Preview of ${esc(name)}" aria-live="off">${previewOf(editing)}</article>
+        <article class="prose preview" id="editor-preview" data-base="${esc(editing.url)}" aria-label="Preview of ${esc(name)}" aria-live="off">${previewOf(editing)}</article>
       </div>
     </div>`;
 }
@@ -149,6 +150,7 @@ export function bindEditor(root: HTMLElement, editing: Editing, hooks: EditorHoo
       if (!preview) return;
       preview.innerHTML = previewOf(editing);
       void drawDiagrams(preview);
+      void drawPictures(preview);
     }, 150);
   });
 

@@ -104,7 +104,11 @@ one changes, change the other. Never point it at the real provider.
   file with no preview, or too large for one, is not downloaded) and finds which
   rules apply (`effectiveAccess`); `src/ui/markdown.ts` renders a pod's
   Markdown through DOMPurify, never raw; `src/ui/mermaid.ts` draws its
-  ```` ```mermaid ```` blocks (loaded on demand, strict, SVG sanitized). `src/access-panel.ts` is its
+  ```` ```mermaid ```` blocks (loaded on demand, strict, SVG sanitized), and
+  `src/ui/pictures.ts` its relative images (read with your WebID).
+  `src/lib/word.ts` (slice I) shows a `.docx` as a page and writes its
+  Markdown copy beside it (`<name>.md`, `<name>-images/`), never over
+  anything; mammoth and Turndown load on demand. `src/access-panel.ts` is its
   "Who can access it" panel (C2), the same for folders and files (Only me,
   Inherit from parent, Anyone with the link, named people): a draft saved
   in one conditional write,
