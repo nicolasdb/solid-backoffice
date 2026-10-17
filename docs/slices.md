@@ -4,7 +4,24 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (16 Oct 2026)
+## Where we are (17 Oct 2026)
+
+**Pods reads more than text, all run live 17 Oct:** Mermaid diagrams with
+fit, full screen, pan and zoom ([H](#h--mermaid-in-the-markdown-preview--built-17-oct-2026));
+Word files previewed and copied to Markdown with their images, at upload
+or from the page ([I](#i--documents-in-pods-word-then-pdf--built-17-oct-2026));
+PDF, SVG, sound and video, the 100 MB limit said before sending, no
+download for what has no preview, and upload progress byte by byte
+([J](#j--media-in-pods-images-audio-video--built-17-oct-2026)). Decided,
+for the other repos: the collective's pipeline converts a shared `.docx`
+with pandoc and a PDF with docling, keeps Markdown and images, drops the
+`.docx` once a check in code passes
+([Documents on a pod](explanation/documents.md)). Not yet written there:
+solid-kit ADR 006's amendment (pull rule 5) and pipeline B in
+solid-css-overlay. Due here: the members' guide page on the ways into a
+pod.
+
+## Where we were (16 Oct 2026)
 
 **G closed**: a member picks the folder they share; stop sharing asks what
 the folder's rules become; a security fix on copied rules. Details and
