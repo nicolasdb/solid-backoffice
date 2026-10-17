@@ -57,8 +57,11 @@ create-a-collective was merged into the how-to and the reference's pod tree.
      - The label taken from the member's own `config.ttl`
        ("HyperScope's agent") keeps priority over `foaf:name`, which the
        agent declares about itself.
-   - **Mermaid in the Markdown preview**: render ```` ```mermaid ```` blocks
-     (the cross-project dashboard on the pod uses one).
+   - **Mermaid**: built 17 Oct, to run live ([H](#h--mermaid-in-the-markdown-preview--built-17-oct-2026)).
+5. **Word files** ([I](#i--word-files-in-pods)): free to start, after H.
+   I1 (preview) and I2 (a Markdown copy) depend on nothing outside this
+   repo; pipeline B still handles the `.docx` a member shares unconverted,
+   so I helps Xavier's share without unblocking it.
 
 ## Where we were (10 Oct 2026)
 
@@ -781,6 +784,62 @@ re-announces; suggestions and reasons (four questions) in the agent
 folder picker, with `agents-view.ts`'s `^output-to/` note; the count of
 items with rules of their own; `procedure-contribution` reads the
 settings file (solid-kit); a base `select` style in the kit.
+
+## H — Mermaid in the Markdown preview · built (17 Oct 2026)
+
+Why: the cross-project plan (`hyperscope_ndb/tasks/now.md`) is a Mermaid
+flowchart: projects as subgraphs, arrows for what blocks what, green for
+free to start. Read as source it does not show what to pick next.
+
+Built:
+
+- ```` ```mermaid ```` blocks become diagrams in Pods' preview and the
+  editor's preview (`src/ui/mermaid.ts`). Other formats are unchanged:
+  Turtle and plain text as source, JSON indented, TOML has no preview
+  (CSS serves it as `application/toml`).
+- Mermaid loads only on a page that holds a diagram (its own chunks, the
+  main bundle unchanged).
+- Safety: `securityLevel: "strict"` (labels encoded, no clicks, not
+  overridable from `%%{init}%%`), labels as SVG text (no
+  `foreignObject`), and the SVG goes through DOMPurify's SVG profile.
+- Drawn on a light card in both themes, because a `classDef`'s colours
+  assume a light ground; a wide diagram scrolls sideways. A diagram that
+  does not parse stays as source with the reason above it.
+- Drawn SVG kept by source (50 at most), forgotten at sign-out.
+
+Run live: [manual tests, H](manual-tests.md#h--mermaid-in-the-markdown-preview).
+Mermaid 12 pulls KaTeX, which `npm audit` flags (prototype pollution,
+moderate); math in labels is not used, an override waits for a fixed
+release.
+
+## I — Word files in Pods
+
+Why: members arrive with `.docx` (Xavier's share), and Google Docs export
+to it. Keep or convert, and why no option is closed:
+[Word files on a pod](explanation/word-files.md).
+
+The rule: the original is never replaced; a conversion is a copy beside
+it, with `source`, `converted` and `converter` in its YAML header.
+
+- **I1 · Preview.** A `.docx` in Pods shows as a page: mammoth to HTML in
+  the browser, through the same sanitizing as Markdown, loaded only when a
+  Word file is opened. Read only.
+- **I2 · Make a Markdown copy.** In the `···` menu of a `.docx`: writes
+  `<name>.md` and its images (`<name>-images/`) beside it, the header
+  pointing back to the original. Converter taken from
+  [obsidian-docx-importer](https://github.com/mayac5/obsidian-docx-importer)'s
+  `src/converter.ts` (MIT, notice kept), without its wikilink step.
+  Refused, not overwritten, when the copy's name exists.
+- **I3 · The preview says where a copy came from**: "Converted from
+  rapport.docx on 17 Oct", for I2's copies and the `gdoc-to-solid-md`
+  skill's (its `source:` is a Google Docs URL).
+- Later, not planned: "Download as Word" for a Markdown file (the
+  plugin's exporter, on the `docx` library); `.odt`.
+
+Depends on: nothing outside this repo. Related, elsewhere: pipeline B
+(solid-css-overlay) extracts derived text from whatever a member shares,
+converted or not, with pandoc; the share summary (pipeline D) counts
+`.docx` among the types.
 
 ## Replacing the old backoffice
 

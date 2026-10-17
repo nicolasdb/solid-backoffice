@@ -9,7 +9,7 @@ answer lives.
 | Tutorials | learning by doing | none yet: the first will be a newcomer's first join (J1, built) |
 | How-to guides | a task, for someone who knows what they want | [Set up a collective's pod](how-to/set-up-a-collective.md) · [Invite people](how-to/invite-people.md) · [Deploy the test copy](how-to/deploy-the-test-copy.md) · [Manual tests](manual-tests.md) |
 | Reference | facts to look up | [Collective files](reference/collective-files.md) (and [the pod tree](reference/collective-files.md#the-pod-tree)) · [The following file](reference/following-file.md) · [The collectives file](reference/collectives-file.md) · [Examples](examples/) |
-| Explanation | why it works this way | [Membership](explanation/membership.md) · [Access rules](explanation/access-rules.md) · [Sharing with a collective](explanation/sharing.md) · [Following](explanation/following.md) · [Reading pods quickly](explanation/reading-pods.md) · [Four questions before a grant](explanation/four-questions.md) |
+| Explanation | why it works this way | [Membership](explanation/membership.md) · [Access rules](explanation/access-rules.md) · [Sharing with a collective](explanation/sharing.md) · [Following](explanation/following.md) · [Reading pods quickly](explanation/reading-pods.md) · [Four questions before a grant](explanation/four-questions.md) · [Word files on a pod](explanation/word-files.md) |
 
 Outside `docs/`: [`templates/collective/`](../templates/collective/), what a
 collective copies onto its pod (`config.ttl`, `membres.ttl`, and the
