@@ -58,11 +58,11 @@ create-a-collective was merged into the how-to and the reference's pod tree.
        ("HyperScope's agent") keeps priority over `foaf:name`, which the
        agent declares about itself.
    - **Mermaid**: built 17 Oct, to run live ([H](#h--mermaid-in-the-markdown-preview--built-17-oct-2026)).
-5. **Documents, Word then PDF** ([I](#i--documents-in-pods-word-then-pdf--built-17-oct-2026)): built 17 Oct,
-   to run live. Pipeline B still handles the `.docx` a member shares
+5. **Documents, Word then PDF** ([I](#i--documents-in-pods-word-then-pdf--built-17-oct-2026)): built and
+   run live 17 Oct. Pipeline B still handles the `.docx` a member shares
    unconverted, so I helps Xavier's share without unblocking it.
-6. **Media** ([J](#j--media-in-pods-images-audio-video--built-17-oct-2026)): built 17 Oct,
-   to run live.
+6. **Media** ([J](#j--media-in-pods-images-audio-video--built-17-oct-2026)): built and
+   run live 17 Oct (video: not in Fedora's Firefox, see J).
 
 ## Where we were (10 Oct 2026)
 
@@ -819,7 +819,7 @@ release.
 
 ## I — Documents in Pods: Word, then PDF · built (17 Oct 2026)
 
-Built 17 Oct, not yet run live ([manual test I](manual-tests.md#i--word-files-in-pods)):
+Built and run live 17 Oct ([manual test I](manual-tests.md#i--word-files-in-pods)):
 `src/lib/word.ts` (mammoth 1.13 + Turndown 7.2 and its GFM tables, loaded
 on demand), `src/ui/pictures.ts`, Pods (`src/places.ts`). Differences
 from the plan below:
@@ -890,7 +890,8 @@ play; `.odt` uploads with no preview, as planned. A 35 MB `.mp4` (H.264
 High + AAC, the usual web video) failed in Fedora's Firefox as "the file
 is corrupt": that Firefox decodes video through the system's
 `libavcodec-free`, which has no H.264 (RPM Fusion's
-`libavcodec-freeworld` adds it; Chrome and Safari have it). Not the pod,
+`libavcodec-freeworld` adds it). The same link plays in Chrome and
+Brave (checked 17 Oct). Not the pod,
 not the app; the preview now says "This browser cannot play …" with
 Download. Upload progress (asked 17 Oct): in I's "Later" list above.
 
