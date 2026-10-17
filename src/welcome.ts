@@ -16,7 +16,7 @@
 import type { Collective } from "./lib/collective";
 import { APP_NAME } from "./config";
 import { esc } from "./ui/patterns";
-import { renderThemeButton } from "./theme";
+import { renderThemeButton } from "./ui/theme";
 
 export interface Invitation {
   /** The host the invitation points to. */
@@ -146,7 +146,7 @@ function invitationCard(invitation: Invitation | null): string {
       <span class="avatar" aria-hidden="true">${esc(initials(collective.name))}</span>
       <div>
         <strong>${esc(collective.name)}</strong>
-        <span class="meta">The invitation comes from <code>${esc(host)}</code></span>
+        <span class="hint">The invitation comes from <code>${esc(host)}</code></span>
       </div>
     </div>`;
 }
@@ -233,8 +233,8 @@ export function renderLandingRest(copy: LandingCopy): string {
     </section>
 
     <footer class="landing-foot">
-      <span class="meta">Nothing between you and your pod: this page runs in your browser.</span>
-      <span class="meta">Built on Solid, an open web standard (W3C).</span>
+      <span class="hint">Nothing between you and your pod: this page runs in your browser.</span>
+      <span class="hint">Built on Solid, an open web standard (W3C).</span>
     </footer>`;
 }
 

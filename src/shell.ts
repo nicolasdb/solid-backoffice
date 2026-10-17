@@ -9,7 +9,7 @@
  * WebID, profile and sign out) sits under the avatar, with a dot while a
  * step is left to do.
  */
-import { bindThemeButton, renderThemeButton } from "./theme";
+import { renderThemeButton } from "./ui/theme";
 import { APP_NAME } from "./config";
 import { isCollectives, isPlaces, routeHref, type Route } from "./router";
 import { bindCopy, copyable } from "./steps";
@@ -96,7 +96,6 @@ export function renderShell({ webId, name, tabs, todo = 0, body }: ShellOptions)
 
 export function bindShell(app: HTMLElement, onLogout: () => void): void {
   app.querySelector("#logout")?.addEventListener("click", onLogout);
-  bindThemeButton(app);
   bindCopy(app.querySelector<HTMLElement>(".account-pop") ?? app);
   const menu = app.querySelector<HTMLDetailsElement>("#account-menu");
   if (!menu) return;

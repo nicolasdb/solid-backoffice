@@ -14,7 +14,6 @@
  * page signs the person in, and the home screen sets their name and inbox from
  * the record left here (`invite.ts`).
  */
-import { bindThemeButton } from "./theme";
 import { loginWithIdentifier } from "./lib/auth";
 import { AccountError, createAccount, emailProblem, passwordProblem, podAddress, usernameProblem } from "./lib/css-account";
 import { loadCollective, type Collective } from "./lib/collective";
@@ -85,7 +84,6 @@ export function renderWelcome(app: HTMLElement, options: WelcomeOptions): void {
     switchLabel,
   });
 
-  bindThemeButton(app);
   const switchMode = () => renderWelcome(app, { provider, mode: other });
   app.querySelector("#switch-mode")?.addEventListener("click", switchMode);
   app.querySelector("#nav-switch")?.addEventListener("click", switchMode);
@@ -129,7 +127,7 @@ function signInForm(provider: string | null, message?: string): string {
         <label for="identifier">Pod or WebID</label>
         <input id="identifier" name="identifier" type="url"
                value="${esc(DEFAULT_IDENTIFIER)}" required />
-        <p class="meta">
+        <p class="hint">
           Your pod's address, or your WebID if you don't know which provider
           hosts it: it will be found from your profile.
         </p>
@@ -139,7 +137,7 @@ function signInForm(provider: string | null, message?: string): string {
       ${
         provider
           ? `<hr class="divider">
-             <p class="meta">No Solid account yet?
+             <p class="hint">No Solid account yet?
                <button type="button" class="link-button" id="switch-mode">Create one on ${esc(providerHost(provider))}</button></p>`
           : ""
       }
@@ -187,18 +185,18 @@ function signUpForm(provider: string, message?: string): string {
   return `
     <form id="signup-form" class="stack panel-card" novalidate>
       <div class="step-head"><h2>Create your account</h2><span class="pill">Step 1 of 2</span></div>
-      <p class="meta">An account on <code>${esc(providerHost(provider))}</code>, with a pod of your own.</p>
+      <p class="hint">An account on <code>${esc(providerHost(provider))}</code>, with a pod of your own.</p>
       ${field("name", "Your name", `<input id="name" name="name" type="text" autocomplete="name" required />`,
-        `<p class="meta">Shown next to your work, in the collectives you join.</p>`)}
+        `<p class="hint">Shown next to your work, in the collectives you join.</p>`)}
       ${field("username", "Username",
         `<input id="username" name="username" type="text" autocomplete="username"
                 autocapitalize="none" spellcheck="false" required />`,
-        `<p class="meta">Your pod's address: <code id="pod-address">${esc(podAddress(provider, "your-name"))}</code></p>`)}
+        `<p class="hint">Your pod's address: <code id="pod-address">${esc(podAddress(provider, "your-name"))}</code></p>`)}
       ${field("email", "Email", `<input id="email" name="email" type="email" autocomplete="email" required />`)}
-      ${field("password", `Set a passphrase <span class="meta">— a regular password still works</span>`,
+      ${field("password", `Set a passphrase <span class="hint">— a regular password still works</span>`,
         `<input id="password" name="password" type="password" autocomplete="new-password"
                 placeholder="four random words you'll remember" required />`,
-        `<p class="meta">A passphrase, like <code>correct-horse-battery-staple</code>, is easier to
+        `<p class="hint">A passphrase, like <code>correct-horse-battery-staple</code>, is easier to
            remember and far harder to guess than a short password. Length beats symbols.
            At least 8 characters.</p>`)}
       ${field("confirm", "Type it again",
@@ -207,7 +205,7 @@ function signUpForm(provider: string, message?: string): string {
         <button id="reveal" class="ghost small" type="button" aria-pressed="false">Show passphrase</button>
         <button type="submit">Create my account</button>
       </div>
-      <p class="meta">
+      <p class="hint">
         Next, your provider's page asks for this email and passphrase once, to
         sign you in. Keep it somewhere safe: this provider cannot reset it by
         email yet.
@@ -215,7 +213,7 @@ function signUpForm(provider: string, message?: string): string {
       <p class="error" id="signup-error" role="alert" hidden></p>
       ${message ? `<p class="error" role="alert">${esc(message)}</p>` : ""}
       <hr class="divider">
-      <p class="meta">Already have a Solid account?
+      <p class="hint">Already have a Solid account?
         <button type="button" class="link-button" id="switch-mode">Sign in instead</button></p>
     </form>`;
 }
