@@ -15,6 +15,7 @@
 import { nameOf, readFile, saveFile, type FileContent } from "./lib/files";
 import { describePodError } from "./lib/pod";
 import { renderMarkdown } from "./ui/markdown";
+import { drawDiagrams } from "./ui/mermaid";
 import { esc } from "./ui/patterns";
 
 export type EditorView = "source" | "side" | "preview";
@@ -145,7 +146,9 @@ export function bindEditor(root: HTMLElement, editing: Editing, hooks: EditorHoo
     if (unsaved) unsaved.hidden = !dirty;
     clearTimeout(timer);
     timer = setTimeout(() => {
-      if (preview) preview.innerHTML = previewOf(editing);
+      if (!preview) return;
+      preview.innerHTML = previewOf(editing);
+      void drawDiagrams(preview);
     }, 150);
   });
 

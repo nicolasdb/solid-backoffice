@@ -1213,6 +1213,10 @@ button.menu-item.is-warn { color: var(--warn); }
 .preview.source code { background: none; padding: 0; }
 .preview.image { margin: 0; text-align: center; }
 .preview.image img { max-width: 100%; height: auto; }
+/* Mermaid diagrams (src/ui/mermaid.ts): on a light card in both themes, since
+   an author's classDef colours assume a light ground; wide ones scroll. */
+.prose .diagram { margin: 0 0 1em; padding: var(--space-4); background: white; border-radius: var(--radius-md); overflow-x: auto; }
+.prose .diagram svg { display: block; max-width: none; height: auto; }
 
 .file-status { margin: 0; }
 

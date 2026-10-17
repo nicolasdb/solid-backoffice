@@ -102,7 +102,8 @@ one changes, change the other. Never point it at the real provider.
   own memory of listings, rules and files (ADR 007), forgotten at
   sign-out. `src/lib/files.ts` lists folders, reads files and finds which
   rules apply (`effectiveAccess`); `src/ui/markdown.ts` renders a pod's
-  Markdown through DOMPurify, never raw. `src/access-panel.ts` is its
+  Markdown through DOMPurify, never raw; `src/ui/mermaid.ts` draws its
+  ```` ```mermaid ```` blocks (loaded on demand, strict, SVG sanitized). `src/access-panel.ts` is its
   "Who can access it" panel (C2), the same for folders and files (Only me,
   Inherit from parent, Anyone with the link, named people): a draft saved
   in one conditional write,

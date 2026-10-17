@@ -687,3 +687,19 @@ member through the new flow.
    diagram (in Pods): the header as fields, links clickable; the diagram as
    one block, its spacing kept, scrolled sideways on a phone; headings and
    paragraphs spaced. Both themes.
+
+## H · Mermaid in the Markdown preview
+
+1. **The plan.** In Pods, open `hyperscope_ndb/tasks/now.md`: the
+   flowchart is drawn, subgraphs per project, green and red nodes, dotted
+   arrows. Wide: it scrolls sideways inside the page, on a phone too.
+2. **Both themes.** Switch to dark: the diagram stays on its light card,
+   every label readable.
+3. **Speed.** On the Network tab, Mermaid's chunks load the first time a
+   diagram is shown, not when the app opens. Back to the folder and into
+   the file again: drawn at once, no flash of source.
+4. **A broken diagram.** Edit a copy, break a line of the diagram
+   (`A -->`): the preview shows the source with "This diagram could not be
+   drawn" and the reason; fix it, the diagram comes back.
+5. **Hostile source.** A diagram with `A["<img src=x onerror=alert(1)>"]`
+   and `click A "javascript:alert(2)"`: no alert, the label shown as text.

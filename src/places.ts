@@ -52,6 +52,7 @@ import { forgetAclLocations, type AccessRules } from "./lib/acl";
 import { describePodError, isAuthError } from "./lib/pod";
 import { routeHref, type Route } from "./router";
 import { renderMarkdown } from "./ui/markdown";
+import { drawDiagrams, forgetDiagrams } from "./ui/mermaid";
 import { busy } from "./ui/typing";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
 import { accessChips, bindAccess, labelOf, loadDraft, renderAccess, rulesOf, type Draft, type Group } from "./access-panel";
@@ -160,6 +161,7 @@ export function forgetPlaces(): void {
   ctx = null;
   releaseObjectUrls();
   forgetAclLocations();
+  forgetDiagrams();
 }
 
 function releaseObjectUrls(): void {
@@ -676,6 +678,7 @@ function draw(focus: boolean): void {
   releaseObjectUrls();
   frame.innerHTML = renderPlaces();
   bind();
+  void drawDiagrams(frame);
   if (focus) focusView(frame);
 }
 
