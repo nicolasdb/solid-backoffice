@@ -23,24 +23,23 @@ derived text, batches for a backlog, the trigger from CSS webhooks on the
 inbox; A → B → D → C). One WebID per agent: the puller is `hs:agent`, the
 confronter has its own.
 
-**Next, in order:**
-
 Done 17 Oct: the folders shared or granted before 16 Oct checked in a
 private window; solid-kit #5 and #6, overlay #1 and #2 merged (the overlay's
-`main` now holds the image, the connector and the procedures).
+`main` now holds the image, the connector and the procedures). The
+collective's docs came here from solid-kit: what a collective copies onto
+its pod is in `templates/collective/` (`config.ttl` and `membres.ttl`
+templates, parsed by the tests; the members' `guide/`), and
+create-a-collective was merged into the how-to and the reference's pod tree.
 
-1. **Bring the collective's docs here** from solid-kit: `guide/` (copied to
-   a collective's pod as `hs:guide`), `docs/collectives/create-a-collective.md`
-   (merge with `docs/how-to/set-up-a-collective.md`) and
-   `templates/collective/config.ttl` (beside `docs/examples/`): they follow
-   the backoffice's config, with a link to the connector's procedures.
-2. **The pipeline** (overlay, after the migration): A → B → D (D includes
+**Next, in order:**
+
+1. **The pipeline** (overlay, after the migration): A → B → D (D includes
    the summary before sharing, here in the Share panel) → C. Then copy the
    procedures to HyperScope's pod (`principles/`, contribution v3 included),
    then E step 4 with Xavier.
-3. The 10 Oct list below (Maps of Making live, ADR 006 §7, `sb:agent`
+2. The 10 Oct list below (Maps of Making live, ADR 006 §7, `sb:agent`
    optional, E).
-4. G's leftovers: moving a shared folder re-announces; the agent folder
+3. G's leftovers: moving a shared folder re-announces; the agent folder
    picker with suggestions and the four questions; items with rules of
    their own counted; a base `select` style in solid-kit.
 

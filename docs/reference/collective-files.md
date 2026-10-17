@@ -6,11 +6,42 @@ each container is
 it is not repeated here. Setting them up:
 [how-to](../how-to/set-up-a-collective.md).
 
-The collective's agent reads the same files, following solid-kit's
-[procedures](https://github.com/nicolasdb/solid-kit/blob/main/docs/procedures/README.md)
-(pull, confrontation). A change to a file's shape here means checking them.
+The collective's agent reads the same files, following its
+[procedures](https://github.com/nicolasdb/solid-css-overlay/blob/main/mcp-connector/procedures/README.md)
+(pull, confrontation; in solid-css-overlay, beside the connector). A change
+to a file's shape here means checking them.
 
-All three sit at the collective's pod root.
+## The pod tree
+
+At the root of the collective's pod. What to copy is in
+[`templates/collective/`](../../templates/collective/), laid out the same way.
+
+| Path | Origin | Access |
+|---|---|---|
+| `config.ttl` | [template](../../templates/collective/config.ttl), filled at creation | public read; **written by the owner only, never the agent** |
+| `membres.ttl` (`hs:roster`) | [template](../../templates/collective/membres.ttl), empty | members + agent read; written by the backoffice (owner) |
+| `inbox/` (`ldp:inbox`) | created empty | any signed-in agent appends; the common agent reads |
+| `agents/agent` | the common agent's profile | public |
+| `principles/procedure-*.md` (`hs:procedures`) | **copied from** the connector's [`procedures/`](https://github.com/nicolasdb/solid-css-overlay/blob/main/mcp-connector/procedures/) (generic) | members + agent read; owner writes, by ceremony |
+| `principles/cultivate.md` (or equivalent) | **local**: the collective's principles | same |
+| `guide/` (`hs:guide`) | **copied from** [`templates/collective/guide/`](../../templates/collective/guide/) (generic) | `guide/faq.md` public; the rest members |
+| `depots/`, `confrontations/` | created by the common agent | agent edits; members read |
+| `chantiers/`, `briefs/`, `public/` | to be specified | **à délibérer** |
+
+`procedures/` at the root is deprecated: procedures and principles live
+together in `principles/`.
+
+**Generic or local.** The procedures and the guide are the same text for
+every collective, so the same instructions serve every member of every
+collective. Two layers carry them: a generic skill
+([`collectif`](https://github.com/nicolasdb/solid-css-overlay/blob/main/mcp-connector/skills/collectif/SKILL.md)) that holds the invariants and
+resolves who, which collective and which role, through `config.ttl` only;
+and the procedures on the pod, read at every session. A collective adds its
+own history only as annexes of its copy (HyperScope: confrontation annexe C,
+pull annexe D). The principles are the collective's alone, and so is
+everything under `depots/` and after.
+
+The files the backoffice itself reads are below.
 
 ## config.ttl
 
@@ -46,10 +77,13 @@ login server, but our pods use WAC.
 ### Agent entry points
 
 `hs:procedures` and `hs:guide` are for agents, not for the backoffice, which
-ignores them. A collective skill (solid-kit `skills/collectif/`) follows them
-instead of writing a path in, and accepts a procedure only from the pod that
-hosts this `config.ttl`. The folders' contents are copied from solid-kit at
-creation ([create a collective](https://github.com/nicolasdb/solid-kit/blob/main/docs/collectives/create-a-collective.md)).
+ignores them. The `collectif` skill follows them instead of writing a path
+in, and accepts a procedure only from the pod that hosts this `config.ttl`.
+The folders' contents are copied at creation ([the pod tree](#the-pod-tree)).
+The common agent must not be able to write `config.ttl`: it names `hs:agent`
+and `hs:procedures`, so an agent that could write it could rename itself or
+repoint its own rules (2026-10-01: the agent's attempt to add
+`hs:procedures` was refused with 403, as it should be).
 
 ### Welcome copy
 
@@ -115,3 +149,16 @@ collective's account WebID), `as:target` (the collective's IRI) and
 | `as:Accept` | the `as:Join` it answers |
 | `as:Reject` | the `as:Join` it answers |
 | `as:Remove` | the member's WebID |
+
+## Open
+
+- **Members' Read on `guide/`.** Accepting a member grants Read on the
+  shared folders the backoffice knows (`depots/`, `confrontations/`,
+  `chantiers/`, `briefs/`, `principles/`); `guide/` is not among them yet.
+  Until it is, make the whole of `guide/` public, or grant it by hand.
+- **Keeping a pod copy in step** with `templates/collective/` and the
+  procedures: a version in each file (the procedures carry one in their
+  title), a `principles/VERSION`, and a backoffice command run as a
+  ceremony. Not built; it comes with copying the procedures to the pod.
+- **Tooling.** All of the above is by hand today; a « create a collective »
+  flow would follow the pod tree.

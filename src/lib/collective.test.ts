@@ -192,4 +192,29 @@ describe("docs/examples — the files to upload", () => {
       bundleFolder: "output2/hyperscope/",
     });
   });
+
+  it("the template a collective starts from parses, placeholders and all", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const turtle = readFileSync(resolve(process.cwd(), "templates/collective/config.ttl"), "utf8");
+    const url = "https://pod.example/collective/config.ttl";
+    expect(parseCollectiveConfig(turtle, url)).toEqual({
+      configUrl: url,
+      group: "https://pod.example/collective/config.ttl#NOM",
+      name: "NOM-DU-COLLECTIF",
+      roster: "https://pod.example/collective/membres.ttl",
+      inbox: "https://pod.example/collective/inbox/",
+      agent: "https://pod.example/collective/agents/agent#me",
+      bundleFolder: "output2/NOM/",
+    });
+  });
+
+  it("the roster template holds no member yet", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const turtle = readFileSync(resolve(process.cwd(), "templates/collective/membres.ttl"), "utf8");
+    expect(
+      parseRoster(turtle, "https://pod.example/collective/membres.ttl", "https://pod.example/collective/config.ttl#NOM")
+    ).toEqual([]);
+  });
 });

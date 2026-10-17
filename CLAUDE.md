@@ -141,7 +141,10 @@ next tasks), then `docs/journeys.md`. No plan lives anywhere else.
 `docs/` follows Diátaxis (index: `docs/README.md`): tutorials, how-to,
 reference, explanation, each fact in one place. `docs/faq.md` holds only
 questions with a one-line answer and a link to the page that owns it; never
-put an answer there that exists nowhere else. Anything about the collective's
+put an answer there that exists nowhere else. `templates/collective/` is not
+docs: it is what a collective copies onto its pod (`config.ttl`,
+`membres.ttl`, `guide/` in French for its members, with answers of its own),
+and its `config.ttl` is parsed by `src/lib/collective.test.ts`. Anything about the collective's
 agent, snapshots or the protocol belongs in solid-kit's ADRs, not here.
 
 ## Rules that are easy to break
