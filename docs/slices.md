@@ -48,7 +48,7 @@ create-a-collective was merged into the how-to and the reference's pod tree.
      agent document's `foaf:name`, else the address's last part. The WebID
      never changes (members' rules name it); only the name shown does.
      - Setting up a collective proposes the agent's name as
-       "<collective> · pull" (its one role, ADR 006 amendment to come); the
+       "<collective>·pull" (its one role, ADR 006 amendment to come); the
        address follows from it and stays editable.
      - With no `foaf:name`, show "<pod> / <last part>", not the last part
        alone.
@@ -216,7 +216,7 @@ snapshot (TransiStore), then the loop with Xavier.
 confrontation v2 (8 catch-up sidecars, 13 topics), 20/20 documents
 ingested, a topic query found two documents through a synonym. Member side:
 a new chat with Nicolas's agent drew related topics from the graph into
-the conversation and wrote a new contribution to `output2/hyperscope/`,
+the conversation and wrote a new contribution to `output-to/hyperscope/`,
 citing its sources in `s-appuie-sur:`, ready for the next run. Fixed from
 that use: a free short name when the plain one is taken, a refusal or
 removal shown on the member's side (with the admin's reason) instead of
@@ -322,18 +322,18 @@ Not in A, on purpose:
 
 - **Sharing sets the folder's rules whole; stopping deletes them** (27 Sep
   2026, overrules A's first cut and the 26 Sep merge): Share writes
-  `output2/<collective>/.acl` as you (Control), your profile's
+  `output-to/<collective>/.acl` as you (Control), your profile's
   `acl:delegates` (Can edit) and the collective's agent (Can read). Stop
   sharing deletes that `.acl`, so the folder inherits again: inheriting is
   the absence of rules, not something to restore. Both first give
-  `output2/` rules of its own (you, your agents) when it has none, so
+  `output-to/` rules of its own (you, your agents) when it has none, so
   inheriting never means the pod root's public Read. `src/lib/sharing.ts`,
   pinned on CSS in `test/pods/member.test.ts`.
 
 The design review (draft 2) changed three things in A before B starts:
 account creation moves into the first journey (username, email, password;
 our provider only), the home screen splits into "You run" and "You belong
-to" (built), and the shared folder becomes `output2/<collective>/` (built). Reasons:
+to" (built), and the shared folder becomes `output-to/<collective>/` (built). Reasons:
 [explanation/membership.md](explanation/membership.md),
 [explanation/sharing.md](explanation/sharing.md).
 
@@ -498,9 +498,9 @@ Not in C, on purpose:
 
 **Closed (27 Sep 2026).** Found in live use and changed before closing:
 
-- **Sharing** sets `output2/<collective>/.acl` whole (you, your
+- **Sharing** sets `output-to/<collective>/.acl` whole (you, your
   `acl:delegates` Can edit, the collective's agent Can read); stop sharing
-  deletes it, so the folder inherits. Both first give `output2/` rules of
+  deletes it, so the folder inherits. Both first give `output-to/` rules of
   its own when it has none, so inheriting never reaches the pod root's
   public Read ([access rules](explanation/access-rules.md)). The merge of
   26 Sep had left your agent out and could leave "Only me".
@@ -562,7 +562,7 @@ connector, let it act for you or not, delete. As built
   reaches as a count only, a warning when connected to nothing, the
   drawer's steps while unfinished, and the next step as the one primary
   button. The folders themselves are one level down, in Choose folders,
-  which marks `output2/<collective>/` as shared. The `···` menu (Connect
+  which marks `output-to/<collective>/` as shared. The `···` menu (Connect
   or Revoke, Choose folders, acts for you, Delete) closes on a click
   elsewhere or Escape.
 - Found live and fixed: an agent whose connectors could not be read (the
@@ -651,7 +651,7 @@ proof. Most of the work is in pocpod0 (connector, Oxigraph) and solid-kit
 (the procedures, ADR 006); this repo holds the membership side of it.
 
 The scenario it must pass: Xavier's agent writes his summary to
-`output2/hyperscope/`; the collective's agent pulls, confronts and ingests
+`output-to/hyperscope/`; the collective's agent pulls, confronts and ingests
 it; Nicolas opens a new conversation with his own agent, which finds
 Xavier's work through `graph_query`, reads it on the pod, and writes a new
 contribution citing it (`prov:wasDerivedFrom`) that goes round again.
@@ -677,7 +677,7 @@ Decided (29 Sep 2026):
 - **Skills as IPO modules**: each procedure names its input folder, its
   output folder and is the only writer there. Pull and confrontation exist
   (solid-kit `docs/procedures/`); ingest is a tool; the member's procedure
-  (what to put in `output2/`, how to cite) is to write.
+  (what to put in `output-to/`, how to cite) is to write.
 
 Steps: (1) connector tools, **done, deployed**; (2) agents granted on
 accept, **built**, live check in [manual tests](manual-tests.md) "E";
@@ -702,13 +702,13 @@ that is the finding.
 ## G — Share the folder you choose · built, run live, closed (16 Oct 2026)
 
 Why: Xavier's first try (E step 4). How sharing works was confusing, and
-`output2/` means nothing to a member. The member should pick the folder they
+`output-to/` means nothing to a member. The member should pick the folder they
 share, from the collective's panel.
 
 Decided (16 Oct 2026):
 
 - **The member picks the folder.** `hs:bundleFolder` becomes the picker's
-  suggestion, not a rule. Rename the example away from `output2/`.
+  suggestion, not a rule. Rename the example away from `output-to/`.
   Root, `profile/`, `settings/` and `inbox/` are never offered
   (`PROTECTED` in `src/lib/move.ts`).
 - **The choice lives in `settings/collectives.ttl`** on the member's pod,
@@ -754,7 +754,7 @@ Edges:
 - Items inside with their own rules don't inherit the Read: count them and
   say the collective can't read them.
 - A share inside another shared folder: show it.
-- `src/agents-view.ts` stops matching `^output2/` and reads the settings
+- `src/agents-view.ts` stops matching `^output-to/` and reads the settings
   file instead.
 
 Done (PRs #1, #2, #3, and `f271158` pushed to `dev` directly by mistake),
@@ -778,7 +778,7 @@ run live on HyperScope by Nicolas, 16 Oct 2026:
 
 Left over, carried to "Where we are": moving a shared folder
 re-announces; suggestions and reasons (four questions) in the agent
-folder picker, with `agents-view.ts`'s `^output2/` note; the count of
+folder picker, with `agents-view.ts`'s `^output-to/` note; the count of
 items with rules of their own; `procedure-contribution` reads the
 settings file (solid-kit); a base `select` style in the kit.
 
