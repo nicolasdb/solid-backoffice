@@ -825,12 +825,15 @@ to it. Keep or convert, and why no option is closed:
 The rule: the original is never replaced; a conversion is a copy beside
 it, with `source`, `converted` and `converter` in its YAML header.
 
-- **I1 · Preview.** A `.docx` in Pods shows as a page: mammoth to HTML in
-  the browser, through the same sanitizing as Markdown, loaded only when a
-  Word file is opened. Read only.
-- **I2 · Make a Markdown copy.** In the `···` menu of a `.docx`: writes
-  `<name>.md` and its images (`<name>-images/`) beside it, the header
-  pointing back to the original. Converter taken from
+- **I1 · Preview.** A `.docx` in Pods (by type or extension) shows as a
+  page: mammoth to HTML in the browser, through the same sanitizing as
+  Markdown, loaded only when a Word file is opened. Read only.
+- **I2 · Convert, the member's choice.** Uploading a `.docx` asks: keep
+  the Word file (default), keep it and add a Markdown copy, or Markdown
+  only (images beside it; the `.docx` stays on the member's computer).
+  The same copy from the `···` menu of a `.docx` already on the pod.
+  Writes `<name>.md` and its images (`<name>-images/`), the header naming
+  the original. Converter taken from
   [obsidian-docx-importer](https://github.com/mayac5/obsidian-docx-importer)'s
   `src/converter.ts` (MIT, notice kept), without its wikilink step.
   Refused, not overwritten, when the copy's name exists.
@@ -839,14 +842,15 @@ it, with `source`, `converted` and `converter` in its YAML header.
   skill's (its `source:` is a Google Docs URL).
 - Later, not planned: "Download as Word" for a Markdown file (the
   plugin's exporter, on the `docx` library); `.odt`; PDF (the next format
-  after `.docx`; pandoc does not read it). Known unknowns, and the
-  proposal to keep only the Markdown on the collective's pod:
+  after `.docx`; pandoc does not read it). Known unknowns:
   [Word files on a pod](explanation/word-files.md#known-unknowns).
 
-Depends on: nothing outside this repo. Related, elsewhere: pipeline B
-(solid-css-overlay) extracts derived text from whatever a member shares,
-converted or not, with pandoc; the share summary (pipeline D) counts
-`.docx` among the types.
+Depends on: nothing outside this repo. Related, elsewhere (decided 17 Oct,
+[why](explanation/word-files.md#on-the-collectives-pod-markdown-and-images-the-docx-dropped)):
+pipeline B (solid-css-overlay) pulls a shared `.docx`, converts it with
+pandoc to Markdown and images, checks the conversion in code, and drops
+its `.docx` only when complete; solid-kit ADR 006 to amend (pull rule 5).
+The share summary (pipeline D) counts `.docx` among the types.
 
 ## Replacing the old backoffice
 

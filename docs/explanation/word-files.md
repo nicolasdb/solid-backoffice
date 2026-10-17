@@ -75,9 +75,13 @@ Each path is optional, and each leaves a file the others can read:
 
 1. **Upload the `.docx`** in Pods. Works today. The pipeline extracts text
    from it when the folder is shared (pipeline B, pandoc on the server).
-2. **Make a Markdown copy** in Pods (slice I2): the conversion runs in the
-   browser on a `.docx` already on the pod, and writes the copy and its
-   images beside it. Nothing leaves the browser.
+2. **Convert in Pods** (slice I2), the member's choice, in the browser
+   (nothing leaves it): when uploading a `.docx`, keep the Word file
+   (the default), keep it and add a Markdown copy, or store the Markdown
+   only, its images beside it (the `.docx` then stays on the member's
+   computer); and later, "Make a Markdown copy" from the `···` menu of a
+   `.docx` already on the pod. Any `.docx` in Pods previews as a page
+   (I1).
 3. **From Google Docs**, the claude.ai skill `gdoc-to-solid-md` (beta):
    exports the open document to Markdown on the pod, with the source URL in
    its YAML header and images as relative links. Same shape as 2, so the
@@ -89,25 +93,80 @@ Each path is optional, and each leaves a file the others can read:
 A member may use any, all or none. No path deletes or rewrites what
 another one wrote on the member's pod.
 
-## On the collective's pod: keep the Markdown, drop the `.docx`?
+## On the collective's pod: Markdown and images, the `.docx` dropped
 
-Proposed 17 Oct, not decided. For path 4, the collective could pull the
-`.docx`, convert it to Markdown with its images beside it, then delete its
-copy of the `.docx`. Lighter storage; the provenance still names the
-author's original on their pod.
+**Decided 17 Oct 2026** (to carry into solid-kit ADR 006, which changes
+pull rule 5, and into pipeline B in solid-css-overlay). For path 4, the
+collective pulls the `.docx`, converts it to Markdown with its images
+beside it, checks the conversion, then drops its copy of the `.docx`.
 
-What it costs, to weigh in solid-kit ADR 006 before adopting it:
+Why:
 
-- **The snapshot stops being the bytes.** Pull rule 5 (exact bytes) and
-  ADR 001 (derived text is an index, not truth) make the snapshot the
-  evidence of what was confronted. Without it, a later question ("what did
-  the document say when this was confronted?") points to the author's pod,
-  where the file may have changed or gone.
-- **A converter's mistake cannot be redone** from the collective's side:
-  converting again needs the original, which only the author holds.
-- **A middle way**: keep the `.docx` for a while (until confronted, or N
-  days), then drop it; or keep it only while the author's copy is
-  unreachable.
+- **A world of text.** What a collective holds is read by its members,
+  its agents and the confronter. Markdown is read by all three without a
+  tool in between; a `.docx` is not.
+- **The evidence is the author's pod.** If the Markdown is ever
+  questioned, the original is where the author keeps it, and the
+  provenance names it. Asking the author for access to it is a feature
+  noted for later ("request access").
+- **Nobody writes on the collective's pod** but its agent, in a guarded,
+  checked way. Any other change goes through the collective's
+  governance; enforced in production, not while developing.
+- **Storage**: one copy instead of two (below).
+
+What it costs, accepted: the collective's snapshot is no longer the exact
+bytes, and a converter's mistake is redone only from the author's
+original. That is why the `.docx` is dropped **only after the conversion
+has been checked**, and kept while it fails.
+
+### File size
+
+A `.docx` is a zip of XML: the text wrapped in verbose markup, then
+compressed, plus a fixed set of parts (styles, theme, fonts, settings)
+of around ten kilobytes even for a short note. Images are stored inside
+as they are.
+
+- **Text**: the Markdown is the text plus a few marks. Short documents
+  get smaller (no fixed overhead); long ones end up about the same,
+  because the XML's compression makes up for its markup.
+- **Images**: the same bytes either way; pandoc extracts them unchanged.
+  In an illustrated document they are most of the size.
+- **Where the gain is**: not keeping both. A `.docx` with its Markdown
+  copy holds every image twice, and a derived `.texte.md` beside a
+  `.docx` is a second file per document. Dropping the `.docx` roughly
+  halves an illustrated document's storage. Against Google's Markdown
+  export, separate image files are a third smaller than base64 and keep
+  the text file readable.
+
+So size helps, but per file it is a modest argument; one copy instead of
+two, and text read directly, are the strong ones. To be measured on
+Xavier's folder: the pull report can give bytes in and bytes kept.
+
+### Checking the conversion, without an LLM
+
+The confronter never reads a `.docx`: it reads the Markdown. So the check
+that allows dropping the `.docx` is done by the pull's code, right after
+the conversion, not by confrontation; nothing is extracted twice.
+
+Pandoc has no "verify" step of its own, but it reports what it can:
+a non-zero exit when it fails, and warnings (`--verbose`;
+`--fail-if-warnings` turns them into failures). The rest is compared with
+the `.docx`'s own XML, which is plain text inside the zip:
+
+| Check | From the `.docx` | From the result |
+|---|---|---|
+| Pandoc ran | exit code, warnings | |
+| Text kept | words in `w:t` (body, footnotes, endnotes) | words in `pandoc -t plain` of the Markdown; a ratio close to 1 |
+| Images kept | files in `word/media/` | files extracted and linked from the Markdown |
+| Comments | `word/comments.xml` present | kept with `--track-changes=all`, or reported as dropped |
+| Tracked changes | `w:ins`, `w:del` | accepted by default: reported |
+| Charts, embedded objects | `word/charts/`, `w:object` | not converted: reported |
+
+The outcome is the extraction status already planned (ADR 006 §8):
+`texte-complet` (all checks pass: the `.docx` is dropped), `texte-partiel`
+(what is missing, listed: the `.docx` is kept and the admin sees it in the
+pull report), `texte-echec` (kept). The confronter can still flag a text
+that reads as broken, as one more signal, not the gate.
 
 ## One converter: pandoc
 
@@ -157,7 +216,10 @@ Noted, not solved; each is taken up when the path it belongs to is built.
   `--extract-media` lift `data:` images out of Markdown input into files?
   If so, the same tool cleans it, on the server or in pipeline B's
   derived text. To check on a real export.
-- **Path 4's storage**: keep or drop the collective's `.docx` (above).
+- **Request access** to the author's original, when a collective's
+  Markdown is questioned: noted, not designed.
+- **The check's thresholds**: what text ratio counts as complete, and how
+  long a kept `.docx` waits for the admin. Set on Xavier's real files.
 - **Editing after conversion**: when the Markdown copy is edited, is the
   `.docx` beside it still useful, and should the preview say "older"?
 - **The Google Docs skill** (beta): its header and image layout, to align
