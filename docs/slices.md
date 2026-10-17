@@ -42,6 +42,23 @@ create-a-collective was merged into the how-to and the reference's pod tree.
 3. G's leftovers: moving a shared folder re-announces; the agent folder
    picker with suggestions and the four questions; items with rules of
    their own counted; a base `select` style in solid-kit.
+4. **Small, any time:**
+   - **Agent names that tell collectives apart** (17 Oct). Several
+     collectives' agents all showed as "agent": the label comes from the
+     agent document's `foaf:name`, else the address's last part. The WebID
+     never changes (members' rules name it); only the name shown does.
+     - Setting up a collective proposes the agent's name as
+       "<collective> · pull" (its one role, ADR 006 amendment to come); the
+       address follows from it and stays editable.
+     - With no `foaf:name`, show "<pod> / <last part>", not the last part
+       alone.
+     - Chips stay short: cut a long name with an ellipsis, the full name
+       and the WebID on hover and copy.
+     - The label taken from the member's own `config.ttl`
+       ("HyperScope's agent") keeps priority over `foaf:name`, which the
+       agent declares about itself.
+   - **Mermaid in the Markdown preview**: render ```` ```mermaid ```` blocks
+     (the cross-project dashboard on the pod uses one).
 
 ## Where we were (10 Oct 2026)
 
