@@ -191,12 +191,15 @@ export interface FileContent {
 /** Past this, a text file is offered as a download rather than shown. */
 export const PREVIEW_LIMIT = 1_000_000;
 
+/** Text served under an `application/` type: shown and edited as source. */
+const TEXT_TYPES = new Set(["application/n-triples", "application/n-quads", "application/toml"]);
+
 export function kindOf(contentType: string, url = ""): FileKind {
   const type = contentType.split(";")[0].trim().toLowerCase();
   if (type === "text/markdown" || /\.(md|markdown)$/i.test(url)) return "markdown";
   if (type === "application/json" || type === "application/ld+json" || /\.json$/i.test(url)) return "json";
   if (type.startsWith("image/") && type !== "image/svg+xml") return "image";
-  if (type.startsWith("text/") || type === "application/n-triples" || type === "application/n-quads") return "text";
+  if (type.startsWith("text/") || TEXT_TYPES.has(type) || /\.toml$/i.test(url)) return "text";
   return "other";
 }
 
@@ -277,6 +280,7 @@ export function typeFor(name: string): string {
     ttl: "text/turtle",
     html: "text/html",
     csv: "text/csv",
+    toml: "application/toml",
     png: "image/png",
     jpg: "image/jpeg",
     jpeg: "image/jpeg",

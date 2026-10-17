@@ -15,12 +15,16 @@
  * readable. A diagram that does not parse is shown as its source, with the
  * reason above it. Drawn SVG is kept by source, so a redraw of the page does
  * not draw it again.
+ *
+ * A diagram is shown at its own size and scrolls sideways; "Fit width"
+ * scales it to the page, "Full screen" gives it the whole screen.
  */
 import DOMPurify from "dompurify";
 
 type Mermaid = typeof import("mermaid").default;
 
 const drawn = new Map<string, string>();
+const fitted = new Set<string>(); // sources shown at the card's width, kept across redraws
 let loading: Promise<Mermaid> | null = null;
 let counter = 0;
 
@@ -55,7 +59,7 @@ export async function drawDiagrams(root: ParentNode): Promise<void> {
   const blocks = [...root.querySelectorAll<HTMLElement>("pre > code.language-mermaid")];
   for (const code of blocks) {
     const pre = code.parentElement!;
-    const source = code.textContent ?? "";
+    const source = (code.textContent ?? "").trim();
     let svg: string;
     try {
       svg = await diagramSvg(source);
@@ -68,11 +72,58 @@ export async function drawDiagrams(root: ParentNode): Promise<void> {
       continue;
     }
     if (!pre.isConnected) continue; // the page was redrawn meanwhile
-    const figure = document.createElement("figure");
-    figure.className = "diagram";
-    figure.innerHTML = svg;
-    pre.replaceWith(figure);
+    pre.replaceWith(diagramFigure(source, svg));
   }
+}
+
+/** The diagram with its two buttons: fit to the width, and full screen. */
+function diagramFigure(source: string, svg: string): HTMLElement {
+  const figure = document.createElement("figure");
+  figure.className = "diagram";
+  figure.classList.toggle("is-fit", fitted.has(source));
+  figure.innerHTML = `
+    <div class="diagram-bar">
+      <button type="button" class="ghost small" data-diagram="fit" aria-pressed="${fitted.has(source)}">Fit width</button>
+      <button type="button" class="ghost small" data-diagram="full">Full screen</button>
+    </div>
+    <div class="diagram-canvas">${svg}</div>`;
+  const fit = figure.querySelector<HTMLButtonElement>('[data-diagram="fit"]')!;
+  const full = figure.querySelector<HTMLButtonElement>('[data-diagram="full"]')!;
+  fit.addEventListener("click", () => {
+    if (fitted.has(source)) fitted.delete(source);
+    else fitted.add(source);
+    figure.classList.toggle("is-fit", fitted.has(source));
+    fit.setAttribute("aria-pressed", String(fitted.has(source)));
+  });
+  const shown = () => document.fullscreenElement === figure || figure.classList.contains("is-full");
+  const label = () => (full.textContent = shown() ? "Exit full screen" : "Full screen");
+  const escape = (event: KeyboardEvent) => {
+    if (event.key === "Escape") leave();
+  };
+  // The Fullscreen API where there is one; a fixed layer over the app where
+  // there is not (Safari on an iPhone), closed with Escape or the button.
+  const leave = () => {
+    figure.classList.remove("is-full");
+    document.removeEventListener("keydown", escape);
+    label();
+  };
+  full.addEventListener("click", () => {
+    if (document.fullscreenElement === figure) void document.exitFullscreen();
+    else if (figure.classList.contains("is-full")) leave();
+    else if (document.fullscreenEnabled) void figure.requestFullscreen();
+    else {
+      figure.classList.add("is-full");
+      document.addEventListener("keydown", escape);
+      label();
+    }
+  });
+  figure.addEventListener("fullscreenchange", label);
+  return figure;
+}
+
+/** A diagram is shown full screen: the page must not be redrawn under it. */
+export function diagramExpanded(): boolean {
+  return Boolean(document.fullscreenElement?.classList.contains("diagram") || document.querySelector(".diagram.is-full"));
 }
 
 function firstLine(err: unknown): string {
@@ -82,4 +133,5 @@ function firstLine(err: unknown): string {
 /** Forgotten at sign-out, with the rest of what was read. */
 export function forgetDiagrams(): void {
   drawn.clear();
+  fitted.clear();
 }

@@ -692,14 +692,22 @@ member through the new flow.
 
 1. **The plan.** In Pods, open `hyperscope_ndb/tasks/now.md`: the
    flowchart is drawn, subgraphs per project, green and red nodes, dotted
-   arrows. Wide: it scrolls sideways inside the page, on a phone too.
-2. **Both themes.** Switch to dark: the diagram stays on its light card,
+   arrows. At its own size it scrolls both ways inside the card, on a
+   phone too.
+2. **Fit width, full screen.** Fit width: the whole diagram in the card;
+   it stays fitted after Back and into the file again. Full screen: the
+   whole screen, fitted or at its own size (scrolls); Escape or the button
+   leaves it, and the page underneath is as it was. On an iPhone (no
+   Fullscreen API): the diagram covers the app, the button closes it.
+3. **Both themes.** Switch to dark: the diagram stays on its light card,
    every label readable.
-3. **Speed.** On the Network tab, Mermaid's chunks load the first time a
+4. **Speed.** On the Network tab, Mermaid's chunks load the first time a
    diagram is shown, not when the app opens. Back to the folder and into
    the file again: drawn at once, no flash of source.
-4. **A broken diagram.** Edit a copy, break a line of the diagram
+5. **A broken diagram.** Edit a copy, break a line of the diagram
    (`A -->`): the preview shows the source with "This diagram could not be
    drawn" and the reason; fix it, the diagram comes back.
-5. **Hostile source.** A diagram with `A["<img src=x onerror=alert(1)>"]`
+6. **Hostile source.** A diagram with `A["<img src=x onerror=alert(1)>"]`
    and `click A "javascript:alert(2)"`: no alert, the label shown as text.
+7. **TOML.** A `.toml` file opens as source, Edit works, and a saved file
+   keeps its type.

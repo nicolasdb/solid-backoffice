@@ -795,16 +795,20 @@ Built:
 
 - ```` ```mermaid ```` blocks become diagrams in Pods' preview and the
   editor's preview (`src/ui/mermaid.ts`). Other formats are unchanged:
-  Turtle and plain text as source, JSON indented, TOML has no preview
-  (CSS serves it as `application/toml`).
+  Turtle and plain text as source, JSON indented.
 - Mermaid loads only on a page that holds a diagram (its own chunks, the
   main bundle unchanged).
 - Safety: `securityLevel: "strict"` (labels encoded, no clicks, not
   overridable from `%%{init}%%`), labels as SVG text (no
   `foreignObject`), and the SVG goes through DOMPurify's SVG profile.
 - Drawn on a light card in both themes, because a `classDef`'s colours
-  assume a light ground; a wide diagram scrolls sideways. A diagram that
-  does not parse stays as source with the reason above it.
+  assume a light ground. Shown at its own size, scrolled; **Fit width**
+  (kept across redraws) and **Full screen** (the Fullscreen API, or a
+  layer over the app where there is none; the page is not redrawn under
+  it). A diagram that does not parse stays as source with the reason
+  above it.
+- Bonus: `.toml` previews and edits as text (CSS serves it as
+  `application/toml`, which is not `text/*`).
 - Drawn SVG kept by source (50 at most), forgotten at sign-out.
 
 Run live: [manual tests, H](manual-tests.md#h--mermaid-in-the-markdown-preview).

@@ -65,6 +65,8 @@ describe("a folder's listing", () => {
     expect(kindOf("image/png")).toBe("image");
     expect(kindOf("image/svg+xml")).toBe("other");
     expect(kindOf("application/pdf")).toBe("other");
+    expect(kindOf("application/toml")).toBe("text");
+    expect(kindOf("application/octet-stream", "x/config.toml")).toBe("text");
   });
 });
 

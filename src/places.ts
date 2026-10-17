@@ -52,7 +52,7 @@ import { forgetAclLocations, type AccessRules } from "./lib/acl";
 import { describePodError, isAuthError } from "./lib/pod";
 import { routeHref, type Route } from "./router";
 import { renderMarkdown } from "./ui/markdown";
-import { drawDiagrams, forgetDiagrams } from "./ui/mermaid";
+import { diagramExpanded, drawDiagrams, forgetDiagrams } from "./ui/mermaid";
 import { busy } from "./ui/typing";
 import { esc, renderError, renderPending, toast } from "./ui/patterns";
 import { accessChips, bindAccess, labelOf, loadDraft, renderAccess, rulesOf, type Draft, type Group } from "./access-panel";
@@ -555,7 +555,7 @@ function kindFromItem(item: Item | undefined): string {
   if (/markdown/.test(type) || /\.md$/i.test(item?.url ?? "")) return "markdown";
   if (/json/.test(type)) return "json";
   if (type.startsWith("image/")) return "image";
-  if (type.startsWith("text/")) return "text";
+  if (type.startsWith("text/") || /toml/.test(type) || /\.toml$/i.test(item?.url ?? "")) return "text";
   return "other";
 }
 
@@ -687,6 +687,7 @@ function inUse(): boolean {
   return (
     !frame ||
     busy(frame) ||
+    diagramExpanded() ||
     Boolean(draft?.dirty) ||
     isDirty(editing) ||
     Boolean(creating) ||
