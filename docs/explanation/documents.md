@@ -1,4 +1,4 @@
-# Word files on a pod: keep, convert, or both
+# Documents on a pod: Word and PDF, keep or convert
 
 Members arrive with `.docx` files, and Google Docs that export to one. A
 pod stores any bytes, so the question is not whether a `.docx` can live on
@@ -183,6 +183,26 @@ likely split: pandoc on the server (pipeline B, and a server-side "convert"
 if the backoffice ever asks for one), mammoth in the browser for preview
 and a quick copy (I1, I2).
 
+## PDF: the same paths, a weaker conversion
+
+Planned 17 Oct on the same paths as `.docx`: preview in Pods, the
+member's choice to convert at upload, and on the collective's pod
+Markdown and images after a check. What differs is how much a conversion
+can keep. A PDF stores glyphs at positions, not paragraphs, headings or
+tables; structure is guessed back, and a scan holds no text at all.
+
+| | `.docx` | PDF |
+|---|---|---|
+| Preview in the browser | mammoth to HTML | the browser's own PDF viewer on the file's bytes (an iPhone shows the first page only: Download stays) |
+| Copy in the browser | mammoth, structure kept | pdf.js text, one paragraph per block, no headings or tables: a rough copy, said so |
+| On the server | pandoc | not pandoc. Light: poppler's `pdftotext` and `pdfimages` (text and images, no structure). Heavy: docling (MIT, layout models, tables, OCR for scans), much slower and larger |
+| Scans | n/a | no text: `texte-echec` unless OCR runs |
+| The check | word counts against the XML | text per page (a page with images and no text is a scan), images listed by `pdfimages -list` against those extracted |
+
+So on the collective's pod, a PDF more often ends `texte-partiel` and keeps
+its original. That follows from the rule (drop only what the check
+confirms), not from a special case.
+
 ## The Obsidian plugin as a reference
 
 [mayac5/obsidian-docx-importer](https://github.com/mayac5/obsidian-docx-importer)
@@ -210,8 +230,10 @@ and a quick copy (I1, I2).
 
 Noted, not solved; each is taken up when the path it belongs to is built.
 
-- **PDF**: which tool for text, and for Markdown with structure; what a
-  scan gets (OCR, or flagged). The next format after `.docx`.
+- **PDF on the server**: poppler alone, or docling; measured on Xavier's
+  PDFs (quality, time, image size). OCR for scans or not.
+- **PDF's check**: what "complete" means without a source of truth to
+  count against.
 - **Google's Markdown with base64 images**: can pandoc's
   `--extract-media` lift `data:` images out of Markdown input into files?
   If so, the same tool cleans it, on the server or in pipeline B's
@@ -231,4 +253,4 @@ Noted, not solved; each is taken up when the path it belongs to is built.
 - **Legacy `.doc`**: neither pandoc nor mammoth reads it; LibreOffice
   could convert it. Wait for a member who has one.
 
-Where this sits in the plan: [slices, I](../slices.md#i--word-files-in-pods).
+Where this sits in the plan: [slices, I](../slices.md#i--documents-in-pods-word-then-pdf).

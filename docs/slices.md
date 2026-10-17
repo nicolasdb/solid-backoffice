@@ -58,7 +58,9 @@ create-a-collective was merged into the how-to and the reference's pod tree.
        ("HyperScope's agent") keeps priority over `foaf:name`, which the
        agent declares about itself.
    - **Mermaid**: built 17 Oct, to run live ([H](#h--mermaid-in-the-markdown-preview--built-17-oct-2026)).
-5. **Word files** ([I](#i--word-files-in-pods)): free to start, after H.
+5. **Documents, Word then PDF** ([I](#i--documents-in-pods-word-then-pdf)): free to start, after H.
+6. **Media** ([J](#j--media-in-pods-images-audio-video)): J1 and J2 any
+   time (small, and J2 matters before members upload video).
    I1 (preview) and I2 (a Markdown copy) depend on nothing outside this
    repo; pipeline B still handles the `.docx` a member shares unconverted,
    so I helps Xavier's share without unblocking it.
@@ -816,11 +818,11 @@ Mermaid 12 pulls KaTeX, which `npm audit` flags (prototype pollution,
 moderate); math in labels is not used, an override waits for a fixed
 release.
 
-## I — Word files in Pods
+## I — Documents in Pods: Word, then PDF
 
 Why: members arrive with `.docx` (Xavier's share), and Google Docs export
 to it. Keep or convert, and why no option is closed:
-[Word files on a pod](explanation/word-files.md).
+[Documents on a pod](explanation/documents.md).
 
 The rule: the original is never replaced; a conversion is a copy beside
 it, with `source`, `converted` and `converter` in its YAML header.
@@ -840,17 +842,60 @@ it, with `source`, `converted` and `converter` in its YAML header.
 - **I3 · The preview says where a copy came from**: "Converted from
   rapport.docx on 17 Oct", for I2's copies and the `gdoc-to-solid-md`
   skill's (its `source:` is a Google Docs URL).
+- **I4 · PDF, the same paths** (after I1–I3): preview with the
+  browser's own viewer on the file's bytes; at upload, keep the PDF
+  (default), add a rough Markdown copy (pdf.js text, said to be rough),
+  or both. Its server side (pipeline B) is poppler or docling, not
+  pandoc: [PDF](explanation/documents.md#pdf-the-same-paths-a-weaker-conversion).
 - Later, not planned: "Download as Word" for a Markdown file (the
-  plugin's exporter, on the `docx` library); `.odt`; PDF (the next format
-  after `.docx`; pandoc does not read it). Known unknowns:
-  [Word files on a pod](explanation/word-files.md#known-unknowns).
+  plugin's exporter, on the `docx` library); `.odt`. Known unknowns:
+  [Documents on a pod](explanation/documents.md#known-unknowns).
 
 Depends on: nothing outside this repo. Related, elsewhere (decided 17 Oct,
-[why](explanation/word-files.md#on-the-collectives-pod-markdown-and-images-the-docx-dropped)):
+[why](explanation/documents.md#on-the-collectives-pod-markdown-and-images-the-docx-dropped)):
 pipeline B (solid-css-overlay) pulls a shared `.docx`, converts it with
 pandoc to Markdown and images, checks the conversion in code, and drops
 its `.docx` only when complete; solid-kit ADR 006 to amend (pull rule 5).
 The share summary (pipeline D) counts `.docx` among the types.
+
+## J — Media in Pods: images, audio, video
+
+Status, 17 Oct 2026 (read from the code; the PNG checked live):
+
+- **Upload** sends any file as is, one PUT per file, typed by the browser
+  (`file.type`, else `typeFor`). The gateway in front of
+  pod.nicolasdb.eu takes **100 MB per file** (`client_max_body_size`,
+  hetzner-gateway `04-pocpod0.conf`); past that the upload fails as "Could
+  not create … (413)", with no word on why.
+- **Images preview** as `<img>` from the bytes read: PNG (a 5 MB one
+  checked live), JPEG, WebP, GIF and AVIF show in every current browser.
+  HEIC (iPhone photos) shows in Safari only, a broken image elsewhere;
+  Safari on an iPhone usually sends a JPEG when uploading from Photos.
+  SVG is left out on purpose: no preview.
+- **Audio and video** upload (under 100 MB) and download; no preview.
+- **Opening any file reads it whole**, even one with no preview: a 90 MB
+  video is downloaded into memory to say "No preview".
+
+Plan, smallest first:
+
+- **J1 · Say the limit before sending**: a file over the limit is refused
+  in the browser with the reason; a 413 says "too large for this pod
+  (100 MB per file)". With the 1 Oct follow-up: after a failed upload,
+  check what was stored.
+- **J2 · Don't read what cannot be shown**: a file with no preview, or a
+  preview over a size (say 20 MB), shows its type and size from the
+  listing, with Download and "Show anyway".
+- **J3 · SVG** as `<img>` (scripts in an SVG do not run there); never
+  inlined.
+- **J4 · Audio and video** with the browser's own player, from the bytes
+  read (under J2's size); a public file plays from its address, which can
+  stream.
+
+Known unknowns: whether CSS 7 answers `Range` requests (streaming a
+private file needs it, and a way to sign the media element's requests);
+the per-file limit after the move to the overlay image; a quota per pod;
+what the collective's pipeline does with audio and video (a transcript,
+as text, is a path: `~/github/audioTranscript`).
 
 ## Replacing the old backoffice
 
