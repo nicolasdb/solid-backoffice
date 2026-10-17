@@ -25,23 +25,22 @@ confronter has its own.
 
 **Next, in order:**
 
-1. **Check folders shared or granted before 16 Oct** (yours, Xavier's,
-   ChaBi's): open each in a private window; any that opens and should not,
-   fix in its access panel.
-2. **Merge** solid-kit #5, then overlay #1; solid-kit #6 once the overlay's
-   `main` holds `mcp-connector/` (its links point there).
-3. **Bring the collective's docs here** from solid-kit: `guide/` (copied to
+Done 17 Oct: the folders shared or granted before 16 Oct checked in a
+private window; solid-kit #5 and #6, overlay #1 and #2 merged (the overlay's
+`main` now holds the image, the connector and the procedures).
+
+1. **Bring the collective's docs here** from solid-kit: `guide/` (copied to
    a collective's pod as `hs:guide`), `docs/collectives/create-a-collective.md`
    (merge with `docs/how-to/set-up-a-collective.md`) and
    `templates/collective/config.ttl` (beside `docs/examples/`): they follow
    the backoffice's config, with a link to the connector's procedures.
-4. **The pipeline** (overlay, after the migration): A → B → D (D includes
+2. **The pipeline** (overlay, after the migration): A → B → D (D includes
    the summary before sharing, here in the Share panel) → C. Then copy the
    procedures to HyperScope's pod (`principles/`, contribution v3 included),
    then E step 4 with Xavier.
-5. The 10 Oct list below (Maps of Making live, ADR 006 §7, `sb:agent`
+3. The 10 Oct list below (Maps of Making live, ADR 006 §7, `sb:agent`
    optional, E).
-6. G's leftovers: moving a shared folder re-announces; the agent folder
+4. G's leftovers: moving a shared folder re-announces; the agent folder
    picker with suggestions and the four questions; items with rules of
    their own counted; a base `select` style in solid-kit.
 
