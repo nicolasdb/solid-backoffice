@@ -838,7 +838,10 @@ it, with `source`, `converted` and `converter` in its YAML header.
   rapport.docx on 17 Oct", for I2's copies and the `gdoc-to-solid-md`
   skill's (its `source:` is a Google Docs URL).
 - Later, not planned: "Download as Word" for a Markdown file (the
-  plugin's exporter, on the `docx` library); `.odt`.
+  plugin's exporter, on the `docx` library); `.odt`; PDF (the next format
+  after `.docx`; pandoc does not read it). Known unknowns, and the
+  proposal to keep only the Markdown on the collective's pod:
+  [Word files on a pod](explanation/word-files.md#known-unknowns).
 
 Depends on: nothing outside this repo. Related, elsewhere: pipeline B
 (solid-css-overlay) extracts derived text from whatever a member shares,

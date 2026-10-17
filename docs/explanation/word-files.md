@@ -5,9 +5,30 @@ pod stores any bytes, so the question is not whether a `.docx` can live on
 a pod but what reads it afterwards: the backoffice's preview and editor,
 another Solid app, the collective's pipeline and its LLM confronter.
 
-Nothing here is decided for good. What is decided is the rule that keeps
-every option open: **the original is never replaced**. A conversion writes
-a copy beside it, and says where it came from.
+Nothing here is decided for good. Everyone works differently, so no path
+into a pod is closed; and not every path is built now. What is not known
+yet is listed at the end and taken up when it matters. What is decided is
+the rule that keeps every option open: **the original is never replaced**
+on the member's pod. A conversion writes a copy beside it, and says where
+it came from.
+
+## How it arrives today
+
+Xavier writes in Google Docs, downloads a `.docx` (Google Docs has no file
+of its own to keep offline) and uploads it to his pod. Most members will
+do the same with Word or Docs. Google's Download menu offers:
+
+| Format | What survives |
+|---|---|
+| `.docx` | Text, structure, images inside the file. The usual choice. |
+| `.odt` | Same, in an open format. |
+| `.pdf` | Layout; text only if extracted, structure lost. Not handled yet. |
+| `.md` | Structure, but images inlined as base64 text, with no option to change it: several MB of text an LLM must not read, and that our writes cap. |
+| `.txt` | Text only: images and structure lost. |
+| `.rtf`, `.html` (zipped), `.epub` | Possible, rarely chosen. |
+
+So the formats to expect, in order: `.docx`, then `.pdf`, then Markdown
+with base64 images.
 
 ## Two ways to store it
 
@@ -66,7 +87,42 @@ Each path is optional, and each leaves a file the others can read:
    can and marks what it cannot read (`format-non-lu`, `texte-echec`).
 
 A member may use any, all or none. No path deletes or rewrites what
-another one wrote.
+another one wrote on the member's pod.
+
+## On the collective's pod: keep the Markdown, drop the `.docx`?
+
+Proposed 17 Oct, not decided. For path 4, the collective could pull the
+`.docx`, convert it to Markdown with its images beside it, then delete its
+copy of the `.docx`. Lighter storage; the provenance still names the
+author's original on their pod.
+
+What it costs, to weigh in solid-kit ADR 006 before adopting it:
+
+- **The snapshot stops being the bytes.** Pull rule 5 (exact bytes) and
+  ADR 001 (derived text is an index, not truth) make the snapshot the
+  evidence of what was confronted. Without it, a later question ("what did
+  the document say when this was confronted?") points to the author's pod,
+  where the file may have changed or gone.
+- **A converter's mistake cannot be redone** from the collective's side:
+  converting again needs the original, which only the author holds.
+- **A middle way**: keep the `.docx` for a while (until confronted, or N
+  days), then drop it; or keep it only while the author's copy is
+  unreachable.
+
+## One converter: pandoc
+
+Pandoc reads `.docx`, `.odt`, `.epub`, `.html`, `.rtf` and Markdown, and
+writes Markdown with images as separate files (`--extract-media`). So yes,
+it can be the one converter on the server, for every format above but one:
+**pandoc does not read PDF** (it writes PDF, through LaTeX). PDF needs its
+own tool (`pdftotext`, or a PDF-to-Markdown converter), and a scan needs
+OCR or nothing.
+
+In the browser, pandoc is not practical (a WebAssembly build exists, but
+tens of MB); mammoth for `.docx` is small and loads on demand. So the
+likely split: pandoc on the server (pipeline B, and a server-side "convert"
+if the backoffice ever asks for one), mammoth in the browser for preview
+and a quick copy (I1, I2).
 
 ## The Obsidian plugin as a reference
 
@@ -87,8 +143,30 @@ another one wrote.
   file, later.
 - **Weight**: mammoth, Turndown and JSZip load only when a Word file is
   opened, like Mermaid for diagrams.
-- **On the server** (pipeline B), pandoc stays the choice: it also reads
-  `.odt`, and handles tables and footnotes better. The plugin's converter
-  would work in Node too, if one engine for both sides ever matters more.
+- **On the server** (pipeline B), pandoc stays the choice (above). The
+  plugin's converter would work in Node too, if one engine for both sides
+  ever matters more.
+
+## Known unknowns
+
+Noted, not solved; each is taken up when the path it belongs to is built.
+
+- **PDF**: which tool for text, and for Markdown with structure; what a
+  scan gets (OCR, or flagged). The next format after `.docx`.
+- **Google's Markdown with base64 images**: can pandoc's
+  `--extract-media` lift `data:` images out of Markdown input into files?
+  If so, the same tool cleans it, on the server or in pipeline B's
+  derived text. To check on a real export.
+- **Path 4's storage**: keep or drop the collective's `.docx` (above).
+- **Editing after conversion**: when the Markdown copy is edited, is the
+  `.docx` beside it still useful, and should the preview say "older"?
+- **The Google Docs skill** (beta): its header and image layout, to align
+  with I2's so the preview and the pipeline treat both alike.
+- **Telling members**: one page in the members' `guide/`
+  (`templates/collective/guide/`) on the ways into a pod: upload as is,
+  make a Markdown copy, the Google Docs skill, and what each keeps. Written
+  once two paths exist.
+- **Legacy `.doc`**: neither pandoc nor mammoth reads it; LibreOffice
+  could convert it. Wait for a member who has one.
 
 Where this sits in the plan: [slices, I](../slices.md#i--word-files-in-pods).
