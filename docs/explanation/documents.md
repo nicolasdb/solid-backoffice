@@ -183,25 +183,27 @@ likely split: pandoc on the server (pipeline B, and a server-side "convert"
 if the backoffice ever asks for one), mammoth in the browser for preview
 and a quick copy (I1, I2).
 
-## PDF: the same paths, a weaker conversion
+## PDF: a light preview, docling for the conversion
 
-Planned 17 Oct on the same paths as `.docx`: preview in Pods, the
-member's choice to convert at upload, and on the collective's pod
-Markdown and images after a check. What differs is how much a conversion
-can keep. A PDF stores glyphs at positions, not paragraphs, headings or
-tables; structure is guessed back, and a scan holds no text at all.
+Decided 17 Oct: **speed for the preview, precision for the conversion.**
+The preview is only visual and must be fast; the conversion is what the
+collective reads and must be the best available, whatever it costs in time.
+A PDF stores glyphs at positions, not paragraphs, headings or tables;
+structure is guessed back, and a scan holds no text at all, so a good
+conversion needs layout models and OCR.
 
 | | `.docx` | PDF |
 |---|---|---|
-| Preview in the browser | mammoth to HTML | the browser's own PDF viewer on the file's bytes (an iPhone shows the first page only: Download stays) |
-| Copy in the browser | mammoth, structure kept | pdf.js text, one paragraph per block, no headings or tables: a rough copy, said so |
-| On the server | pandoc | not pandoc. Light: poppler's `pdftotext` and `pdfimages` (text and images, no structure). Heavy: docling (MIT, layout models, tables, OCR for scans), much slower and larger |
-| Scans | n/a | no text: `texte-echec` unless OCR runs |
-| The check | word counts against the XML | text per page (a page with images and no text is a scan), images listed by `pdfimages -list` against those extracted |
+| Preview in the browser | mammoth to HTML | the browser's own PDF viewer on the file's bytes, nothing to load (an iPhone shows the first page only: Download stays) |
+| Copy in the browser | mammoth, structure kept | none: a browser copy would be rough, and a rough copy is worse than none |
+| On the server | pandoc | **docling** (MIT): layout models, tables, images, OCR for scans; slow and large, which the pull can afford |
+| The check | word counts against the XML | text per page (a page with images and no text that OCR could not read is a scan left unread), images found against images extracted, docling's own confidence per page |
 
-So on the collective's pod, a PDF more often ends `texte-partiel` and keeps
-its original. That follows from the rule (drop only what the check
-confirms), not from a special case.
+So the member's choice at upload (I2) stays Word only for now; a PDF on
+the member's pod is kept as is and previewed. Converting it on the
+member's side would need the server's docling, offered to members: a
+path noted, not planned. On the collective's pod, a PDF follows the same
+rule as a `.docx`: dropped only when the check says complete.
 
 ## The Obsidian plugin as a reference
 
@@ -230,8 +232,11 @@ confirms), not from a special case.
 
 Noted, not solved; each is taken up when the path it belongs to is built.
 
-- **PDF on the server**: poppler alone, or docling; measured on Xavier's
-  PDFs (quality, time, image size). OCR for scans or not.
+- **Docling on the server**: time and memory per page on the overlay's
+  host, measured on Xavier's PDFs; which OCR engine; whether it runs in
+  the connector's container or beside it.
+- **Converting a PDF for a member** (their own pod, not a collective's):
+  docling as a service the backoffice could call. Not planned.
 - **PDF's check**: what "complete" means without a source of truth to
   count against.
 - **Google's Markdown with base64 images**: can pandoc's

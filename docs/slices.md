@@ -842,11 +842,10 @@ it, with `source`, `converted` and `converter` in its YAML header.
 - **I3 · The preview says where a copy came from**: "Converted from
   rapport.docx on 17 Oct", for I2's copies and the `gdoc-to-solid-md`
   skill's (its `source:` is a Google Docs URL).
-- **I4 · PDF, the same paths** (after I1–I3): preview with the
-  browser's own viewer on the file's bytes; at upload, keep the PDF
-  (default), add a rough Markdown copy (pdf.js text, said to be rough),
-  or both. Its server side (pipeline B) is poppler or docling, not
-  pandoc: [PDF](explanation/documents.md#pdf-the-same-paths-a-weaker-conversion).
+- **I4 · PDF preview**: the browser's own viewer on the file's bytes, no
+  library. No conversion in the browser: the conversion is docling's, on
+  the server (pipeline B), for precision:
+  [PDF](explanation/documents.md#pdf-a-light-preview-docling-for-the-conversion).
 - Later, not planned: "Download as Word" for a Markdown file (the
   plugin's exporter, on the `docx` library); `.odt`. Known unknowns:
   [Documents on a pod](explanation/documents.md#known-unknowns).
