@@ -715,3 +715,21 @@ member through the new flow.
    and `click A "javascript:alert(2)"`: no alert, the label shown as text.
 7. **TOML.** A `.toml` file opens as source, Edit works, and a saved file
    keeps its type.
+
+## J · Media in Pods
+
+1. **Images.** Upload a JPEG, a WebP and an SVG: each previews; the SVG
+   as a picture (an SVG holding `<script>` shows, the script does not run).
+2. **PDF.** Open a PDF: the browser's viewer, pages scroll. On an iPhone,
+   the first page and Download.
+3. **Sound and video.** Upload an MP3 and a short MP4 (under 20 MB): each
+   plays in the page. While one plays, wait for a background refresh
+   (open the folder in another tab and add a file): playback goes on.
+4. **Large.** A video between 20 and 100 MB: opening it shows its type
+   and size, no download in the Network tab beyond the headers. "Show
+   anyway": private, it is read then plays; made public, it plays at once
+   and seeks (Network: requests with `Range`, or one stream).
+5. **No preview.** A `.zip`: type and size, nothing downloaded on open;
+   Download saves it whole.
+6. **Too large to upload.** A file over 100 MB: refused at once with its
+   size and the limit, nothing sent.

@@ -17,6 +17,7 @@ import { authFetch } from "./auth";
 import { readTurtle } from "./read";
 import { readAccess, type ResourceAccess } from "./acl";
 import { writeIfMatch, type ConditionalError } from "./conditional";
+import { UPLOAD_LIMITS } from "../config";
 
 const LDP = "http://www.w3.org/ns/ldp#";
 const DCT_MODIFIED = "http://purl.org/dc/terms/modified";
@@ -174,7 +175,7 @@ function nearestRules(
 
 /* ── Contents ──────────────────────────────────────────────────────────── */
 
-export type FileKind = "markdown" | "text" | "json" | "image" | "other";
+export type FileKind = "markdown" | "text" | "json" | "image" | "svg" | "pdf" | "audio" | "video" | "other";
 
 export interface FileContent {
   url: string;
@@ -183,13 +184,23 @@ export interface FileContent {
   etag: string | null;
   /** For markdown, text and json. */
   text: string | null;
-  /** For images and everything else (download). */
+  /** For the other kinds' previews, and for a download. */
   blob: Blob | null;
   modified: Date | null;
+  /** From `Content-Length`; null when the server did not say. */
+  size: number | null;
+  /**
+   * Why the bytes were not read: nothing to show for this type, or more
+   * than its preview takes. A download (or "Show anyway") reads them.
+   */
+  withheld: "no-preview" | "too-large" | null;
 }
 
 /** Past this, a text file is offered as a download rather than shown. */
 export const PREVIEW_LIMIT = 1_000_000;
+
+/** Past this, an image, PDF, sound or video is shown only when asked. */
+export const MEDIA_PREVIEW_LIMIT = 20 * 1024 * 1024;
 
 /** Text served under an `application/` type: shown and edited as source. */
 const TEXT_TYPES = new Set(["application/n-triples", "application/n-quads", "application/toml"]);
@@ -198,35 +209,56 @@ export function kindOf(contentType: string, url = ""): FileKind {
   const type = contentType.split(";")[0].trim().toLowerCase();
   if (type === "text/markdown" || /\.(md|markdown)$/i.test(url)) return "markdown";
   if (type === "application/json" || type === "application/ld+json" || /\.json$/i.test(url)) return "json";
-  if (type.startsWith("image/") && type !== "image/svg+xml") return "image";
+  if (type === "image/svg+xml" || /\.svg$/i.test(url)) return "svg";
+  if (type.startsWith("image/")) return "image";
+  if (type === "application/pdf" || /\.pdf$/i.test(url)) return "pdf";
+  if (type.startsWith("audio/")) return "audio";
+  if (type.startsWith("video/")) return "video";
   if (type.startsWith("text/") || TEXT_TYPES.has(type) || /\.toml$/i.test(url)) return "text";
   return "other";
 }
 
 /**
  * A file, fresh from the pod (files are not kept by read.ts: they are not
- * Turtle, and a preview must show what is there now). SVG is never shown
- * inline: it can carry script.
+ * Turtle, and a preview must show what is there now).
+ *
+ * The headers come first: a file with nothing to show, or larger than its
+ * preview takes, is not read further, so opening a 90 MB video does not
+ * download it. `whole` reads the bytes anyway, as a blob (a download, or
+ * "Show anyway").
+ *
+ * SVG is never shown inline: it can carry script (Pods shows it as an
+ * `<img>`, where script does not run).
  */
-export async function readFile(url: string): Promise<FileContent> {
+export async function readFile(url: string, { whole = false } = {}): Promise<FileContent> {
   const res = await authFetch(url, { cache: "no-store" });
   if (!res.ok) throw failure(`Could not read ${url} (${res.status}).`, res.status);
   const contentType = res.headers.get("content-type") ?? "application/octet-stream";
   const kind = kindOf(contentType, url);
-  const size = Number(res.headers.get("content-length") ?? NaN);
+  const length = Number(res.headers.get("content-length") ?? NaN);
+  const size = Number.isFinite(length) ? length : null;
   const lastModified = res.headers.get("last-modified");
-  const base = { url, contentType, etag: res.headers.get("etag"), modified: lastModified ? new Date(lastModified) : null };
-  if ((kind === "markdown" || kind === "text" || kind === "json") && !(size > PREVIEW_LIMIT)) {
-    const text = await res.text();
-    if (text.length <= PREVIEW_LIMIT) return { ...base, kind, text, blob: null };
-    return { ...base, kind: "other", text: null, blob: new Blob([text], { type: contentType }) };
+  const base = { url, contentType, kind, etag: res.headers.get("etag"), modified: lastModified ? new Date(lastModified) : null, size };
+  if (whole) return { ...base, text: null, blob: await res.blob(), withheld: null };
+  const textual = kind === "markdown" || kind === "text" || kind === "json";
+  const withheld =
+    kind === "other" ? "no-preview" : size !== null && size > (textual ? PREVIEW_LIMIT : MEDIA_PREVIEW_LIMIT) ? "too-large" : null;
+  if (withheld) {
+    void res.body?.cancel().catch(() => undefined);
+    return { ...base, text: null, blob: null, withheld };
   }
-  return { ...base, kind, text: null, blob: await res.blob() };
+  if (textual) {
+    const text = await res.text();
+    if (text.length <= PREVIEW_LIMIT) return { ...base, text, blob: null, withheld: null };
+    return { ...base, text: null, blob: new Blob([text], { type: contentType }), withheld: "too-large" };
+  }
+  return { ...base, text: null, blob: await res.blob(), withheld: null };
 }
 
 /** Saves a file to the device, read with your WebID (a plain link could not). */
 export async function downloadFile(url: string, content?: FileContent): Promise<void> {
-  const file = content ?? (await readFile(url));
+  const kept = content && (content.blob || content.text !== null) ? content : null;
+  const file = kept ?? (await readFile(url, { whole: true }));
   const blob = file.blob ?? new Blob([file.text ?? ""], { type: file.contentType });
   const href = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -241,7 +273,7 @@ export async function downloadFile(url: string, content?: FileContent): Promise<
 /* ── Writes (C3) ───────────────────────────────────────────────────────── */
 
 export interface FileError extends Error {
-  code: "bad-name" | "exists" | "conflict" | "write-failed";
+  code: "bad-name" | "exists" | "conflict" | "write-failed" | "too-large";
   status?: number;
 }
 
@@ -286,6 +318,15 @@ export function typeFor(name: string): string {
     jpeg: "image/jpeg",
     gif: "image/gif",
     webp: "image/webp",
+    avif: "image/avif",
+    svg: "image/svg+xml",
+    mp3: "audio/mpeg",
+    m4a: "audio/mp4",
+    ogg: "audio/ogg",
+    wav: "audio/wav",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    mov: "video/quicktime",
     pdf: "application/pdf",
   };
   return types[ext] ?? (ext ? "application/octet-stream" : "text/plain");
@@ -303,6 +344,7 @@ async function createOnly(url: string, body: BodyInit, contentType: string): Pro
   if (res.status === 412 || res.status === 409) {
     throw fileError("exists", `${nameOf(url)} is already there. Choose another name.`, res.status);
   }
+  if (res.status === 413) throw fileError("too-large", `${nameOf(url)} is larger than this pod accepts in one upload.`, 413);
   if (!res.ok) throw fileError("write-failed", `Could not create ${nameOf(url)} (${res.status}).`, res.status);
 }
 
@@ -323,12 +365,54 @@ export async function createFile(parentUrl: string, name: string, body = ""): Pr
 }
 
 /** One file from the device, under its own name; never over an existing one. */
+/**
+ * The largest file one upload can send to this pod, in bytes, or null when
+ * not known. Not Solid: it is the gateway in front of a server
+ * (`UPLOAD_LIMITS` in config.ts); a server not listed answers 413 instead.
+ */
+export function uploadLimit(podUrl: string): number | null {
+  return UPLOAD_LIMITS[new URL(podUrl).origin] ?? null;
+}
+
 export async function uploadFile(parentUrl: string, file: File): Promise<string> {
   const problem = nameProblem(file.name);
   if (problem) throw fileError("bad-name", `${file.name}: ${problem}`);
+  const limit = uploadLimit(parentUrl);
+  if (limit !== null && file.size > limit) {
+    throw fileError("too-large", `${file.name} is ${megabytes(file.size)}; this pod takes ${megabytes(limit)} per file.`);
+  }
   const url = childUrl(parentUrl, file.name, false);
-  await createOnly(url, file, file.type || typeFor(file.name));
+  try {
+    await createOnly(url, file, file.type || typeFor(file.name));
+  } catch (err) {
+    // A server can keep the bytes it received before failing (CSS does, on
+    // a 500): say so rather than leave a broken file nobody knows about.
+    const code = (err as FileError).code;
+    if (code === "write-failed") {
+      const stored = await storedSize(url);
+      if (stored !== null && stored !== file.size) {
+        (err as Error).message += ` Only part of it was stored (${megabytes(stored)} of ${megabytes(file.size)}): delete ${file.name} and try again.`;
+      }
+    }
+    throw err;
+  }
   return url;
+}
+
+/** What a file's size is on the pod now, or null when it is not there. */
+async function storedSize(url: string): Promise<number | null> {
+  try {
+    const res = await authFetch(url, { method: "HEAD", cache: "no-store" });
+    if (!res.ok) return null;
+    const length = Number(res.headers.get("content-length") ?? NaN);
+    return Number.isFinite(length) ? length : null;
+  } catch {
+    return null;
+  }
+}
+
+function megabytes(bytes: number): string {
+  return `${Math.round((bytes / 1024 / 1024) * 10) / 10} MB`;
 }
 
 /**

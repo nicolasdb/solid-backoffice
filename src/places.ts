@@ -131,6 +131,8 @@ let route: Route = { name: "places", path: "" };
 let generation = 0;
 /** Object URLs of images on screen, released when the screen changes. */
 let objectUrls: string[] = [];
+/** Public sounds and videos played from their address, which streams. */
+const streams = new Set<string>();
 
 export function forgetPlaces(): void {
   naming.clear();
@@ -160,6 +162,7 @@ export function forgetPlaces(): void {
   frame = null;
   ctx = null;
   releaseObjectUrls();
+  streams.clear();
   forgetAclLocations();
   forgetDiagrams();
 }
@@ -211,7 +214,17 @@ export function size(bytes: number | null): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-const KIND_LABEL: Record<string, string> = { markdown: "Markdown", text: "Text", json: "JSON", image: "Image", other: "File" };
+const KIND_LABEL: Record<string, string> = {
+  markdown: "Markdown",
+  text: "Text",
+  json: "JSON",
+  image: "Image",
+  svg: "SVG",
+  pdf: "PDF",
+  audio: "Audio",
+  video: "Video",
+  other: "File",
+};
 
 /* ── Columns: shown, hidden, ordered, sorted ───────────────────────────── */
 
@@ -554,12 +567,18 @@ function kindFromItem(item: Item | undefined): string {
   const type = item?.type ?? "";
   if (/markdown/.test(type) || /\.md$/i.test(item?.url ?? "")) return "markdown";
   if (/json/.test(type)) return "json";
+  if (/svg/.test(type)) return "svg";
   if (type.startsWith("image/")) return "image";
+  if (/pdf/.test(type)) return "pdf";
+  if (type.startsWith("audio/")) return "audio";
+  if (type.startsWith("video/")) return "video";
   if (type.startsWith("text/") || /toml/.test(type) || /\.toml$/i.test(item?.url ?? "")) return "text";
   return "other";
 }
 
 function renderPreview(file: FileContent): string {
+  if (streams.has(file.url)) return renderMedia(file, file.url);
+  if (file.withheld) return renderWithheld(file);
   switch (file.kind) {
     case "markdown":
       return `<article class="prose preview" aria-label="Preview of ${esc(nameOf(file.url))}">${renderMarkdown(file.text ?? "")}</article>`;
@@ -574,14 +593,65 @@ function renderPreview(file: FileContent): string {
     }
     case "text":
       return `<pre class="preview source"><code>${esc(file.text ?? "")}</code></pre>`;
-    case "image": {
-      const src = URL.createObjectURL(file.blob!);
-      objectUrls.push(src);
-      return `<figure class="preview image"><img src="${src}" alt="${esc(nameOf(file.url))}"></figure>`;
-    }
+    case "image":
+    case "svg": // as an <img>, where an SVG's script does not run; never inlined
+      return `<figure class="preview image"><img src="${objectUrl(file)}" alt="${esc(nameOf(file.url))}"></figure>`;
+    case "pdf": // the browser's own viewer: nothing to load (an iPhone shows the first page; Download stays)
+      return `<iframe class="preview pdf" src="${objectUrl(file)}" title="${esc(nameOf(file.url))}"></iframe>`;
+    case "audio":
+    case "video":
+      return renderMedia(file, objectUrl(file));
     default:
-      return `<div class="preview empty-state"><p class="lead">No preview for ${esc(file.contentType.split(";")[0])}. Download it to open it on your device.</p></div>`;
+      return renderWithheld(file);
   }
+}
+
+/** Readable without signing in: a player can then fetch it itself, in ranges. */
+async function readableByAnyone(url: string): Promise<boolean> {
+  try {
+    return (await fetch(url, { method: "HEAD", credentials: "omit", cache: "no-store" })).ok;
+  } catch {
+    return false;
+  }
+}
+
+/** A sound or video is playing: a redraw would stop it. */
+function playing(root: HTMLElement): boolean {
+  return [...root.querySelectorAll<HTMLMediaElement>("audio, video")].some((media) => !media.paused);
+}
+
+/** A blob URL for the file's bytes, revoked at the next draw. */
+function objectUrl(file: FileContent): string {
+  const src = URL.createObjectURL(file.blob!);
+  objectUrls.push(src);
+  return src;
+}
+
+function renderMedia(file: FileContent, src: string): string {
+  const label = esc(nameOf(file.url));
+  return file.kind === "audio"
+    ? `<figure class="preview media"><audio controls preload="metadata" src="${esc(src)}" aria-label="${label}"></audio></figure>`
+    : `<figure class="preview media"><video controls preload="metadata" src="${esc(src)}" aria-label="${label}"></video></figure>`;
+}
+
+/** A file whose bytes were not read: what it is, and what can be done. */
+function renderWithheld(file: FileContent): string {
+  const type = esc(file.contentType.split(";")[0]);
+  const showable = file.kind !== "other" && file.kind !== "markdown" && file.kind !== "text" && file.kind !== "json";
+  const what = file.size === null ? type : `${type}, ${size(file.size)}`;
+  const lead =
+    file.withheld === "too-large"
+      ? `${esc(nameOf(file.url))} is ${what}: too large to show without asking.`
+      : `No preview for ${type}. Download it to open it on your device.`;
+  return `<div class="preview empty-state">
+    <p class="lead">${lead}</p>
+    ${file.withheld === "no-preview" && file.size !== null ? `<p class="meta">${size(file.size)}</p>` : ""}
+    ${
+      file.withheld === "too-large" && showable
+        ? `<button class="small" type="button" id="show-anyway" data-url="${esc(file.url)}">Show anyway (${file.size === null ? "reads it whole" : `reads ${size(file.size)}`})</button>`
+        : ""
+    }
+  </div>`;
 }
 
 function renderFile(url: string): string {
@@ -688,6 +758,7 @@ function inUse(): boolean {
     !frame ||
     busy(frame) ||
     diagramExpanded() ||
+    playing(frame) ||
     Boolean(draft?.dirty) ||
     isDirty(editing) ||
     Boolean(creating) ||
@@ -943,6 +1014,28 @@ function bind(): void {
   frame.querySelector("#places-retry")?.addEventListener("click", () => void showPlaces(route));
   bindWrites();
   bindFollowing();
+  const showAnyway = frame.querySelector<HTMLButtonElement>("#show-anyway");
+  showAnyway?.addEventListener("click", async () => {
+    const url = showAnyway.dataset.url!;
+    const kept = files.get(url) ?? opened.get(url)?.file;
+    showAnyway.disabled = true;
+    showAnyway.textContent = "Reading…";
+    try {
+      // A public sound or video plays from its address, which can stream;
+      // a private one has to be read whole first (the player cannot sign).
+      if ((kept?.kind === "audio" || kept?.kind === "video") && (await readableByAnyone(url))) streams.add(url);
+      else {
+        const file = await readFile(url, { whole: true });
+        if (files.has(url)) files.set(url, file);
+        const seen = opened.get(url);
+        if (seen) opened.set(url, { ...seen, file });
+      }
+      draw(false);
+    } catch (err) {
+      toast(`Could not read ${nameOf(url)}: ${describePodError(err)}`);
+      showAnyway.disabled = false;
+    }
+  });
   const download = frame.querySelector<HTMLButtonElement>("#download");
   download?.addEventListener("click", async () => {
     const url = download.dataset.url!;

@@ -145,8 +145,8 @@ describe("writing files (C3)", () => {
 
   it("uploads a file from the device with its type", async () => {
     const url = await uploadFile(work, new File([new Uint8Array([1, 2, 3])], "data.bin", { type: "application/octet-stream" }));
-    const file = await readFile(url);
-    expect(file.kind).toBe("other");
+    expect(await readFile(url)).toMatchObject({ kind: "other", blob: null, withheld: "no-preview", size: 3 });
+    const file = await readFile(url, { whole: true });
     expect(file.blob!.size).toBe(3);
   });
 

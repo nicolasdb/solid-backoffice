@@ -59,8 +59,8 @@ create-a-collective was merged into the how-to and the reference's pod tree.
        agent declares about itself.
    - **Mermaid**: built 17 Oct, to run live ([H](#h--mermaid-in-the-markdown-preview--built-17-oct-2026)).
 5. **Documents, Word then PDF** ([I](#i--documents-in-pods-word-then-pdf)): free to start, after H.
-6. **Media** ([J](#j--media-in-pods-images-audio-video)): J1 and J2 any
-   time (small, and J2 matters before members upload video).
+6. **Media** ([J](#j--media-in-pods-images-audio-video--built-17-oct-2026)): built 17 Oct,
+   to run live.
    I1 (preview) and I2 (a Markdown copy) depend on nothing outside this
    repo; pipeline B still handles the `.docx` a member shares unconverted,
    so I helps Xavier's share without unblocking it.
@@ -857,7 +857,7 @@ pandoc to Markdown and images, checks the conversion in code, and drops
 its `.docx` only when complete; solid-kit ADR 006 to amend (pull rule 5).
 The share summary (pipeline D) counts `.docx` among the types.
 
-## J — Media in Pods: images, audio, video
+## J — Media in Pods: images, audio, video · built (17 Oct 2026)
 
 Status, 17 Oct 2026 (read from the code; the PNG checked live):
 
@@ -889,6 +889,24 @@ Plan, smallest first:
 - **J4 · Audio and video** with the browser's own player, from the bytes
   read (under J2's size); a public file plays from its address, which can
   stream.
+
+Built 17 Oct (`src/lib/files.ts`, `src/places.ts`; `npm run test:pods`
+confirms CSS 7 sends `Content-Length`):
+
+- J1: `UPLOAD_LIMITS` in `src/config.ts` (100 MB for pod.nicolasdb.eu)
+  refuses a larger file before sending; a 413 from any server says "larger
+  than this pod accepts"; after a failed upload, a `HEAD` says when only
+  part of the file was stored.
+- J2: `readFile` reads the headers first and stops there for a type with
+  no preview, a text over 1 MB or a medium over 20 MB
+  (`MEDIA_PREVIEW_LIMIT`): type and size, Download, and for media "Show
+  anyway". Download reads the file whole.
+- J3: SVG as an `<img>` (kind `svg`). PDF in the browser's own viewer
+  (I4's preview, here because it cost one line).
+- J4: `<audio>` / `<video>` from the bytes; over 20 MB, "Show anyway"
+  plays a public file from its address (an unauthenticated `HEAD` says
+  whether it is public) and reads a private one whole. A playing medium
+  is never redrawn under the listener.
 
 Known unknowns: whether CSS 7 answers `Range` requests (streaming a
 private file needs it, and a way to sign the media element's requests);

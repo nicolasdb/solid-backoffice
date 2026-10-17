@@ -100,7 +100,8 @@ one changes, change the other. Never point it at the real provider.
   drawer → technical rules; columns kept in localStorage), mounted
   into its own frame by `onboarding.ts` (`#/p/<path>`, `#/f`), with its
   own memory of listings, rules and files (ADR 007), forgotten at
-  sign-out. `src/lib/files.ts` lists folders, reads files and finds which
+  sign-out. `src/lib/files.ts` lists folders, reads files (headers first: a
+  file with no preview, or too large for one, is not downloaded) and finds which
   rules apply (`effectiveAccess`); `src/ui/markdown.ts` renders a pod's
   Markdown through DOMPurify, never raw; `src/ui/mermaid.ts` draws its
   ```` ```mermaid ```` blocks (loaded on demand, strict, SVG sanitized). `src/access-panel.ts` is its

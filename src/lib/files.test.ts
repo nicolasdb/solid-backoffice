@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockFetch = vi.fn();
 vi.mock("./auth", () => ({ authFetch: (...args: unknown[]) => mockFetch(...args) }));
 
-const { parseListing, parentOf, nameOf, kindOf, effectiveAccess, readFile, PREVIEW_LIMIT, nameProblem, childUrl, typeFor, createFolder, createFile, uploadFile, saveFile } =
+const { parseListing, parentOf, nameOf, kindOf, effectiveAccess, readFile, PREVIEW_LIMIT, MEDIA_PREVIEW_LIMIT, nameProblem, childUrl, typeFor, createFolder, createFile, uploadFile, saveFile } =
   await import("./files");
 const { readAccess, forgetAclLocations } = await import("./acl");
 const { forgetReads } = await import("./read");
@@ -63,8 +63,11 @@ describe("a folder's listing", () => {
     expect(kindOf("application/ld+json")).toBe("json");
     expect(kindOf("text/turtle")).toBe("text");
     expect(kindOf("image/png")).toBe("image");
-    expect(kindOf("image/svg+xml")).toBe("other");
-    expect(kindOf("application/pdf")).toBe("other");
+    expect(kindOf("image/svg+xml")).toBe("svg");
+    expect(kindOf("application/pdf")).toBe("pdf");
+    expect(kindOf("audio/mpeg")).toBe("audio");
+    expect(kindOf("video/mp4")).toBe("video");
+    expect(kindOf("application/zip")).toBe("other");
     expect(kindOf("application/toml")).toBe("text");
     expect(kindOf("application/octet-stream", "x/config.toml")).toBe("text");
   });
@@ -125,13 +128,28 @@ describe("a file's contents", () => {
     expect(mockFetch.mock.calls[0][1].cache).toBe("no-store");
   });
 
-  it("offers a text file too large to show as a download", async () => {
-    mockFetch.mockResolvedValueOnce(
-      res(200, "x", { "Content-Type": "text/plain", "Content-Length": String(PREVIEW_LIMIT + 1) })
-    );
-    const file = await readFile(POD + "big.txt");
-    expect(file.text).toBeNull();
-    expect(file.blob).not.toBeNull();
+  it("does not read a text file too large to show, nor a file with no preview", async () => {
+    mockFetch.mockResolvedValueOnce(res(200, "x", { "Content-Type": "text/plain", "Content-Length": String(PREVIEW_LIMIT + 1) }));
+    const big = await readFile(POD + "big.txt");
+    expect(big).toMatchObject({ text: null, blob: null, withheld: "too-large", size: PREVIEW_LIMIT + 1 });
+
+    const zip = res(200, "PK", { "Content-Type": "application/zip", "Content-Length": "2" });
+    const cancel = vi.spyOn(zip.body!, "cancel");
+    mockFetch.mockResolvedValueOnce(zip);
+    expect(await readFile(POD + "a.zip")).toMatchObject({ kind: "other", blob: null, withheld: "no-preview", size: 2 });
+    expect(cancel).toHaveBeenCalled(); // the rest is not downloaded
+  });
+
+  it("shows media under the limit, holds back larger ones until asked", async () => {
+    mockFetch.mockResolvedValueOnce(res(200, "png", { "Content-Type": "image/png", "Content-Length": "3" }));
+    expect(await readFile(POD + "a.png")).toMatchObject({ kind: "image", withheld: null });
+    const huge = { "Content-Type": "video/mp4", "Content-Length": String(MEDIA_PREVIEW_LIMIT + 1) };
+    mockFetch.mockResolvedValueOnce(res(200, "mp4", huge));
+    expect(await readFile(POD + "a.mp4")).toMatchObject({ kind: "video", blob: null, withheld: "too-large" });
+    mockFetch.mockResolvedValueOnce(res(200, "mp4", huge));
+    const whole = await readFile(POD + "a.mp4", { whole: true });
+    expect(whole.withheld).toBeNull();
+    expect(whole.blob).not.toBeNull();
   });
 
   it("says why a file cannot be read", async () => {
@@ -179,6 +197,23 @@ describe("writing files (C3)", () => {
     expect(await uploadFile(POD, file)).toBe(POD + "logo.png");
     expect(headers(0)).toMatchObject({ "If-None-Match": "*", "Content-Type": "image/png" });
     expect(sentTo(0)[1].body).toBe(file);
+  });
+
+  it("refuses a file over the pod's upload limit before sending it, and explains a 413", async () => {
+    const big = new File(["x"], "film.mp4", { type: "video/mp4" });
+    Object.defineProperty(big, "size", { value: 101 * 1024 * 1024 });
+    await expect(uploadFile("https://pod.nicolasdb.eu/amina/", big)).rejects.toMatchObject({ code: "too-large", message: /101 MB; this pod takes 100 MB/ });
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    mockFetch.mockResolvedValueOnce(res(413));
+    await expect(uploadFile(POD, big)).rejects.toMatchObject({ code: "too-large", message: /larger than this pod accepts/ });
+  });
+
+  it("says when a failed upload left part of the file behind", async () => {
+    const file = new File(["0123456789"], "photo.png", { type: "image/png" });
+    mockFetch.mockResolvedValueOnce(res(500)).mockResolvedValueOnce(res(200, "", { "Content-Length": "4" }));
+    await expect(uploadFile(POD, file)).rejects.toMatchObject({ code: "write-failed", message: /Only part of it was stored/ });
+    expect(sentTo(1)[1].method).toBe("HEAD");
   });
 
   it("saves over the version opened, and says so when someone changed it", async () => {

@@ -33,6 +33,14 @@ export const DEFAULT_IDENTIFIER = "https://pod.nicolasdb.eu/";
  */
 export const SIGNUP_PROVIDER: string | null = "https://pod.nicolasdb.eu/";
 
+/**
+ * The largest file one upload may send, per pod server (origin), in bytes.
+ * Not Solid: it is what the gateway in front of a server accepts
+ * (`client_max_body_size` in hetzner-gateway's `04-pocpod0.conf` for ours).
+ * A server not listed is not checked before sending; its 413 still says why.
+ */
+export const UPLOAD_LIMITS: Record<string, number> = { "https://pod.nicolasdb.eu": 100 * 1024 * 1024 };
+
 // No list of collectives lives here. Which collectives someone sees comes from
 // their own profile (`org:memberOf`), an invitation link (`?collective=`), or
 // an address they paste — see src/onboarding.ts. An app that assumes a

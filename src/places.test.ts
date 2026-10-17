@@ -11,7 +11,7 @@ const POD = "https://pod.example/amina/";
 const WEBID = POD + "profile/card#me";
 const AGENT = "https://pod.example/hs/agent#me";
 
-type Doc = { status?: number; body?: string; type?: string; etag?: string };
+type Doc = { status?: number; body?: string; type?: string; etag?: string; length?: number };
 let pod: Record<string, Doc> = {};
 /** URLs whose answers wait until `release()`. */
 let held: ((url: string) => boolean) | null = null;
@@ -55,6 +55,7 @@ async function answer(url: string, init: RequestInit = {}): Promise<Response> {
   if (doc.status && doc.status >= 400) return new Response(null, { status: doc.status, headers });
   if (doc.etag) headers.ETag = doc.etag;
   headers["Content-Type"] = doc.type ?? "text/turtle";
+  if (doc.length !== undefined) headers["Content-Length"] = String(doc.length);
   const match = (init.headers as Record<string, string> | undefined)?.["If-None-Match"];
   if (match && match === doc.etag) return new Response(null, { status: 304, headers });
   return new Response(method === "HEAD" ? null : (doc.body ?? ""), { status: 200, headers });
@@ -76,7 +77,7 @@ function standardPod(): Record<string, Doc> {
   return {
     [POD]: { body: listing(["projects/", "README"]), etag: '"root1"' },
     [POD + ".acl"]: { body: acl("./", true), etag: '"racl"' },
-    [POD + "projects/"]: { body: listing(["drafts/", "readme.md", "data.json", "logo.png", "public.md", "report.pdf"]), etag: '"p1"' },
+    [POD + "projects/"]: { body: listing(["drafts/", "readme.md", "data.json", "logo.png", "public.md", "report.pdf", "notes.zip", "film.mp4"]), etag: '"p1"' },
     [POD + "projects/drafts/"]: { body: listing([]), etag: '"d1"' },
     [POD + "projects/drafts/.acl"]: {
       body: acl("./", true, `<#g> a acl:Authorization; acl:agent <${AGENT}>; acl:accessTo <./>; acl:default <./>; acl:mode acl:Read.`),
@@ -86,6 +87,8 @@ function standardPod(): Record<string, Doc> {
     [POD + "projects/data.json"]: { body: '{"a":1}', type: "application/json", etag: '"j"' },
     [POD + "projects/logo.png"]: { body: "png", type: "image/png", etag: '"i"' },
     [POD + "projects/report.pdf"]: { body: "%PDF", type: "application/pdf", etag: '"pdf"' },
+    [POD + "projects/notes.zip"]: { body: "PK", type: "application/zip", etag: '"zip"', length: 2 },
+    [POD + "projects/film.mp4"]: { body: "mp4", type: "video/mp4", etag: '"mp4"', length: 90 * 1024 * 1024 },
     [POD + "projects/public.md"]: { body: "# Public", type: "text/markdown", etag: '"pub"' },
     [POD + "projects/public.md.acl"]: {
       body: acl("public.md", false, `<#p> a acl:Authorization; acl:agentClass <http://xmlns.com/foaf/0.1/Agent>; acl:accessTo <public.md>; acl:mode acl:Read.`),
@@ -333,10 +336,28 @@ describe("C1 — a file opens in Preview", () => {
     expect(app.querySelector<HTMLImageElement>(".preview img")!.src).toBe("blob:fake");
 
     await open("projects/report.pdf");
-    expect(app.querySelector(".preview")!.textContent).toMatch(/No preview for application\/pdf/);
+    expect(app.querySelector<HTMLIFrameElement>("iframe.preview.pdf")!.src).toBe("blob:fake");
+
+    await open("projects/notes.zip");
+    expect(app.querySelector(".preview")!.textContent).toMatch(/No preview for application\/zip/);
+    vi.mocked(URL.createObjectURL).mockClear();
     app.querySelector<HTMLButtonElement>("#download")!.click();
-    await settle();
-    expect(URL.createObjectURL).toHaveBeenCalled();
+    await until(() => vi.mocked(URL.createObjectURL).mock.calls.length > 0);
+    expect(requests.filter((r) => r === `GET ${POD}projects/notes.zip`)).toHaveLength(2); // opened without its bytes, read whole to save
+  });
+
+  it("holds back a large video until asked, and plays a public one from its address", async () => {
+    await mount("projects/film.mp4");
+    await until(() => app.querySelector(".preview"));
+    expect(app.querySelector(".preview")!.textContent).toMatch(/90\.0 MB: too large to show without asking/);
+    expect(app.querySelector("video")).toBeNull();
+
+    const publicHead = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 200 }));
+    app.querySelector<HTMLButtonElement>("#show-anyway")!.click();
+    await until(() => app.querySelector("video"));
+    expect(app.querySelector("video")!.getAttribute("src")).toBe(POD + "projects/film.mp4");
+    expect(publicHead.mock.calls[0][1]).toMatchObject({ method: "HEAD", credentials: "omit" });
+    publicHead.mockRestore();
   });
 
   it("opens full width, its access in its ··· menu", async () => {
@@ -648,7 +669,7 @@ describe("C4 — rename, move, delete", () => {
     await select("", "projects/");
     app.querySelector<HTMLButtonElement>('[data-change="delete"]')!.click();
     await until(() => app.querySelector("#change-form")!.textContent!.includes("items inside"));
-    expect(app.querySelector("#change-form")!.textContent).toMatch(/Delete projects and the 6 items inside\? This cannot be undone\./);
+    expect(app.querySelector("#change-form")!.textContent).toMatch(/Delete projects and the 8 items inside\? This cannot be undone\./);
     expect(writes).toHaveLength(0);
     app.querySelector<HTMLButtonElement>("#delete-confirm")!.click();
     await until(() => document.querySelector(".toast")?.textContent?.includes("Deleted"));

@@ -1213,6 +1213,10 @@ button.menu-item.is-warn { color: var(--warn); }
 .preview.source code { background: none; padding: 0; }
 .preview.image { margin: 0; text-align: center; }
 .preview.image img { max-width: 100%; height: auto; }
+.preview.pdf { display: block; width: 100%; height: 80vh; padding: 0; }
+.preview.media { margin: 0; text-align: center; }
+.preview.media :is(audio, video) { width: 100%; }
+.preview.media video { max-height: 75vh; }
 /* Mermaid diagrams (src/ui/mermaid.ts): on a light card in both themes, since
    an author's classDef colours assume a light ground. Own size and scrolled by default; Fit width, full screen
    (where it pans and zooms: .diagram-stage carries the transform). */
