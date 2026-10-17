@@ -805,7 +805,7 @@ Built:
   assume a light ground. Shown at its own size, scrolled; **Fit width**
   (kept across redraws) and **Full screen** (the Fullscreen API, or a
   layer over the app where there is none; the page is not redrawn under
-  it). A diagram that does not parse stays as source with the reason
+  it). Full screen pans and zooms: drag, wheel, pinch, −/Reset/+. A diagram that does not parse stays as source with the reason
   above it.
 - Bonus: `.toml` previews and edits as text (CSS serves it as
   `application/toml`, which is not `text/*`).

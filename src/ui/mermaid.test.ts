@@ -34,7 +34,7 @@ describe("Mermaid in a Markdown preview", () => {
     expect(calls).toBe(1);
   });
 
-  it("replaces the block with the diagram, fit to width and full screen kept across a redraw", async () => {
+  it("replaces the block with the diagram; fit to width kept across a redraw; zoom only full screen", async () => {
     forgetDiagrams();
     const source = "flowchart LR\n  Z";
     await diagramSvg(source, stub('<svg id="z"></svg>'));
@@ -54,8 +54,12 @@ describe("Mermaid in a Markdown preview", () => {
     // No Fullscreen API here (as on an iPhone): a layer over the app, closed with Escape.
     document.querySelector<HTMLButtonElement>('[data-diagram="full"]')!.click();
     expect(diagramExpanded()).toBe(true);
+    const stage = document.querySelector<HTMLElement>(".diagram-stage")!;
+    document.querySelector<HTMLButtonElement>('[data-zoom="in"]')!.click();
+    expect(stage.style.transform).toContain("scale(1.25)");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(diagramExpanded()).toBe(false);
+    expect(stage.style.transform).toBe(""); // leaving full screen resets the view
   });
 
   it("leaves a diagram that does not parse as source, with the reason", async () => {

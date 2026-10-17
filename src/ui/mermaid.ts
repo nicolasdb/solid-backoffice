@@ -17,7 +17,8 @@
  * not draw it again.
  *
  * A diagram is shown at its own size and scrolls sideways; "Fit width"
- * scales it to the page, "Full screen" gives it the whole screen.
+ * scales it to the page, "Full screen" gives it the whole screen, where it
+ * can also be dragged and zoomed.
  */
 import DOMPurify from "dompurify";
 
@@ -76,17 +77,22 @@ export async function drawDiagrams(root: ParentNode): Promise<void> {
   }
 }
 
-/** The diagram with its two buttons: fit to the width, and full screen. */
+/** The diagram with its buttons: fit to the width, full screen, and zoom while full screen. */
 function diagramFigure(source: string, svg: string): HTMLElement {
   const figure = document.createElement("figure");
   figure.className = "diagram";
   figure.classList.toggle("is-fit", fitted.has(source));
   figure.innerHTML = `
     <div class="diagram-bar">
+      <span class="diagram-zoom" role="group" aria-label="Zoom">
+        <button type="button" class="ghost small" data-zoom="out" aria-label="Zoom out">−</button>
+        <button type="button" class="ghost small" data-zoom="reset">Reset</button>
+        <button type="button" class="ghost small" data-zoom="in" aria-label="Zoom in">+</button>
+      </span>
       <button type="button" class="ghost small" data-diagram="fit" aria-pressed="${fitted.has(source)}">Fit width</button>
       <button type="button" class="ghost small" data-diagram="full">Full screen</button>
     </div>
-    <div class="diagram-canvas">${svg}</div>`;
+    <div class="diagram-canvas"><div class="diagram-stage">${svg}</div></div>`;
   const fit = figure.querySelector<HTMLButtonElement>('[data-diagram="fit"]')!;
   const full = figure.querySelector<HTMLButtonElement>('[data-diagram="full"]')!;
   fit.addEventListener("click", () => {
@@ -96,7 +102,11 @@ function diagramFigure(source: string, svg: string): HTMLElement {
     fit.setAttribute("aria-pressed", String(fitted.has(source)));
   });
   const shown = () => document.fullscreenElement === figure || figure.classList.contains("is-full");
-  const label = () => (full.textContent = shown() ? "Exit full screen" : "Full screen");
+  const view = panZoom(figure, shown);
+  const changed = () => {
+    full.textContent = shown() ? "Exit full screen" : "Full screen";
+    view.reset();
+  };
   const escape = (event: KeyboardEvent) => {
     if (event.key === "Escape") leave();
   };
@@ -105,7 +115,7 @@ function diagramFigure(source: string, svg: string): HTMLElement {
   const leave = () => {
     figure.classList.remove("is-full");
     document.removeEventListener("keydown", escape);
-    label();
+    changed();
   };
   full.addEventListener("click", () => {
     if (document.fullscreenElement === figure) void document.exitFullscreen();
@@ -114,11 +124,96 @@ function diagramFigure(source: string, svg: string): HTMLElement {
     else {
       figure.classList.add("is-full");
       document.addEventListener("keydown", escape);
-      label();
+      changed();
     }
   });
-  figure.addEventListener("fullscreenchange", label);
+  figure.addEventListener("fullscreenchange", changed);
   return figure;
+}
+
+/**
+ * Pan and zoom, only while full screen: drag to move, the wheel or a pinch
+ * to zoom around the pointer, the −, Reset and + buttons, or the keys
+ * `-`, `0` and `+`. On the page itself the wheel scrolls the page, as usual.
+ */
+function panZoom(figure: HTMLElement, shown: () => boolean): { reset(): void } {
+  const canvas = figure.querySelector<HTMLElement>(".diagram-canvas")!;
+  const stage = figure.querySelector<HTMLElement>(".diagram-stage")!;
+  let scale = 1;
+  let x = 0;
+  let y = 0;
+  const pointers = new Map<number, { x: number; y: number }>();
+
+  const apply = () => {
+    stage.style.transform = scale === 1 && !x && !y ? "" : `translate(${x}px, ${y}px) scale(${scale})`;
+  };
+  /** Zoom by `factor`, keeping the point under (clientX, clientY) where it is. */
+  const zoomAt = (clientX: number, clientY: number, factor: number) => {
+    const next = Math.min(8, Math.max(0.2, scale * factor));
+    const box = stage.getBoundingClientRect(); // its top left moves with the translation only
+    const px = clientX - (box.left - x);
+    const py = clientY - (box.top - y);
+    x = px - (px - x) * (next / scale);
+    y = py - (py - y) * (next / scale);
+    scale = next;
+    apply();
+  };
+  const zoomCentre = (factor: number) => {
+    const box = canvas.getBoundingClientRect();
+    zoomAt(box.left + box.width / 2, box.top + box.height / 2, factor);
+  };
+  const reset = () => {
+    scale = 1;
+    x = y = 0;
+    pointers.clear();
+    apply();
+  };
+
+  canvas.addEventListener(
+    "wheel",
+    (event) => {
+      if (!shown()) return;
+      event.preventDefault();
+      zoomAt(event.clientX, event.clientY, Math.exp(-event.deltaY * 0.0015));
+    },
+    { passive: false }
+  );
+  canvas.addEventListener("pointerdown", (event) => {
+    if (!shown() || event.button !== 0) return;
+    canvas.setPointerCapture?.(event.pointerId);
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    const before = pointers.get(event.pointerId);
+    if (!before) return;
+    const now = { x: event.clientX, y: event.clientY };
+    const other = [...pointers].find(([id]) => id !== event.pointerId)?.[1];
+    if (other) {
+      // A pinch: zoom by the change in distance, around the two fingers' middle.
+      const apart = (a: { x: number; y: number }) => Math.hypot(a.x - other.x, a.y - other.y) || 1;
+      zoomAt((now.x + other.x) / 2, (now.y + other.y) / 2, apart(now) / apart(before));
+    } else {
+      x += now.x - before.x;
+      y += now.y - before.y;
+      apply();
+    }
+    pointers.set(event.pointerId, now);
+  });
+  const release = (event: PointerEvent) => pointers.delete(event.pointerId);
+  canvas.addEventListener("pointerup", release);
+  canvas.addEventListener("pointercancel", release);
+
+  figure.querySelector('[data-zoom="in"]')!.addEventListener("click", () => zoomCentre(1.25));
+  figure.querySelector('[data-zoom="out"]')!.addEventListener("click", () => zoomCentre(0.8));
+  figure.querySelector('[data-zoom="reset"]')!.addEventListener("click", reset);
+  figure.addEventListener("keydown", (event) => {
+    if (!shown()) return;
+    if (event.key === "+" || event.key === "=") zoomCentre(1.25);
+    else if (event.key === "-") zoomCentre(0.8);
+    else if (event.key === "0") reset();
+  });
+
+  return { reset };
 }
 
 /** A diagram is shown full screen: the page must not be redrawn under it. */

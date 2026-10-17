@@ -699,6 +699,10 @@ member through the new flow.
    whole screen, fitted or at its own size (scrolls); Escape or the button
    leaves it, and the page underneath is as it was. On an iPhone (no
    Fullscreen API): the diagram covers the app, the button closes it.
+   Full screen only: drag moves the diagram, the wheel zooms around the
+   pointer, a pinch zooms on a phone; −, Reset, + and the keys `-`, `0`,
+   `+` do the same. Leaving full screen resets the view; on the page the
+   wheel scrolls the page, not the diagram.
 3. **Both themes.** Switch to dark: the diagram stays on its light card,
    every label readable.
 4. **Speed.** On the Network tab, Mermaid's chunks load the first time a
