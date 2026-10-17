@@ -139,6 +139,8 @@ const streams = new Set<string>();
 const pages = new Map<string, string | Error>();
 /** Files picked for upload, Word files among them: waiting for keep or convert (I2). */
 let wordChoice: { files: File[] } | null = null;
+/** Files are being sent: a redraw would drop the progress shown. */
+let uploading = false;
 /** A Markdown copy of a Word file being made (I2, from its page). */
 let copying: string | null = null;
 
@@ -174,6 +176,7 @@ export function forgetPlaces(): void {
   pages.clear();
   wordChoice = null;
   copying = null;
+  uploading = false;
   forgetAclLocations();
   forgetDiagrams();
   forgetPictures();
@@ -217,6 +220,14 @@ export function when(date: Date | null, now = new Date()): string {
   if (days === 0) return `Today, ${time}`;
   if (days === 1) return `Yesterday, ${time}`;
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** "204k", "1M", "34.2M": a size where room is short. */
+export function shortSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}k`;
+  const mb = bytes / 1024 / 1024;
+  return `${mb < 10 ? Math.round(mb * 10) / 10 : Math.round(mb)}M`;
 }
 
 export function size(bytes: number | null): string {
@@ -490,6 +501,9 @@ function renderFolder(url: string): string {
       ${renderCreate()}
       ${renderWordChoice()}
       <p class="meta" id="upload-status" role="status" hidden></p>
+      <div class="upload-progress" id="upload-progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden>
+        <span class="upload-cells" aria-hidden="true">${"<i></i>".repeat(10)}</span><strong id="upload-percent">0%</strong><span id="upload-bytes"></span>
+      </div>
       <div id="places-list" class="places-list">${renderColumns()}${list}</div>
     </section>`;
 }
@@ -873,6 +887,7 @@ function inUse(): boolean {
     isDirty(editing) ||
     Boolean(creating) ||
     Boolean(wordChoice) ||
+    uploading ||
     Boolean(changes.change) ||
     Boolean(followForm) ||
     Boolean(changes.change) ||
@@ -1303,15 +1318,30 @@ function bindWrites(): void {
   frame.querySelector("#upload")?.addEventListener("click", () => picker?.click());
   const upload = async (chosen: File[], word: "keep" | "both" | "markdown") => {
     const status = frame!.querySelector<HTMLElement>("#upload-status")!;
+    const bar = frame!.querySelector<HTMLElement>("#upload-progress")!;
+    const cells = [...bar.querySelectorAll<HTMLElement>(".upload-cells i")];
+    const percent = bar.querySelector<HTMLElement>("#upload-percent")!;
+    const bytes = bar.querySelector<HTMLElement>("#upload-bytes")!;
+    // Byte by byte for the file being sent; the status line, read aloud, changes once per file.
+    const progress = (sent: number, total: number) => {
+      const share = total ? Math.min(100, Math.floor((sent / total) * 100)) : 0;
+      cells.forEach((cell, i) => cell.classList.toggle("is-on", share >= (i + 1) * 10));
+      percent.textContent = `${share}%`;
+      bar.setAttribute("aria-valuenow", String(share));
+      bytes.textContent = `${shortSize(sent)}/${shortSize(total)}`;
+    };
     status.hidden = false;
+    uploading = true;
     const failed: string[] = [];
     let copies = 0;
     let lossy = false;
     for (const [i, file] of chosen.entries()) {
       status.textContent = `Uploading ${i + 1} of ${chosen.length}: ${file.name}…`;
+      bar.hidden = false;
+      progress(0, file.size);
       try {
         const convert = word !== "keep" && isWord(file);
-        if (!convert || word === "both") await uploadFile(here, file);
+        if (!convert || word === "both") await uploadFile(here, file, progress);
         if (convert) {
           status.textContent = `Copying ${file.name} to Markdown…`;
           const copy = await saveWordCopy(here, file.name, await file.arrayBuffer());
@@ -1322,6 +1352,8 @@ function bindWrites(): void {
         failed.push(describePodError(err));
       }
     }
+    uploading = false;
+    bar.hidden = true;
     const done = chosen.length - failed.length;
     const copied = copies ? ` ${copies} Markdown cop${copies === 1 ? "y" : "ies"} made${lossy ? "; some Word formatting had no Markdown equivalent" : ""}.` : "";
     toast(

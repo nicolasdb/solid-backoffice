@@ -66,7 +66,7 @@ async function answer(url: string, init: RequestInit = {}): Promise<Response> {
 vi.mock("./lib/auth", () => ({ authFetch: (url: string, init?: RequestInit) => answer(url, init) }));
 
 const { docx } = await import("./lib/docx.fixture");
-const { mountPlaces, showPlaces, forgetPlaces, whoCanRead, when, sortItems } = await import("./places");
+const { mountPlaces, showPlaces, forgetPlaces, whoCanRead, when, sortItems, shortSize } = await import("./places");
 const { forgetReads } = await import("./lib/read");
 
 const acl = (target: string, folder: boolean, extra = "") => `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
@@ -125,6 +125,8 @@ beforeEach(() => {
   forgetReads();
   app = document.createElement("div");
   document.body.replaceChildren(app);
+  // Uploads go through authFetch here: the XHR with progress is upload.test.ts's.
+  vi.stubGlobal("XMLHttpRequest", undefined);
   URL.createObjectURL = vi.fn(() => "blob:fake");
   URL.revokeObjectURL = vi.fn();
 });
@@ -445,6 +447,11 @@ describe("C1 — words", () => {
     expect(whoCanRead({ ...none, public: ["read"] }, names)).toBe("Anyone");
     expect(whoCanRead({ ...none, authenticated: ["append"] }, names)).toBe("You · anyone signed in can leave a message");
     expect(whoCanRead({ ...none, agents: [{ webId: AGENT, modes: ["read"] }, { webId: "https://x.example/me", modes: ["read"] }] }, names)).toBe("You · 2 people");
+  });
+
+  it("writes sizes short where room is short", () => {
+    expect([512, 204 * 1024, 1024 * 1024, 34.24 * 1024 * 1024, 90 * 1024 * 1024].map(shortSize)).toEqual(["512B", "204k", "1M", "34M", "90M"]);
+    expect(shortSize(3.46 * 1024 * 1024)).toBe("3.5M");
   });
 
   it("dates like a person would", () => {

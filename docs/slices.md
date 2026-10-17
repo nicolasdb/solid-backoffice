@@ -866,12 +866,15 @@ it, with `source`, `converted` and `converter` in its YAML header.
   library. No conversion in the browser: the conversion is docling's, on
   the server (pipeline B), for precision:
   [PDF](explanation/documents.md#pdf-a-light-preview-docling-for-the-conversion).
-- Later, asked 17 Oct: **upload progress**. Byte progress needs
-  `XMLHttpRequest` (Firefox cannot stream a request body to `fetch`), and
-  the session's `fetch` signs each request itself (DPoP), so an XHR could
-  not be signed. Possible now: a bar by files and bytes done, with the
-  current file's size and time spent; true byte progress waits for a way
-  to sign an XHR, or a server that accepts uploads in parts.
+- **Upload progress**, asked and built 17 Oct: ten cells, the percentage
+  and `34M/90M` for the file being sent (a batch keeps "2 of 3" above).
+  Byte progress needs `XMLHttpRequest` (Firefox cannot stream a request
+  body to `fetch`), which the session's `fetch` cannot sign; so
+  `src/lib/upload.ts` has the session sign a bodiless copy of the request,
+  catches its headers on the way to the global `fetch`, and sends the file
+  once by XHR with them. Pinned on the real Inrupt library
+  (`upload.test.ts`); any doubt (headers not caught, 401/403) sends it
+  through the session's `fetch` as before, without progress.
 - Later, not planned: "Download as Word" for a Markdown file (the
   plugin's exporter, on the `docx` library); `.odt`. Known unknowns:
   [Documents on a pod](explanation/documents.md#known-unknowns).

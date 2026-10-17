@@ -756,6 +756,9 @@ Have a real `.docx` with a heading, a nested list, a table and an image
    Download saves it whole.
 6. **Too large to upload.** A file over 100 MB: refused at once with its
    size and the limit, nothing sent.
-7. **A format this browser lacks.** An H.264 `.mp4` in Fedora's Firefox
+7. **Progress.** Upload a 50–100 MB video: ten cells fill, the
+   percentage and `12M/80M` move until done; the list then shows the
+   file. Network: one PUT carrying the file (plus an OPTIONS), not two.
+8. **A format this browser lacks.** An H.264 `.mp4` in Fedora's Firefox
    without `libavcodec-freeworld`: "This browser cannot play …" and
    Download, not "the file is corrupt". The same file plays in Chrome.

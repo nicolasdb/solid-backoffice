@@ -14,6 +14,7 @@
  */
 import { Parser } from "n3";
 import { authFetch } from "./auth";
+import { sendWithProgress, type Progress } from "./upload";
 import { readTurtle } from "./read";
 import { readAccess, type ResourceAccess } from "./acl";
 import { writeIfMatch, type ConditionalError } from "./conditional";
@@ -338,12 +339,9 @@ export function typeFor(name: string): string {
 }
 
 /** PUT that creates, never replaces: 412 when something is already there. */
-export async function createOnly(url: string, body: BodyInit, contentType: string): Promise<void> {
-  const res = await authFetch(url, {
-    method: "PUT",
-    headers: { "Content-Type": contentType, "If-None-Match": "*" },
-    body,
-  });
+export async function createOnly(url: string, body: BodyInit, contentType: string, progress?: Progress): Promise<void> {
+  const init = { method: "PUT", headers: { "Content-Type": contentType, "If-None-Match": "*" } };
+  const res = progress && body instanceof Blob ? await sendWithProgress(url, { ...init, body }, progress) : await authFetch(url, { ...init, body });
   // 412: If-None-Match found something. 409: CSS 7 refuses a PUT on an
   // existing folder, or a folder where a file of that name is (and back).
   if (res.status === 412 || res.status === 409) {
@@ -379,7 +377,7 @@ export function uploadLimit(podUrl: string): number | null {
   return UPLOAD_LIMITS[new URL(podUrl).origin] ?? null;
 }
 
-export async function uploadFile(parentUrl: string, file: File): Promise<string> {
+export async function uploadFile(parentUrl: string, file: File, progress?: Progress): Promise<string> {
   const problem = nameProblem(file.name);
   if (problem) throw fileError("bad-name", `${file.name}: ${problem}`);
   const limit = uploadLimit(parentUrl);
@@ -388,7 +386,7 @@ export async function uploadFile(parentUrl: string, file: File): Promise<string>
   }
   const url = childUrl(parentUrl, file.name, false);
   try {
-    await createOnly(url, file, file.type || typeFor(file.name));
+    await createOnly(url, file, file.type || typeFor(file.name), progress);
   } catch (err) {
     // A server can keep the bytes it received before failing (CSS does, on
     // a 500): say so rather than leave a broken file nobody knows about.
