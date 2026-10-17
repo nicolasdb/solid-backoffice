@@ -153,14 +153,17 @@ diagnosable.
 
 ---
 
-## 9 · The design system, both themes
+## 9 · The design system, all three themes
 
-**Do:** open `/styleguide.html`. Use the Light / Dark / System switch, and change
-the OS appearance while on "System".
+**Do:** open `/styleguide.html`. Use the Light / Dark / High contrast preview.
+Then, in the app, set the theme button to "same as this device" and change the
+OS appearance, then its "increase contrast" setting, without reloading.
 
-**Expect:** every contrast badge reads AA. Nothing unreadable in either theme —
-particularly no token that renders one theme's text on the other theme's ground,
-which is what a slot defined in only one mode looks like.
+**Expect:** every contrast badge reads AA (AAA in High contrast). Nothing
+unreadable in any theme — particularly no token that renders one theme's text
+on another theme's ground, which is what a slot defined in only one mode looks
+like. "Same as this device" follows the OS live: dark, then High contrast. A
+dark OS with nothing chosen still opens light, with no flash of dark.
 
 **Observed:**
 
@@ -313,8 +316,9 @@ Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
    the invitation link, the one thing an owner sends.
 3. **Theme switch.** The icon left of the avatar (and in the
    landing's nav) goes light (the default) → dark → same-as-device. The choice survives
-   a reload; in a private window it lasts until the reload. Both themes read
-   well on every tab.
+   a reload with no flash of the other theme; in a private window it lasts
+   until the reload. A dark choice made before Oct 2026 (`backoffice:theme`)
+   is still there after the update. Every theme reads well on every tab.
 4. **L3, the landing.** Signed out, in a private window, desktop and phone
    (links as in [invite people](how-to/invite-people.md)): `/` shows the backoffice's own page (sign in first, "Create one on
    pod.nicolasdb.eu" one click away; "How it works" scrolls without changing
@@ -322,7 +326,8 @@ Built in slices (docs/slices.md, "Layout pass"); run each part as it lands.
    shows the invited page: HyperScope's card, its folder in step 03, the
    create form first. Add `schema:slogan "…"` to HyperScope's `config.ttl`,
    reload: its text replaces "Your work stays yours."; remove it again. Titles are in Newsreader
-   (serif), not Georgia. Both themes.
+   (serif, never bold), not Georgia; the field help and "No Solid account
+   yet?" are in the body face, not mono. Both themes.
 5. **L4, a member's tab.** As `nicolasdb`, HyperScope's tab: beside Sharing
    and Your membership, "Members" lists the roster (nicolasdb marked
    "(you)", each with a short name) and "Its agent" shows the agent's WebID.

@@ -70,18 +70,6 @@
   margin: 0;
 }
 
-/* "You run", "You", "You belong to": the roles read at sign-in. */
-/* A section's name on Home: a small mono label, as drawn (layout A). */
-.section-title {
-  margin: var(--space-6) 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-label);
-  color: var(--text-tertiary);
-}
-
 /* "Join another collective": the field and its button on one line. */
 .find-row {
   display: flex;
@@ -146,14 +134,10 @@ details.step:not([open]) {
 }
 
 /* ══ Layout A: the shell, its tabs, and the wide screens (docs/layout-brief.md) ══
-   Candidates to carry back to solid-kit once they have settled: .screen-wide,
-   the tab bar that moves to the bottom on a phone. */
-
-:root {
-  /* The display serif, self-hosted (@fontsource/newsreader, OFL, latin
-     400 and italic; imported by main.ts). Georgia while it loads. */
-  --font-display: "Newsreader", Georgia, serif;
-}
+   The brand, .screen-wide, .section-title, the display serif, the eyebrow
+   and the theme's icon button are the kit's now (src/styles/editorial.css).
+   Still a candidate to carry back once it has settled: the tab bar that moves
+   to the bottom on a phone. */
 
 .app-top {
   display: flex;
@@ -161,32 +145,6 @@ details.step:not([open]) {
   gap: var(--space-6);
   padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-8) var(--space-3);
   border-bottom: var(--border-width) solid var(--border-subtle);
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.brand-mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 1.5px solid var(--accent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand-mark::after {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--accent);
 }
 
 .tabs {
@@ -315,21 +273,6 @@ details.step:not([open]) {
   font-weight: 600;
 }
 
-button.small {
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-small);
-}
-
-/* min-width: 0 so a long address wraps instead of widening the page: on a
-   phone a page wider than the screen zooms out and the fixed tab bar drifts
-   off the bottom. */
-.screen-wide {
-  min-width: 0;
-  max-width: 90rem;
-  margin: 0 auto;
-  padding: var(--space-8) var(--space-8) calc(var(--space-12) + env(safe-area-inset-bottom));
-}
-
 /* You: the steps, and beside them from 64rem the profile's source. */
 .you-grid,
 .member-grid {
@@ -411,35 +354,6 @@ pre.source code { background: none; padding: 0; }
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-4);
-}
-
-.display {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(2.25rem, 5vw, 3rem);
-  line-height: 1.05;
-  letter-spacing: -0.01em;
-  margin: 0;
-}
-
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--text-tertiary);
-}
-
-.eyebrow::before {
-  content: "";
-  width: 40px;
-  height: var(--border-width);
-  background: currentColor;
-  opacity: 0.6;
 }
 
 .pill {
@@ -745,27 +659,6 @@ table.members .row-actions button { margin-top: var(--space-1); }
   .find, .find input { width: 100%; }
 }
 
-/* The theme switch: an icon button in the top bar, or the welcome screen's
-   corner before sign-in (src/theme.ts). */
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  flex: none;
-}
-
-.theme-icon {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-}
-
 /* Text that copies itself when clicked: the text, then a copy icon. */
 button.copyable {
   display: inline;
@@ -794,73 +687,9 @@ button.copyable:hover .copy-icon { fill: var(--accent); }
 
 /* ── The landing (layout L3, src/welcome.ts) ─────────────────────────────── */
 
-.landing {
-  max-width: 80rem;
-  margin: 0 auto;
-  padding: 0 var(--space-8) env(safe-area-inset-bottom);
-}
-
-.landing-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: calc(var(--space-5) + env(safe-area-inset-top)) 0 var(--space-5);
-}
-
-.landing-links {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-}
-
-/* A button that reads as a link: it acts on the page, not the address. */
-button.link-button {
-  display: inline;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--text-secondary);
-  font: inherit;
-  cursor: pointer;
-}
-
-button.link-button:hover { color: var(--text-primary); text-decoration: underline; }
-.panel-card button.link-button { color: var(--accent); }
-
-.landing-hero,
-.landing-why,
-.landing-then {
-  display: grid;
-  gap: var(--space-8);
-  align-items: start;
-}
-
-.landing-hero { padding: var(--space-16) 0 var(--space-20); }
-.landing-hero-text { gap: var(--space-6); padding-top: var(--space-6); min-width: 0; }
-
-.landing-title {
-  font-size: clamp(2.5rem, 6vw, 4rem);
-  line-height: 1.04;
-  text-wrap: balance;
-}
-
-.landing-h2 {
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-  line-height: 1.1;
-  text-wrap: balance;
-}
-
-.pull {
-  margin: 0;
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--text-h3);
-  line-height: 1.35;
-  color: var(--text-primary);
-}
-
-.landing-lead { font-size: var(--text-h4); max-width: 34em; }
+/* The landing's frame, hero, bands, steps and foot are the kit's
+   (src/styles/editorial.css). What stays here is the backoffice's own: the
+   invitation card, the diagram (.ladder) and the phone tweak below. */
 
 .invite-card {
   display: flex;
@@ -874,59 +703,6 @@ button.link-button:hover { color: var(--text-primary); text-decoration: underlin
 }
 
 .invite-card div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-
-.panel-card {
-  padding: var(--space-6);
-  border: var(--border-width) solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-elevated);
-}
-
-.panel-card h2 { margin: 0; }
-.panel-card .field { max-width: none; }
-
-.panel-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.divider {
-  width: 100%;
-  height: var(--border-width);
-  margin: 0;
-  border: none;
-  background: var(--border-subtle);
-}
-
-.landing-band {
-  padding: var(--space-16) 0;
-  border-top: var(--border-width) solid var(--border-subtle);
-}
-
-.landing-band:focus { outline: none; }
-
-.how-steps {
-  list-style: none;
-  margin: var(--space-8) 0 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-8);
-}
-
-.how-steps li {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-4);
-  border-top: var(--border-width) solid var(--border);
-}
-
-.how-number { font-family: var(--font-mono); font-size: var(--text-micro); color: var(--accent); }
-.how-title { margin: 0; font-size: var(--text-h3); }
-.how-steps .lead { margin: 0; font-size: var(--text-body); }
 
 .ladder { display: block; width: 100%; height: auto; }
 .ladder-ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-opacity: 0.6; }
@@ -942,38 +718,7 @@ button.link-button:hover { color: var(--text-primary); text-decoration: underlin
   text-anchor: middle;
 }
 
-.landing-foot {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-6) 0 var(--space-8);
-  border-top: var(--border-width) solid var(--border-subtle);
-}
-
-@media (min-width: 64rem) {
-  .landing-hero,
-  .landing-why,
-  .landing-then { grid-template-columns: repeat(12, minmax(0, 1fr)); }
-  .landing-hero-text { grid-column: span 7; }
-  .landing-panel { grid-column: span 5; }
-  .landing-why > :first-child { grid-column: span 6; }
-  .landing-why-text { grid-column: span 6; padding-top: var(--space-8); }
-  .landing-then { align-items: center; }
-  .landing-then > :first-child { grid-column: span 5; }
-  .landing-then > :last-child { grid-column: span 7; }
-  .how-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-@media (min-width: 40rem) and (max-width: 64rem) {
-  .how-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
 @media (max-width: 40rem) {
-  .landing { padding-inline: var(--space-4); }
-  .landing-hero { padding: var(--space-8) 0 var(--space-12); }
-  .landing-band { padding: var(--space-12) 0; }
-  .landing-links { gap: var(--space-4); }
   #to-how { display: none; }
 }
 
@@ -1294,14 +1039,44 @@ button.menu-item.is-warn { color: var(--warn); }
 .create-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
 .create-row .field { flex: 1 1 16rem; }
 .create-row .error { flex-basis: 100%; margin: 0; }
-/* Upload progress: the file being sent, byte by byte. */
-.upload-progress { display: flex; align-items: center; gap: var(--space-2); margin-block: var(--space-2); font-family: var(--font-mono); font-size: var(--text-small); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Upload progress: the file being sent, byte by byte. One mono line in the
+   manner of a terminal status bar: a quiet label, slanted cells that fill in
+   sage, the share in bold, the bytes in the quiet tone. The sentence above it
+   ("Uploading 1 of 2: …") is a .hint and is what a screen reader hears; the
+   line itself is the role="progressbar". */
+.upload-status {
+  margin-block: var(--space-2) 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block: var(--space-1) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-tertiary);
+}
 .upload-progress[hidden] { display: none; }
+.upload-label { letter-spacing: var(--tracking-label); }
 .upload-cells { display: inline-flex; gap: 2px; }
-.upload-cells i { width: 0.6rem; height: 0.45rem; border: 1px solid var(--text-tertiary); border-radius: 1px; }
-.upload-cells i.is-on { background: var(--accent); border-color: var(--accent); }
-.upload-progress strong { min-width: 4ch; text-align: right; }
-.upload-progress span:last-child { color: var(--text-secondary); }
+/* Empty cells are the text tone at a quarter: findable in every theme without
+   competing with the filled ones. */
+.upload-cells i {
+  width: 0.5rem;
+  height: 0.3rem;
+  border-radius: 1px;
+  background: var(--text-tertiary);
+  opacity: 0.28;
+  transform: skewX(-20deg);
+}
+.upload-cells i.is-on { background: var(--accent); opacity: 1; }
+.upload-progress strong { min-width: 4ch; text-align: right; font-weight: 700; color: var(--text-primary); }
 
 /* I2: a Word file at upload, kept or copied to Markdown. */
 .word-choice { margin-block: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface-recessed); border-radius: var(--radius-md); }

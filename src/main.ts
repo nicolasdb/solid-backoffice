@@ -8,11 +8,11 @@
  * `renderHome` hands over to the backoffice's own screens; everything above
  * it is the kit's shell, kept unchanged.
  */
-import "@fontsource/newsreader/latin-400.css";
-import "@fontsource/newsreader/latin-400-italic.css";
+import "./styles/fonts.css";
 import "./styles/core.css";
 import "./styles/theme.css";
 import "./styles/patterns.css";
+import "./styles/editorial.css";
 import { completeLogin, logout } from "./lib/auth";
 import { describePodError, getPrimaryPodUrl, isAuthError } from "./lib/pod";
 import { SIGNUP_PROVIDER } from "./config";
@@ -21,12 +21,14 @@ import { renderError, renderPending } from "./ui/patterns";
 import { renderMembership } from "./onboarding";
 import { captureInvite } from "./invite";
 import { renderWelcome } from "./signup";
-import { applyTheme, storedTheme } from "./theme";
+import { wireThemeButton } from "./ui/theme";
 import "./styles/backoffice.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 trackInputModality();
-applyTheme(storedTheme());
+// Once, on #app: every screen draws its theme button inside it, and a
+// listener added on each render would cycle the theme twice per click.
+wireThemeButton(app);
 
 /** Escapes text before it goes into innerHTML — WebIDs and errors are inputs. */
 function esc(value: string): string {

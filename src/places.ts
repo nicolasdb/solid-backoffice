@@ -500,13 +500,16 @@ function renderFolder(url: string): string {
       </div>
       ${renderCreate()}
       ${renderWordChoice()}
-      <p class="meta" id="upload-status" role="status" hidden></p>
+      <p class="hint upload-status" id="upload-status" role="status" hidden></p>
       <div class="upload-progress" id="upload-progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden>
-        <span class="upload-cells" aria-hidden="true">${"<i></i>".repeat(10)}</span><strong id="upload-percent">0%</strong><span id="upload-bytes"></span>
+        <span class="upload-label" aria-hidden="true">upload</span><span class="upload-cells" aria-hidden="true">${"<i></i>".repeat(UPLOAD_CELLS)}</span><strong id="upload-percent">0%</strong><span class="upload-bytes" id="upload-bytes"></span>
       </div>
       <div id="places-list" class="places-list">${renderColumns()}${list}</div>
     </section>`;
 }
+
+/** Cells in the upload bar: a terminal-style meter, one cell per 1/12 sent. */
+const UPLOAD_CELLS = 12;
 
 /** Word files among those picked: keep them, or convert (I2). Keeping is the default. */
 function renderWordChoice(): string {
@@ -1325,7 +1328,8 @@ function bindWrites(): void {
     // Byte by byte for the file being sent; the status line, read aloud, changes once per file.
     const progress = (sent: number, total: number) => {
       const share = total ? Math.min(100, Math.floor((sent / total) * 100)) : 0;
-      cells.forEach((cell, i) => cell.classList.toggle("is-on", share >= (i + 1) * 10));
+      const on = Math.floor((share * UPLOAD_CELLS) / 100);
+      cells.forEach((cell, i) => cell.classList.toggle("is-on", i < on));
       percent.textContent = `${share}%`;
       bar.setAttribute("aria-valuenow", String(share));
       bytes.textContent = `${shortSize(sent)}/${shortSize(total)}`;

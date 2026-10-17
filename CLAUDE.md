@@ -137,8 +137,17 @@ one changes, change the other. Never point it at the real provider.
 - `src/lib/read.ts` — display reads with an in-memory ETag cache
   (`If-None-Match`, 304 hands back the kept body); writes never use it.
   Forgotten at sign-out, with the last load.
-- `src/theme.ts` — the light / dark switch in the top bar and the landing's
-  nav: light by default, kept in localStorage, never on a pod.
+- `src/ui/theme.ts` — the kit's theme button, in the top bar and the
+  landing's nav: Light (the default) → Dark → Same as this device, kept in
+  localStorage under the kit's key, never on a pod. `index.html`'s first-paint
+  script resolves "same as this device" (dark, High contrast or light) and
+  follows it; it also carries over the old `backoffice:theme` once. Wired once
+  on `#app` in `src/main.ts`, never per render.
+- `src/styles/` — the kit's `core.css`, `theme.css`, `patterns.css`,
+  `editorial.css` (the landing, `.hint`, the brand, the icon button) and
+  `fonts.css` (Newsreader, Commit Mono), unchanged. `backoffice.css` holds
+  only what is the backoffice's own: the shell and its tabs, `.ladder`, Pods.
+  Help under a field and the line under a form are `.hint`, never `.meta`.
 
 **Starting a session: read `docs/slices.md` first** ("Where we are" and the
 next tasks), then `docs/journeys.md`. No plan lives anywhere else.

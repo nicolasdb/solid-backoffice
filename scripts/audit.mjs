@@ -5,21 +5,37 @@
  * The rest of the UX principles are judgment and live in docs/manual-tests.md.
  * What is here is what would otherwise be a comment nobody re-checks:
  *
- *   1. every text token clears WCAG AA 4.5:1 on the surfaces it sits on,
- *      in BOTH modes;
- *   2. every color token defined for light is also defined for dark, in both
- *      the media query and the [data-theme] override — a token defined in one
- *      mode only renders one theme's text on the other theme's ground;
+ *   1. every text token clears WCAG AA 4.5:1 on the surfaces it sits on, in
+ *      light and dark — and AAA 7:1 in the high-contrast theme, whose borders
+ *      and lines must also reach 3:1;
+ *   2. every color token defined for light is also defined for dark and for
+ *      high contrast — a token defined in one mode only renders one theme's
+ *      text on the other theme's ground — and light stays the default: no
+ *      prefers-color-scheme: dark block (ADR 008). theme.css has no
+ *      prefers-contrast copy of the contrast theme either: the first-paint
+ *      script resolves "same as this device" (src/ui/theme.ts). A skin may
+ *      still carry one; if it does, it must be complete and agree;
  *   3. :focus-visible and prefers-reduced-motion exist at all.
  *
  * No dependencies: it reads the CSS as text on purpose, so it cannot drift
  * from what actually ships the way a duplicated token table would.
+ *
+ * `npm run audit -- --skin <file.css>` runs checks 1 and 2 on an identity-page
+ * skin instead (solid-css-overlay's skins/, an instance's overlay/), plus the skin's own slot,
+ * --border-control, which outlines inputs and must reach 3:1 (WCAG 1.4.11)
+ * on the surfaces a control sits on, in every theme.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const skinArg = process.argv.indexOf("--skin");
+const skinPath = skinArg === -1 ? null : process.argv[skinArg + 1];
+if (skinArg !== -1 && !skinPath) {
+  console.error("usage: npm run audit -- --skin <skin.css>");
+  process.exit(2);
+}
 const themeCss = readFileSync(join(root, "src/styles/theme.css"), "utf8");
 const coreCss = readFileSync(join(root, "src/styles/core.css"), "utf8");
 const patternsCss = readFileSync(join(root, "src/styles/patterns.css"), "utf8");
@@ -28,6 +44,17 @@ const uxTs = readFileSync(join(root, "src/ui/ux.ts"), "utf8");
 
 const failures = [];
 const notes = [];
+
+function report() {
+  for (const note of notes) console.log(note);
+  if (failures.length) {
+    console.error(`\n${failures.length} problem(s):`);
+    for (const f of failures) console.error(`  FAIL  ${f}`);
+    process.exit(1);
+  }
+  console.log(`\naudit: ${notes.length} checks passed.`);
+  process.exit(0);
+}
 
 /* ── parsing ──────────────────────────────────────────────────────────────── */
 
@@ -48,6 +75,16 @@ function blockAfter(css, pattern) {
   return null;
 }
 
+/** Every block whose selector line matches `pattern` (a global regex), concatenated. */
+function blocksAll(css, pattern) {
+  const out = [];
+  for (const m of css.matchAll(pattern)) {
+    const body = blockAfter(css.slice(m.index), pattern.source.startsWith("^") ? new RegExp(pattern.source, "m") : pattern);
+    if (body) out.push(body);
+  }
+  return out.join("\n");
+}
+
 /** `--name: value;` pairs in a block, comments stripped. */
 function tokensIn(block) {
   const out = {};
@@ -59,20 +96,12 @@ function tokensIn(block) {
   return out;
 }
 
-const light = tokensIn(blockAfter(themeCss, /^:root\s*\{/m));
-const darkMedia = tokensIn(
-  blockAfter(themeCss, /:root:not\(\[data-theme="light"\]\)\s*\{/)
-);
-const darkAttr = tokensIn(blockAfter(themeCss, /:root\[data-theme="dark"\]\s*\{/));
-
-if (!Object.keys(light).length) failures.push("Could not parse the :root token block.");
-if (!Object.keys(darkMedia).length) failures.push("Could not parse the dark media block.");
-if (!Object.keys(darkAttr).length)
-  failures.push('Could not parse the :root[data-theme="dark"] block.');
-
 /* ── color maths ──────────────────────────────────────────────────────────── */
 
 function parseColor(value) {
+  // #abc is #aabbcc: expand it, or a short hex is skipped without a word.
+  const short = value.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+  if (short) value = `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`;
   const hex = value.match(/^#([0-9a-f]{6})$/i);
   if (hex) {
     const n = parseInt(hex[1], 16);
@@ -112,6 +141,7 @@ function relativeLuminance({ r, g, b }) {
 }
 
 function contrast(fgValue, bgValue) {
+  if (!fgValue || !bgValue) return null; // a missing token is reported by the completeness check
   const bg = parseColor(bgValue);
   const fgRaw = parseColor(fgValue);
   if (!bg || !fgRaw) return null;
@@ -120,13 +150,13 @@ function contrast(fgValue, bgValue) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/* ── 1. contrast ──────────────────────────────────────────────────────────── */
-
 const TEXT_TOKENS = ["--text-primary", "--text-secondary", "--text-tertiary"];
 const SURFACES = ["--surface", "--surface-elevated", "--surface-recessed"];
 const MIN = 4.5;
+const MIN_AAA = 7;
+const MIN_LINE = 3;
 
-function checkContrast(label, tokens) {
+function checkContrast(label, tokens, min = MIN) {
   for (const text of TEXT_TOKENS) {
     for (const surface of SURFACES) {
       if (!tokens[text] || !tokens[surface]) continue;
@@ -136,7 +166,7 @@ function checkContrast(label, tokens) {
         continue;
       }
       const line = `${label}: ${text} on ${surface} = ${ratio.toFixed(2)}:1`;
-      if (ratio < MIN) failures.push(`${line} — below AA ${MIN}:1`);
+      if (ratio < min) failures.push(`${line} — below ${min}:1`);
       else notes.push(`  ok  ${line}`);
     }
   }
@@ -145,41 +175,129 @@ function checkContrast(label, tokens) {
   if (tokens["--accent"] && tokens["--accent-contrast"]) {
     const ratio = contrast(tokens["--accent-contrast"], tokens["--accent"]);
     const line = `${label}: --accent-contrast on --accent = ${ratio.toFixed(2)}:1`;
-    if (ratio < MIN) failures.push(`${line} — below AA ${MIN}:1`);
+    if (ratio < min) failures.push(`${line} — below ${min}:1`);
     else notes.push(`  ok  ${line}`);
   }
 }
 
-checkContrast("light", light);
-checkContrast("dark ", { ...light, ...darkMedia });
-
-/* ── 2. slot completeness ─────────────────────────────────────────────────── */
+/* ── 1 and 2, for one stylesheet: contrast and slot completeness ─────────── */
 
 const isColor = (v) => /^#[0-9a-f]{3,8}$/i.test(v) || /^rgba?\(/i.test(v);
-const lightColors = Object.keys(light).filter((k) => isColor(light[k]));
 
-for (const [label, block] of [
-  ["the dark media block", darkMedia],
-  ['the :root[data-theme="dark"] block', darkAttr],
-]) {
-  const missing = lightColors.filter((k) => !(k in block));
-  if (missing.length) {
+/** Checks 1 and 2 on the token blocks of `css` (theme.css, or a skin). */
+function auditTokens(css, file, opts = {}) {
+  // Every bare :root block: a skin may keep its fonts in one and its colours in another.
+  const light = tokensIn(blocksAll(css, /^:root\s*\{/gm));
+  const darkAttr = tokensIn(blockAfter(css, /:root\[data-theme="dark"\]\s*\{/));
+  const contrastAttr = tokensIn(
+    blockAfter(css, /:root\[data-theme="contrast"\]\s*\{/)
+  );
+  const contrastMedia = tokensIn(
+    blockAfter(css, /:root:not\(\[data-theme\]\)\s*\{/)
+  );
+
+  if (!Object.keys(light).length) failures.push("Could not parse the :root token block.");
+  if (!Object.keys(darkAttr).length)
+    failures.push('Could not parse the :root[data-theme="dark"] block.');
+  if (!Object.keys(contrastAttr).length)
+    failures.push('Could not parse the :root[data-theme="contrast"] block.');
+  const hasContrastMedia = /@media\s*\(prefers-contrast:\s*more\)/.test(css);
+  if (hasContrastMedia && !opts.skin) {
     failures.push(
-      `${missing.length} color token(s) defined for light but missing from ${label}: ` +
-        missing.join(", ")
+      `${file} has a prefers-contrast: more block — the first-paint script resolves ` +
+        `"same as this device" to [data-theme="contrast"], so each theme's values live once (ADR 008).`
     );
+  } else if (hasContrastMedia && !Object.keys(contrastMedia).length) {
+    failures.push("Could not parse the prefers-contrast: more block.");
+  }
+
+  /* ── 1. contrast ──────────────────────────────────────────────────────────── */
+
+  checkContrast("light", light);
+  checkContrast("dark ", { ...light, ...darkAttr });
+  checkContrast("contrast", { ...light, ...contrastAttr }, MIN_AAA);
+
+  // High contrast is the theme for people who cannot find a faint outline, so
+  // its lines carry meaning: every border, and the status colors as text.
+  const hc = { ...light, ...contrastAttr };
+  for (const [token, min] of [
+    ["--border", MIN_LINE],
+    ["--border-subtle", MIN_LINE],
+    ["--accent-line", MIN_LINE],
+    ["--warn-line", MIN_LINE],
+    ["--accent", MIN_AAA],
+    ["--warn", MIN_AAA],
+    ["--danger", MIN_AAA],
+  ]) {
+    for (const surface of SURFACES) {
+      const ratio = contrast(hc[token], hc[surface]);
+      if (ratio === null) continue;
+      const line = `contrast: ${token} on ${surface} = ${ratio.toFixed(2)}:1`;
+      if (ratio < min) failures.push(`${line} — below ${min}:1`);
+      else notes.push(`  ok  ${line}`);
+    }
+  }
+
+  /* ── 2. slot completeness ─────────────────────────────────────────────────── */
+
+  const lightColors = Object.keys(light).filter((k) => isColor(light[k]));
+
+  for (const [label, block] of [
+    ['the :root[data-theme="dark"] block', darkAttr],
+    ['the :root[data-theme="contrast"] block', contrastAttr],
+    ...(hasContrastMedia ? [["the prefers-contrast: more block", contrastMedia]] : []),
+  ]) {
+    const missing = lightColors.filter((k) => !(k in block));
+    if (missing.length) {
+      failures.push(
+        `${missing.length} color token(s) defined for light but missing from ${label}: ` +
+          missing.join(", ")
+      );
+    }
+  }
+
+  // The two contrast blocks must agree, or the switch and the OS setting disagree.
+  const disagreements = Object.keys(contrastMedia).filter(
+    (k) => contrastAttr[k] !== undefined && contrastAttr[k] !== contrastMedia[k]
+  );
+  if (disagreements.length) {
+    failures.push(
+      `prefers-contrast block and [data-theme="contrast"] disagree on: ${disagreements.join(", ")}`
+    );
+  }
+
+  // Light is the default for everyone (ADR 008). A dark media block would quietly
+  // bring back following the OS, which is the decision that ADR reverses.
+  if (/@media\s*\(prefers-color-scheme:\s*dark\)/.test(css)) {
+    failures.push(
+      `${file} has a prefers-color-scheme: dark block — dark is an explicit choice only, see ADR 008.`
+    );
+  }
+
+  // A skin's own slot: input and choice-row outlines (WCAG 1.4.11).
+  if (opts.skin) {
+    const themes = [["light", light], ["dark ", { ...light, ...darkAttr }], ["contrast", hc]];
+    for (const [label, tokens] of themes) {
+      if (!tokens["--border-control"]) {
+        failures.push(`${label}: --border-control is not defined`);
+        continue;
+      }
+      for (const surface of ["--surface", "--surface-elevated"]) {
+        const ratio = contrast(tokens["--border-control"], tokens[surface]);
+        if (ratio === null) continue;
+        const line = `${label}: --border-control on ${surface} = ${ratio.toFixed(2)}:1`;
+        if (ratio < MIN_LINE) failures.push(`${line} — below ${MIN_LINE}:1`);
+        else notes.push(`  ok  ${line}`);
+      }
+    }
   }
 }
 
-// The two dark blocks must agree, or the toggle and the OS setting disagree.
-const disagreements = Object.keys(darkMedia).filter(
-  (k) => darkAttr[k] !== undefined && darkAttr[k] !== darkMedia[k]
-);
-if (disagreements.length) {
-  failures.push(
-    `dark media block and [data-theme="dark"] disagree on: ${disagreements.join(", ")}`
-  );
+if (skinPath) {
+  auditTokens(readFileSync(skinPath, "utf8"), skinPath, { skin: true });
+  report();
 }
+auditTokens(themeCss, "theme.css");
 
 /* ── 3. accessibility affordances ─────────────────────────────────────────── */
 
@@ -260,12 +378,4 @@ if (!/export const ERRORS_MUST_OFFER_RECOVERY/.test(uxTs)) {
 
 /* ── report ───────────────────────────────────────────────────────────────── */
 
-for (const note of notes) console.log(note);
-
-if (failures.length) {
-  console.error(`\n${failures.length} problem(s):`);
-  for (const f of failures) console.error(`  FAIL  ${f}`);
-  process.exit(1);
-}
-
-console.log(`\naudit: ${notes.length} checks passed.`);
+report();
