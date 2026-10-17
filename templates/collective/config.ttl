@@ -1,0 +1,33 @@
+# config.ttl — a collective's entry point, for the backoffice and for agents.
+#
+# Copy to <POD-COLLECTIF>/config.ttl and replace every UPPERCASE value.
+# Field by field, and the pod tree it points to:
+# docs/reference/collective-files.md. Steps: docs/how-to/set-up-a-collective.md.
+# Filled examples: docs/examples/ (HyperScope, Maps of Making).
+#
+# <#NOM> is the collective's IRI and its group IRI: members write
+# `org:memberOf <POD-COLLECTIF/config.ttl#NOM>`.
+#
+# hs: is the common, provisional vocabulary, the same for every collective:
+# do not replace it with your own pod's address (solid-kit ADR 006, open).
+
+@prefix hs:   <https://pod.nicolasdb.eu/hyperscope/vocab#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix ldp:  <http://www.w3.org/ns/ldp#> .
+@prefix schema: <http://schema.org/> .
+
+<#NOM> a hs:Collective, foaf:Group ;
+    foaf:name "NOM-DU-COLLECTIF" ;
+    hs:roster <membres.ttl> ;
+    ldp:inbox <inbox/> ;
+    # The WebID members grant Read to when they share. Never a group.
+    hs:agent <agents/agent#me> ;
+    # For agents (the backoffice ignores them): procedures + principles,
+    # and onboarding/FAQ/glossary (copied from guide/ beside this file).
+    hs:procedures <principles/> ;
+    hs:guide <guide/> ;
+    # schema:slogan "[A title for newcomers]" ;
+    # schema:description "[One paragraph: what joining means]" ;
+    # The folder suggested to members, relative to their own pod; each
+    # member picks their own (settings/collectives.ttl).
+    hs:bundleFolder "output2/NOM/" .

@@ -46,6 +46,10 @@ instance would only change branding. → [Membership](explanation/membership.md#
 **How do I set up a collective's pod?**
 By hand, once. → [Set up a collective's pod](how-to/set-up-a-collective.md)
 
+**Is there a FAQ for a collective's members?**
+Yes, in French, copied onto each collective's pod (`guide/faq.md`) with an
+onboarding and a glossary. → [`templates/collective/guide/`](../templates/collective/guide/)
+
 **Who can read `config.ttl`? Can it be limited to one provider's WebIDs?**
 Anyone, signed in or not: the invitation's landing reads it before sign-in.
 It holds nothing secret. A provider-wide limit does not exist in WAC.
