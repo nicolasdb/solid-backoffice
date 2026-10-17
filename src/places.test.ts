@@ -364,6 +364,14 @@ describe("C1 — a file opens in Preview", () => {
     publicHead.mockRestore();
   });
 
+  it("says when this browser cannot play a video, rather than \"corrupt\"", async () => {
+    pod[POD + "projects/film.mp4"].length = 3;
+    await mount("projects/film.mp4");
+    await until(() => app.querySelector("video"));
+    app.querySelector("video")!.dispatchEvent(new Event("error"));
+    expect(app.querySelector(".preview")!.textContent).toMatch(/This browser cannot play film\.mp4\.[\s\S]*Download it, or open it in another browser/);
+  });
+
   it("opens full width, its access in its ··· menu", async () => {
     await mount("projects/public.md");
     await reading;

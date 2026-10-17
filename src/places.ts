@@ -703,6 +703,24 @@ async function readableByAnyone(url: string): Promise<boolean> {
   }
 }
 
+/**
+ * A sound or video this browser cannot decode says so, rather than leave
+ * the browser's own words ("the file is corrupt", for a codec it lacks).
+ */
+function unplayable(root: HTMLElement): void {
+  root.querySelectorAll<HTMLMediaElement>(".preview.media :is(audio, video)").forEach((media) =>
+    media.addEventListener("error", () => {
+      const label = media.getAttribute("aria-label") ?? "This file";
+      const what = media.tagName === "VIDEO" ? "video" : "sound";
+      const note = document.createElement("div");
+      note.className = "preview empty-state";
+      note.innerHTML = `<p class="lead">This browser cannot play ${esc(label)}.</p>
+        <p class="meta">The file is most likely fine: browsers differ in the ${what} formats they read. Download it, or open it in another browser.</p>`;
+      media.closest("figure")?.replaceWith(note);
+    })
+  );
+}
+
 /** A sound or video is playing: a redraw would stop it. */
 function playing(root: HTMLElement): boolean {
   return [...root.querySelectorAll<HTMLMediaElement>("audio, video")].some((media) => !media.paused);
@@ -840,6 +858,7 @@ function draw(focus: boolean): void {
   void drawDiagrams(frame);
   void drawPictures(frame);
   void drawWord(frame);
+  unplayable(frame);
   if (focus) focusView(frame);
 }
 

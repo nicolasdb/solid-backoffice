@@ -866,6 +866,12 @@ it, with `source`, `converted` and `converter` in its YAML header.
   library. No conversion in the browser: the conversion is docling's, on
   the server (pipeline B), for precision:
   [PDF](explanation/documents.md#pdf-a-light-preview-docling-for-the-conversion).
+- Later, asked 17 Oct: **upload progress**. Byte progress needs
+  `XMLHttpRequest` (Firefox cannot stream a request body to `fetch`), and
+  the session's `fetch` signs each request itself (DPoP), so an XHR could
+  not be signed. Possible now: a bar by files and bytes done, with the
+  current file's size and time spent; true byte progress waits for a way
+  to sign an XHR, or a server that accepts uploads in parts.
 - Later, not planned: "Download as Word" for a Markdown file (the
   plugin's exporter, on the `docx` library); `.odt`. Known unknowns:
   [Documents on a pod](explanation/documents.md#known-unknowns).
@@ -878,6 +884,15 @@ its `.docx` only when complete; solid-kit ADR 006 to amend (pull rule 5).
 The share summary (pipeline D) counts `.docx` among the types.
 
 ## J — Media in Pods: images, audio, video · built (17 Oct 2026)
+
+Run live 17 Oct: PDF, `.docx` (preview and copy with images), an `.m4a`
+play; `.odt` uploads with no preview, as planned. A 35 MB `.mp4` (H.264
+High + AAC, the usual web video) failed in Fedora's Firefox as "the file
+is corrupt": that Firefox decodes video through the system's
+`libavcodec-free`, which has no H.264 (RPM Fusion's
+`libavcodec-freeworld` adds it; Chrome and Safari have it). Not the pod,
+not the app; the preview now says "This browser cannot play …" with
+Download. Upload progress (asked 17 Oct): in I's "Later" list above.
 
 Status, 17 Oct 2026 (read from the code; the PNG checked live):
 
