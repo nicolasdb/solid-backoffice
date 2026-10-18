@@ -782,10 +782,9 @@ button.copyable:hover .copy-icon { fill: var(--accent); }
 .places-file { width: 100%; max-width: var(--width-reading); margin-inline: auto; }
 .places-file:has(.preview.pdf, .preview.media, .preview.image) { max-width: none; }
 .places-file .preview-note { max-width: none; overflow-wrap: anywhere; }
-.prose.preview { max-width: none; padding: var(--space-8); }
-.prose.preview > * { max-width: var(--measure-prose); margin-inline: auto; }
-.prose.preview > :is(table, figure, pre, .diagram, hr),
-.prose.preview > p:has(> img:only-child) { max-width: none; }
+/* The card itself is the kit's .prose-card (editorial.css): text at
+   --measure-prose, centred; pictures, tables and diagrams at its width. */
+.preview.prose-card { padding: var(--space-8); } /* the kit's, over .preview's */
 .places-head {
   display: flex;
   flex-wrap: wrap;
@@ -1022,7 +1021,7 @@ button.menu-item.is-warn { color: var(--warn); }
     padding-bottom: env(safe-area-inset-bottom);
   }
   .drawer { width: 100vw; border-left: 0; padding: var(--space-5) var(--space-4); }
-  .preview, .prose.preview { padding: var(--space-4); }
+  .preview, .preview.prose-card { padding: var(--space-4); }
 }
 
 /* The permissions panel (C2). */
@@ -1053,46 +1052,8 @@ button.menu-item.is-warn { color: var(--warn); }
 .create-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
 .create-row .field { flex: 1 1 16rem; }
 .create-row .error { flex-basis: 100%; margin: 0; }
-/* Upload: one block, two lines, its height fixed while it shows so the list
-   below does not jump. Line 1 is the queue ("Uploading 2 of 5 · name"), a
-   .hint, read aloud once per file; a long name is cut in the middle, the
-   extension kept. Line 2 is the file being sent: slanted cells filling in
-   sage, the share in bold, the bytes in the quiet tone, in the body face
-   with even-width digits so the numbers do not jitter. */
-.upload-box {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-height: 3rem;
-  margin-block: var(--space-1) var(--space-2);
-}
-.upload-box[hidden] { display: none; }
-.upload-queue { display: flex; max-width: 100%; min-width: 0; white-space: nowrap; }
-.upload-name { display: inline-flex; min-width: 0; }
-.upload-stem { overflow: hidden; text-overflow: ellipsis; }
-.upload-progress {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-meta);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  color: var(--text-tertiary);
-}
-.upload-progress[hidden] { display: none; }
-.upload-cells { display: inline-flex; gap: 2px; }
-/* Empty cells are the text tone at a quarter: findable in every theme without
-   competing with the filled ones. */
-.upload-cells i {
-  width: 0.5rem;
-  height: 0.3rem;
-  border-radius: 1px;
-  background: var(--text-tertiary);
-  opacity: 0.28;
-  transform: skewX(-20deg);
-}
-.upload-cells i.is-on { background: var(--accent); opacity: 1; }
-.upload-progress strong { min-width: 4ch; text-align: right; font-weight: 700; color: var(--text-primary); }
+/* Upload: the kit's progress block (patterns.css, renderProgress). */
+#upload-box .progress { margin-block: var(--space-1) var(--space-2); }
 
 /* I2: a Word file at upload, kept or copied to Markdown. */
 .word-choice { margin-block: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface-recessed); border-radius: var(--radius-md); }

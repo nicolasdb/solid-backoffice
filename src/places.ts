@@ -56,7 +56,7 @@ import { drawPictures, forgetPictures } from "./ui/pictures";
 import { convertedFrom, copyNames, isWord, saveWordCopy, wordToHtml } from "./lib/word";
 import { diagramExpanded, drawDiagrams, forgetDiagrams } from "./ui/mermaid";
 import { busy } from "./ui/typing";
-import { esc, renderError, renderPending, toast } from "./ui/patterns";
+import { esc, renderError, renderPending, renderProgress, setProgress, setProgressQueue, toast } from "./ui/patterns";
 import { accessChips, bindAccess, labelOf, loadDraft, renderAccess, rulesOf, type Draft, type Group } from "./access-panel";
 import { podLabel, webIdName } from "./ui/address";
 import { bindRules, rawDirty, renderRules, startRaw, type RawEdit } from "./raw-rules";
@@ -493,43 +493,10 @@ function renderFolder(url: string): string {
       </div>
       ${renderCreate()}
       ${renderWordChoice()}
-      <div class="upload-box" id="upload-box" hidden>
-        <p class="hint upload-queue" id="upload-status" role="status"></p>
-        <div class="upload-progress" id="upload-progress" role="progressbar" aria-label="This file, sent" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <span class="upload-cells" aria-hidden="true">${"<i></i>".repeat(UPLOAD_CELLS)}</span><strong id="upload-percent">0%</strong><span class="upload-bytes" id="upload-bytes"></span>
-        </div>
-      </div>
+      <div id="upload-box">${renderProgress("This file, sent")}</div>
       <div id="places-list" class="places-list">${renderColumns()}${list}</div>
     </section>`;
 }
-
-/**
- * The queue line: "Uploading 2 of 5 · Évolution_d_OpenFab.png". A long name is
- * cut in the middle, never at the end, so its extension stays in view: the
- * stem shrinks with an ellipsis, the extension does not. Text only: a file
- * name is an input.
- */
-export function queueLine(line: HTMLElement, what: string, name: string): void {
-  const dot = name.lastIndexOf(".");
-  const stem = dot > 0 ? name.slice(0, dot) : name;
-  const ext = dot > 0 ? name.slice(dot) : "";
-  line.replaceChildren();
-  const lead = document.createElement("span");
-  lead.textContent = `${what} ·\u00a0`; // a flex row drops a plain trailing space
-  const file = document.createElement("span");
-  file.className = "upload-name";
-  const s = document.createElement("span");
-  s.className = "upload-stem";
-  s.textContent = stem;
-  const e = document.createElement("span");
-  e.textContent = ext;
-  file.append(s, e);
-  file.title = name;
-  line.append(lead, file);
-}
-
-/** Cells in the upload bar: a terminal-style meter, one cell per 1/12 sent. */
-const UPLOAD_CELLS = 12;
 
 /** Word files among those picked: keep them, or convert (I2). Keeping is the default. */
 function renderWordChoice(): string {
@@ -656,12 +623,12 @@ function renderPreview(file: FileContent): string {
   if (file.withheld) return renderWithheld(file);
   switch (file.kind) {
     case "markdown":
-      return `${convertedLine(file)}<article class="prose preview" data-base="${esc(file.url)}" aria-label="Preview of ${esc(nameOf(file.url))}">${renderMarkdown(file.text ?? "")}</article>`;
+      return `${convertedLine(file)}<article class="prose prose-card preview" data-base="${esc(file.url)}" aria-label="Preview of ${esc(nameOf(file.url))}">${renderMarkdown(file.text ?? "")}</article>`;
     case "word": {
       const page = pages.get(pageKey(file));
       if (page instanceof Error) return `<div class="preview empty-state"><p class="lead">This Word file could not be shown: ${esc(page.message)}</p><p class="hint">Download it to open it on your device.</p></div>`;
       return `<p class="hint preview-note">A preview: Word's layout, fonts and comments are not shown. Read only.</p>
-        <article class="prose preview word" data-word="${esc(file.url)}" aria-label="Preview of ${esc(nameOf(file.url))}"${page ? "" : ' aria-busy="true"'}>${page ?? `<p class="hint">Reading the Word file…</p>`}</article>`;
+        <article class="prose prose-card preview word" data-word="${esc(file.url)}" aria-label="Preview of ${esc(nameOf(file.url))}"${page ? "" : ' aria-busy="true"'}>${page ?? `<p class="hint">Reading the Word file…</p>`}</article>`;
     }
     case "json": {
       let text = file.text ?? "";
@@ -1340,36 +1307,26 @@ function bindWrites(): void {
   const picker = frame.querySelector<HTMLInputElement>("#upload-input");
   frame.querySelector("#upload")?.addEventListener("click", () => picker?.click());
   const upload = async (chosen: File[], word: "keep" | "both" | "markdown") => {
-    const status = frame!.querySelector<HTMLElement>("#upload-status")!;
-    const box = frame!.querySelector<HTMLElement>("#upload-box")!;
-    const bar = frame!.querySelector<HTMLElement>("#upload-progress")!;
-    const cells = [...bar.querySelectorAll<HTMLElement>(".upload-cells i")];
-    const percent = bar.querySelector<HTMLElement>("#upload-percent")!;
-    const bytes = bar.querySelector<HTMLElement>("#upload-bytes")!;
-    // Line 1 is the queue (which file, of how many), read aloud once per file;
-    // line 2 is the file being sent, byte by byte. A single file is a queue of one.
-    const progress = (sent: number, total: number) => {
-      const share = total ? Math.min(100, Math.floor((sent / total) * 100)) : 0;
-      const on = Math.floor((share * UPLOAD_CELLS) / 100);
-      cells.forEach((cell, i) => cell.classList.toggle("is-on", i < on));
-      percent.textContent = `${share}%`;
-      bar.setAttribute("aria-valuenow", String(share));
-      bytes.textContent = `${size(sent)} of ${size(total)}`;
-    };
+    // The kit's progress block: line 1 the queue (which file, of how many),
+    // read aloud once per file; line 2 the file being sent, byte by byte. A
+    // single file is a queue of one.
+    const box = frame!.querySelector<HTMLElement>("#upload-box .progress")!;
+    const bar = box.querySelector<HTMLElement>(".progress-meter")!;
+    const progress = (sent: number, total: number) => setProgress(box, sent, total);
     box.hidden = false;
     uploading = true;
     const failed: string[] = [];
     let copies = 0;
     let lossy = false;
     for (const [i, file] of chosen.entries()) {
-      queueLine(status, `Uploading ${i + 1} of ${chosen.length}`, file.name);
+      setProgressQueue(box, `Uploading ${i + 1} of ${chosen.length}`, file.name);
       bar.hidden = false;
       progress(0, file.size);
       try {
         const convert = word !== "keep" && isWord(file);
         if (!convert || word === "both") await uploadFile(here, file, progress);
         if (convert) {
-          queueLine(status, "Copying to Markdown", file.name);
+          setProgressQueue(box, "Copying to Markdown", file.name);
           bar.hidden = true;
           const copy = await saveWordCopy(here, file.name, await file.arrayBuffer());
           copies++;

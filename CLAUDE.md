@@ -147,6 +147,8 @@ one changes, change the other. Never point it at the real provider.
   `editorial.css` (the landing, `.hint`, the brand, the icon button) and
   `fonts.css` (Newsreader, Commit Mono), unchanged. `backoffice.css` holds
   only what is the backoffice's own: the shell and its tabs, `.ladder`, Pods.
+  Pods uses the kit's `renderProgress` for uploads and `.prose.prose-card`
+  for a document opened; the file view's column (`.places-file`) is its own.
   Help under a field and the line under a form are `.hint`, never `.meta`.
 
 **Starting a session: read `docs/slices.md` first** ("Where we are" and the

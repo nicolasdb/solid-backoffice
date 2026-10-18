@@ -143,7 +143,7 @@ button.link-button:hover { color: var(--text-primary); text-decoration: underlin
 /* The theme switch: an icon button in the top bar or the landing's nav.
    `button.` on purpose: it is also `button.small`, whose padding would win on
    specificity over a bare `.icon-button` and leave 10px of the 36px for the
-   icon. A fix to carry into the design system's bundle.css. */
+   icon. */
 button.icon-button {
   display: inline-flex;
   align-items: center;
@@ -326,8 +326,43 @@ button.icon-button {
 
 .reading .prose { max-width: var(--measure-prose); }
 
+/* A document shown on a card, inside an app: a file opened from a pod. The
+   card takes the reading width, centred, so the page is not weighted to one
+   side; the text inside keeps a comfortable line (--measure-prose, about 72
+   characters), centred too. Wider than that is harder to read, not roomier:
+   the eye loses the start of the next line. Pictures, tables, code and
+   diagrams take the card's whole width. Use with .prose. */
+.prose-card {
+  width: 100%;
+  max-width: var(--width-reading);
+  margin-inline: auto;
+  padding: var(--space-8);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+}
+
+/* The text column is a grid track, not a max-width on each block: 72ch is
+   measured in the font of the element it is set on, so a smaller front-matter
+   list or a larger heading would each get their own width and a left edge of
+   their own. A track measures it once, in the card's font.
+   Grid items' margins do not collapse: every block in .prose ends on a 1em
+   bottom margin, so a heading's 1.6em top becomes 0.6em to keep the rhythm. */
+.prose.prose-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) min(var(--measure-prose), 100%) minmax(0, 1fr);
+  max-width: var(--width-reading);
+}
+
+.prose.prose-card > * { grid-column: 2; min-width: 0; max-width: none; } /* the track sets it */
+.prose.prose-card > :is(h1, h2, h3, h4) { margin-top: 0.6em; }
+.prose.prose-card > :first-child { margin-top: 0; }
+.prose.prose-card > :is(table, figure, pre, hr, .diagram),
+.prose.prose-card > p:has(> img:only-child) { grid-column: 1 / -1; }
+
 @media (max-width: 40rem) {
   .reading { padding: var(--space-8) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom)); }
+  .prose-card { padding: var(--space-4); }
 }
 
 /* ── Meta line: counts and facts joined by middots ────────────────────────── */

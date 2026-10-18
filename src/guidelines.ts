@@ -21,6 +21,7 @@ import {
   MAX_CHUNKS_PER_STEP,
   PENDING_DELAY_MS,
   PENDING_PATIENCE_MS,
+  PROGRESS_CELLS,
   UNDO_WINDOW_MS,
 } from "./ui/ux";
 import {
@@ -33,6 +34,9 @@ import {
   renderPending,
   mountPending,
   renderPhaseRail,
+  renderProgress,
+  setProgress,
+  setProgressQueue,
   toast,
   type Checkpoint,
 } from "./ui/patterns";
@@ -310,6 +314,24 @@ function render(): void {
       )}
 
       ${section(
+        "measured",
+        "Measured work: the queue, then the item",
+        `When the work can be measured, a file sent byte by byte, say it in two
+         lines: which item of how many, then how far along this one is. A
+         single item is a queue of one.`,
+        demo(
+          "renderProgress + setProgressQueue + setProgress",
+          `<div id="demo-progress">${renderProgress("This file, sent")}</div>
+           <button id="demo-progress-run" class="ghost small">Send three files</button>`,
+          `${PROGRESS_CELLS} cells, from <code>PROGRESS_CELLS</code>. Line 1 is a
+           <code>.hint</code>, set once per item, so a screen reader hears it
+           once and not at every byte. A long name is cut in the middle so its
+           extension stays in view. Body face with even-width digits, never mono.
+           When the wait cannot be measured, it is <code>renderPending</code>.`
+        )
+      )}
+
+      ${section(
         "undo",
         "Reversible beats confirmed",
         `Reversibility is the principle that lets the others relax: someone who
@@ -379,11 +401,13 @@ function render(): void {
          in an app and on the pod's public page alike, so a file reads the same
          signed in or not. A YAML header becomes a list of fields.`,
         demo(
-          "renderMarkdown + .prose",
-          `<div class="prose">${renderMarkdown(PROSE_SAMPLE)}</div>`,
+          "renderMarkdown + .prose.prose-card",
+          `<div class="prose prose-card">${renderMarkdown(PROSE_SAMPLE)}</div>`,
           `Output is sanitized: whoever can write the file can put anything in
            it. Without the header handling, <code>---</code> … <code>---</code>
-           renders as a rule and one large heading holding every field.`
+           renders as a rule and one large heading holding every field. On a
+           <code>.prose-card</code> the card takes the reading width, centred,
+           and the text keeps about 72 characters to a line.`
         )
       )}
 
@@ -424,6 +448,28 @@ function wire(): void {
     mountPending(stage, "Looking for your pod\u2026", {
       patience: "Still looking \u2014 your provider may be slow to answer, or the address may be wrong.",
     });
+  });
+
+  // Simulated: three files, a few steps each. The point is the two lines.
+  root.querySelector("#demo-progress-run")?.addEventListener("click", async () => {
+    const progress = root.querySelector<HTMLElement>("#demo-progress .progress");
+    if (!progress) return;
+    const files = [
+      ["Compte_rendu_de_residence_ete_2026_version_relue.docx", 5.7],
+      ["Evolution_d_OpenFab.png", 2.4],
+      ["notes.md", 0.1],
+    ] as const;
+    progress.hidden = false;
+    for (const [i, [name, mb]] of files.entries()) {
+      setProgressQueue(progress, `Uploading ${i + 1} of ${files.length}`, name);
+      const total = mb * 1024 * 1024;
+      for (let step = 0; step <= 10; step++) {
+        setProgress(progress, (total * step) / 10, total);
+        await new Promise((done) => setTimeout(done, 120));
+      }
+    }
+    progress.hidden = true;
+    toast("3 files uploaded.");
   });
 
   root.querySelector("#demo-focus")?.addEventListener("click", () => {

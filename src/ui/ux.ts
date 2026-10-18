@@ -75,3 +75,12 @@ export const PENDING_PATIENCE_MS = 10000;
  * violated, and the audit checks that the pairing still exists.
  */
 export const ERRORS_MUST_OFFER_RECOVERY = true;
+
+/**
+ * Cells in a progress line (`renderProgress`): one per twelfth sent.
+ *
+ * Few enough to read at a glance like a terminal's status bar, enough that a
+ * large upload visibly moves every few seconds. The number beside it carries
+ * the precision; the cells only carry the shape.
+ */
+export const PROGRESS_CELLS = 12;

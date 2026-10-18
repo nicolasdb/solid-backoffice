@@ -14,6 +14,7 @@ import {
   MAX_CHUNKS_PER_STEP,
   PENDING_DELAY_MS,
   PENDING_PATIENCE_MS,
+  PROGRESS_CELLS,
   UNDO_WINDOW_MS,
 } from "./ux";
 import { announce } from "./a11y";
@@ -375,6 +376,85 @@ export function mountPending(
 /* ── Undo toast ───────────────────────────────────────────────────────────── */
 
 let toastTimer: number | undefined;
+
+/* ── Progress ───────────────────────────────────────────────────────────── */
+
+/**
+ * Work that can be measured, said in two lines: the queue, then the item.
+ *
+ * Line 1 is the queue ("Uploading 2 of 5 · name"), a `.hint`, set once per
+ * item so a screen reader hears it once, not at every byte. Line 2 is the item
+ * being worked on: cells filling in sage, the share in bold, the amount in the
+ * quiet tone. A single item is a queue of one. Both lines used to be built
+ * separately, one round after the other, and stacked as two blocks competing
+ * for the same glance; one block with one job per line is what that taught.
+ *
+ * Where the wait cannot be measured, use `renderPending` instead: cells that
+ * never move are worse than a line that admits it does not know.
+ *
+ * Starts hidden; `setProgressQueue` and `setProgress` fill it, and the caller
+ * shows and hides the block (`hidden`). The block keeps its height while it
+ * shows, so what is under it does not jump.
+ */
+export function renderProgress(label: string): string {
+  return `
+    <div class="progress" hidden>
+      <p class="hint progress-queue" role="status"></p>
+      <div class="progress-meter" role="progressbar" aria-label="${esc(label)}"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span class="progress-cells" aria-hidden="true">${"<i></i>".repeat(PROGRESS_CELLS)}</span>
+        <strong class="progress-value">0%</strong><span class="progress-amount"></span>
+      </div>
+    </div>`;
+}
+
+/**
+ * Line 1: "Uploading 2 of 5 · Évolution_d_OpenFab.png". A long name is cut in
+ * the middle, never at the end, so its extension stays in view: the stem
+ * shrinks with an ellipsis, the extension does not. Built as text, because a
+ * file name is an input.
+ */
+export function setProgressQueue(progress: HTMLElement, what: string, name = ""): void {
+  const line = progress.querySelector<HTMLElement>(".progress-queue");
+  if (!line) return;
+  line.replaceChildren();
+  const lead = document.createElement("span");
+  // A no-break space: a flex row drops a plain trailing one.
+  lead.textContent = name ? `${what} ·\u00a0` : what;
+  line.append(lead);
+  if (!name) return;
+  const dot = name.lastIndexOf(".");
+  const stem = document.createElement("span");
+  stem.className = "progress-stem";
+  stem.textContent = dot > 0 ? name.slice(0, dot) : name;
+  const ext = document.createElement("span");
+  ext.textContent = dot > 0 ? name.slice(dot) : "";
+  const whole = document.createElement("span");
+  whole.className = "progress-name";
+  whole.title = name;
+  whole.append(stem, ext);
+  line.append(whole);
+}
+
+/** Line 2: `done` of `total` bytes. Hidden while there is nothing to measure. */
+export function setProgress(progress: HTMLElement, done: number, total: number): void {
+  const meter = progress.querySelector<HTMLElement>(".progress-meter");
+  if (!meter) return;
+  const share = total > 0 ? Math.min(100, Math.floor((done / total) * 100)) : 0;
+  const on = Math.floor((share * PROGRESS_CELLS) / 100);
+  meter.querySelectorAll(".progress-cells i").forEach((cell, i) => cell.classList.toggle("is-on", i < on));
+  meter.querySelector(".progress-value")!.textContent = `${share}%`;
+  meter.querySelector(".progress-amount")!.textContent = `${formatBytes(done)} of ${formatBytes(total)}`;
+  meter.setAttribute("aria-valuenow", String(share));
+}
+
+/** "512 bytes", "204.0 kB", "4.1 MB": one decimal, so the digits do not jump. */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
 
 /**
  * The mechanism behind "reversible everywhere".

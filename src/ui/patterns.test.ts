@@ -8,6 +8,10 @@ import {
   renderError,
   renderPending,
   mountPending,
+  renderProgress,
+  setProgressQueue,
+  setProgress,
+  formatBytes,
   toast,
   esc,
 } from "./patterns";
@@ -16,6 +20,7 @@ import {
   MAX_CHOICES,
   PENDING_DELAY_MS,
   PENDING_PATIENCE_MS,
+  PROGRESS_CELLS,
   UNDO_WINDOW_MS,
 } from "./ux";
 
@@ -367,5 +372,56 @@ describe("toast", () => {
 
     vi.advanceTimersByTime(UNDO_WINDOW_MS + 1);
     expect(document.querySelector(".toast")).toBeNull();
+  });
+});
+
+describe("progress", () => {
+  const block = () => mount(renderProgress("This file, sent")).querySelector<HTMLElement>(".progress")!;
+
+  it("starts hidden, with a cell per PROGRESS_CELLS", () => {
+    const p = block();
+    expect(p.hidden).toBe(true);
+    expect(p.querySelectorAll(".progress-cells i")).toHaveLength(PROGRESS_CELLS);
+    expect(p.querySelector(".progress-meter")!.getAttribute("role")).toBe("progressbar");
+  });
+
+  it("fills the cells and says the share and the amount", () => {
+    const p = block();
+    setProgress(p, 4.1 * 1024 * 1024, 5.7 * 1024 * 1024);
+    expect(p.querySelector(".progress-value")!.textContent).toBe("71%");
+    expect(p.querySelectorAll(".progress-cells i.is-on")).toHaveLength(Math.floor((71 * PROGRESS_CELLS) / 100));
+    expect(p.querySelector(".progress-amount")!.textContent).toBe("4.1 MB of 5.7 MB");
+    expect(p.querySelector(".progress-meter")!.getAttribute("aria-valuenow")).toBe("71");
+  });
+
+  it("never claims more than all of it", () => {
+    const p = block();
+    setProgress(p, 120, 100);
+    expect(p.querySelector(".progress-value")!.textContent).toBe("100%");
+    setProgress(p, 0, 0);
+    expect(p.querySelector(".progress-value")!.textContent).toBe("0%");
+  });
+
+  it("names the item so its extension stays in view, and as text only", () => {
+    const p = block();
+    setProgressQueue(p, "Uploading 2 of 5", "Évolution_d_OpenFab.png");
+    const line = p.querySelector(".progress-queue")!;
+    expect(line.textContent).toBe("Uploading 2 of 5 ·\u00a0Évolution_d_OpenFab.png");
+    // Only the stem shrinks with an ellipsis; the extension is its own span.
+    expect(line.querySelector(".progress-stem")!.textContent).toBe("Évolution_d_OpenFab");
+    expect(line.querySelector(".progress-name")!.lastElementChild!.textContent).toBe(".png");
+    setProgressQueue(p, "Uploading 1 of 1", "<img src=x onerror=alert(1)>.md");
+    expect(line.querySelector("img")).toBeNull();
+    setProgressQueue(p, "Copying to Markdown");
+    expect(line.textContent).toBe("Copying to Markdown");
+  });
+
+  it("writes sizes with one decimal", () => {
+    expect([512, 204 * 1024, 4.1 * 1024 * 1024, 3 * 1024 ** 3].map(formatBytes)).toEqual([
+      "512 bytes",
+      "204.0 kB",
+      "4.1 MB",
+      "3.0 GB",
+    ]);
   });
 });
