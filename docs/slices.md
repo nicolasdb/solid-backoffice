@@ -4,7 +4,27 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (17 Oct 2026)
+## Where we are (18 Oct 2026)
+
+**On the kit's design system, run live 18 Oct** (`dev`, test.nicolasdb.eu):
+the backoffice takes the kit's styles unchanged (solid-kit PR #9; the
+"Solid Kit" design system on claude.ai is the reference): the landing and
+shell rules left `backoffice.css`, help under a field and the line under a
+form are `.hint`, Newsreader and Commit Mono, and the kit's theme button
+(Light → Dark → Same as this device, resolved before first paint; a choice
+kept under `backoffice:theme` carries over once). Pods: one upload block,
+the queue then the file being sent (the kit's `renderProgress`), and a file
+opens in a centred column at the reading width, its text at about 72
+characters (`.prose.prose-card`), carried back to the kit (solid-kit PR
+#10) and the design system. Manual tests §9, layout 3–4 and Pods 7–8 run.
+
+**Next, in order:** the members' guide page on the ways into a pod; agent
+names (proposed `<collective>·pull`, a fallback, short chips), now on the
+kit's classes; then the list below. Outside this repo: tag
+solid-css-overlay `v7.2.0-1` after `check-overrides.sh`, then the
+migration and the pipeline.
+
+## Where we were (17 Oct 2026)
 
 **Pods reads more than text, all run live 17 Oct:** Mermaid diagrams with
 fit, full screen, pan and zoom ([H](#h--mermaid-in-the-markdown-preview--built-17-oct-2026));
