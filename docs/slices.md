@@ -883,8 +883,9 @@ it, with `source`, `converted` and `converter` in its YAML header.
   library. No conversion in the browser: the conversion is docling's, on
   the server (pipeline B), for precision:
   [PDF](explanation/documents.md#pdf-a-light-preview-docling-for-the-conversion).
-- **Upload progress**, asked and built 17 Oct: ten cells, the percentage
-  and `34M/90M` for the file being sent (a batch keeps "2 of 3" above).
+- **Upload progress**, asked and built 17 Oct, one block since 18 Oct:
+  line 1 the queue ("Uploading 2 of 3 · name"), line 2 the file being
+  sent (twelve cells, the percentage, "34.0 MB of 90.0 MB").
   Byte progress needs `XMLHttpRequest` (Firefox cannot stream a request
   body to `fetch`), which the session's `fetch` cannot sign; so
   `src/lib/upload.ts` has the session sign a bodiless copy of the request,

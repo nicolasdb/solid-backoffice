@@ -223,13 +223,6 @@ export function when(date: Date | null, now = new Date()): string {
 }
 
 /** "204k", "1M", "34.2M": a size where room is short. */
-export function shortSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}k`;
-  const mb = bytes / 1024 / 1024;
-  return `${mb < 10 ? Math.round(mb * 10) / 10 : Math.round(mb)}M`;
-}
-
 export function size(bytes: number | null): string {
   if (bytes === null) return "";
   if (bytes < 1024) return `${bytes} bytes`;
@@ -470,7 +463,7 @@ function renderColumns(): string {
         <li class="colpick"><label><input type="checkbox" checked disabled> Name</label></li>
         ${prefs.order.map(line).join("")}
       </ul>
-      <p class="meta">Kept in this browser, never on your pod.</p>
+      <p class="hint">Kept in this browser, never on your pod.</p>
     </div>`;
 }
 
@@ -481,7 +474,7 @@ function renderFolder(url: string): string {
       ? renderFailure(errors.get(url))
       : renderPending("Reading this folder…")
     : !items.length
-      ? `<p class="meta">This folder is empty.</p>`
+      ? `<p class="hint">This folder is empty.</p>`
       : `<table class="items">
           ${renderHead()}
           <tbody>${sortItems(items, prefs.sort, countOf).map(renderRow).join("")}</tbody>
@@ -500,12 +493,39 @@ function renderFolder(url: string): string {
       </div>
       ${renderCreate()}
       ${renderWordChoice()}
-      <p class="hint upload-status" id="upload-status" role="status" hidden></p>
-      <div class="upload-progress" id="upload-progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden>
-        <span class="upload-label" aria-hidden="true">upload</span><span class="upload-cells" aria-hidden="true">${"<i></i>".repeat(UPLOAD_CELLS)}</span><strong id="upload-percent">0%</strong><span class="upload-bytes" id="upload-bytes"></span>
+      <div class="upload-box" id="upload-box" hidden>
+        <p class="hint upload-queue" id="upload-status" role="status"></p>
+        <div class="upload-progress" id="upload-progress" role="progressbar" aria-label="This file, sent" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span class="upload-cells" aria-hidden="true">${"<i></i>".repeat(UPLOAD_CELLS)}</span><strong id="upload-percent">0%</strong><span class="upload-bytes" id="upload-bytes"></span>
+        </div>
       </div>
       <div id="places-list" class="places-list">${renderColumns()}${list}</div>
     </section>`;
+}
+
+/**
+ * The queue line: "Uploading 2 of 5 · Évolution_d_OpenFab.png". A long name is
+ * cut in the middle, never at the end, so its extension stays in view: the
+ * stem shrinks with an ellipsis, the extension does not. Text only: a file
+ * name is an input.
+ */
+export function queueLine(line: HTMLElement, what: string, name: string): void {
+  const dot = name.lastIndexOf(".");
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : "";
+  line.replaceChildren();
+  const lead = document.createElement("span");
+  lead.textContent = `${what} ·\u00a0`; // a flex row drops a plain trailing space
+  const file = document.createElement("span");
+  file.className = "upload-name";
+  const s = document.createElement("span");
+  s.className = "upload-stem";
+  s.textContent = stem;
+  const e = document.createElement("span");
+  e.textContent = ext;
+  file.append(s, e);
+  file.title = name;
+  line.append(lead, file);
 }
 
 /** Cells in the upload bar: a terminal-style meter, one cell per 1/12 sent. */
@@ -526,7 +546,7 @@ function renderWordChoice(): string {
         <label><input type="radio" name="word" value="both"> Keep it, and add a Markdown copy</label>
         <label><input type="radio" name="word" value="markdown"> Only the Markdown copy (the Word file stays on your device)</label>
       </fieldset>
-      <p class="meta">A copy is ${esc(first.note)}, with its images in ${esc(first.images)}/, made in this browser. Headings, lists, tables and images carry over; Word's layout, comments and tracked changes do not.</p>
+      <p class="hint">A copy is ${esc(first.note)}, with its images in ${esc(first.images)}/, made in this browser. Headings, lists, tables and images carry over; Word's layout, comments and tracked changes do not.</p>
       <div class="actions">
         <button type="submit" class="small">Upload ${count === 1 ? "it" : `${count} files`}</button>
         <button type="button" class="ghost small" id="word-cancel">Cancel</button>
@@ -639,9 +659,9 @@ function renderPreview(file: FileContent): string {
       return `${convertedLine(file)}<article class="prose preview" data-base="${esc(file.url)}" aria-label="Preview of ${esc(nameOf(file.url))}">${renderMarkdown(file.text ?? "")}</article>`;
     case "word": {
       const page = pages.get(pageKey(file));
-      if (page instanceof Error) return `<div class="preview empty-state"><p class="lead">This Word file could not be shown: ${esc(page.message)}</p><p class="meta">Download it to open it on your device.</p></div>`;
-      return `<p class="meta">A preview: Word's layout, fonts and comments are not shown. Read only.</p>
-        <article class="prose preview word" data-word="${esc(file.url)}" aria-label="Preview of ${esc(nameOf(file.url))}"${page ? "" : ' aria-busy="true"'}>${page ?? `<p class="meta">Reading the Word file…</p>`}</article>`;
+      if (page instanceof Error) return `<div class="preview empty-state"><p class="lead">This Word file could not be shown: ${esc(page.message)}</p><p class="hint">Download it to open it on your device.</p></div>`;
+      return `<p class="hint preview-note">A preview: Word's layout, fonts and comments are not shown. Read only.</p>
+        <article class="prose preview word" data-word="${esc(file.url)}" aria-label="Preview of ${esc(nameOf(file.url))}"${page ? "" : ' aria-busy="true"'}>${page ?? `<p class="hint">Reading the Word file…</p>`}</article>`;
     }
     case "json": {
       let text = file.text ?? "";
@@ -676,7 +696,7 @@ function convertedLine(file: FileContent): string {
   const source = /^https?:\/\//i.test(from.source)
     ? `<a href="${esc(from.source)}" target="_blank" rel="noopener noreferrer">${esc(sourceLabel(from.source))}</a>`
     : esc(from.source);
-  return `<p class="meta converted-from">Converted from ${source}${on}. The original is the reference; this copy may have been edited since.</p>`;
+  return `<p class="hint preview-note converted-from">Converted from ${source}${on}. The original is the reference; this copy may have been edited since.</p>`;
 }
 
 function sourceLabel(url: string): string {
@@ -732,7 +752,7 @@ function unplayable(root: HTMLElement): void {
       const note = document.createElement("div");
       note.className = "preview empty-state";
       note.innerHTML = `<p class="lead">This browser cannot play ${esc(label)}.</p>
-        <p class="meta">The file is most likely fine: browsers differ in the ${what} formats they read. Download it, or open it in another browser.</p>`;
+        <p class="hint">The file is most likely fine: browsers differ in the ${what} formats they read. Download it, or open it in another browser.</p>`;
       media.closest("figure")?.replaceWith(note);
     })
   );
@@ -1321,33 +1341,36 @@ function bindWrites(): void {
   frame.querySelector("#upload")?.addEventListener("click", () => picker?.click());
   const upload = async (chosen: File[], word: "keep" | "both" | "markdown") => {
     const status = frame!.querySelector<HTMLElement>("#upload-status")!;
+    const box = frame!.querySelector<HTMLElement>("#upload-box")!;
     const bar = frame!.querySelector<HTMLElement>("#upload-progress")!;
     const cells = [...bar.querySelectorAll<HTMLElement>(".upload-cells i")];
     const percent = bar.querySelector<HTMLElement>("#upload-percent")!;
     const bytes = bar.querySelector<HTMLElement>("#upload-bytes")!;
-    // Byte by byte for the file being sent; the status line, read aloud, changes once per file.
+    // Line 1 is the queue (which file, of how many), read aloud once per file;
+    // line 2 is the file being sent, byte by byte. A single file is a queue of one.
     const progress = (sent: number, total: number) => {
       const share = total ? Math.min(100, Math.floor((sent / total) * 100)) : 0;
       const on = Math.floor((share * UPLOAD_CELLS) / 100);
       cells.forEach((cell, i) => cell.classList.toggle("is-on", i < on));
       percent.textContent = `${share}%`;
       bar.setAttribute("aria-valuenow", String(share));
-      bytes.textContent = `${shortSize(sent)}/${shortSize(total)}`;
+      bytes.textContent = `${size(sent)} of ${size(total)}`;
     };
-    status.hidden = false;
+    box.hidden = false;
     uploading = true;
     const failed: string[] = [];
     let copies = 0;
     let lossy = false;
     for (const [i, file] of chosen.entries()) {
-      status.textContent = `Uploading ${i + 1} of ${chosen.length}: ${file.name}…`;
+      queueLine(status, `Uploading ${i + 1} of ${chosen.length}`, file.name);
       bar.hidden = false;
       progress(0, file.size);
       try {
         const convert = word !== "keep" && isWord(file);
         if (!convert || word === "both") await uploadFile(here, file, progress);
         if (convert) {
-          status.textContent = `Copying ${file.name} to Markdown…`;
+          queueLine(status, "Copying to Markdown", file.name);
+          bar.hidden = true;
           const copy = await saveWordCopy(here, file.name, await file.arrayBuffer());
           copies++;
           lossy ||= copy.warnings.length > 0;
@@ -1357,7 +1380,7 @@ function bindWrites(): void {
       }
     }
     uploading = false;
-    bar.hidden = true;
+    box.hidden = true;
     const done = chosen.length - failed.length;
     const copied = copies ? ` ${copies} Markdown cop${copies === 1 ? "y" : "ies"} made${lossy ? "; some Word formatting had no Markdown equivalent" : ""}.` : "";
     toast(

@@ -66,7 +66,7 @@ async function answer(url: string, init: RequestInit = {}): Promise<Response> {
 vi.mock("./lib/auth", () => ({ authFetch: (url: string, init?: RequestInit) => answer(url, init) }));
 
 const { docx } = await import("./lib/docx.fixture");
-const { mountPlaces, showPlaces, forgetPlaces, whoCanRead, when, sortItems, shortSize } = await import("./places");
+const { mountPlaces, showPlaces, forgetPlaces, whoCanRead, when, sortItems, queueLine } = await import("./places");
 const { forgetReads } = await import("./lib/read");
 
 const acl = (target: string, folder: boolean, extra = "") => `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
@@ -449,9 +449,15 @@ describe("C1 — words", () => {
     expect(whoCanRead({ ...none, agents: [{ webId: AGENT, modes: ["read"] }, { webId: "https://x.example/me", modes: ["read"] }] }, names)).toBe("You · 2 people");
   });
 
-  it("writes sizes short where room is short", () => {
-    expect([512, 204 * 1024, 1024 * 1024, 34.24 * 1024 * 1024, 90 * 1024 * 1024].map(shortSize)).toEqual(["512B", "204k", "1M", "34M", "90M"]);
-    expect(shortSize(3.46 * 1024 * 1024)).toBe("3.5M");
+  it("names the file in the upload queue so its extension stays in view", () => {
+    const line = document.createElement("p");
+    queueLine(line, "Uploading 2 of 5", "Évolution_d_OpenFab.png");
+    expect(line.textContent).toBe("Uploading 2 of 5 ·\u00a0Évolution_d_OpenFab.png");
+    // Only the stem shrinks with an ellipsis; the extension is its own span.
+    expect(line.querySelector(".upload-stem")!.textContent).toBe("Évolution_d_OpenFab");
+    expect(line.querySelector(".upload-name")!.lastElementChild!.textContent).toBe(".png");
+    queueLine(line, "Uploading 1 of 1", "<b>.md");
+    expect(line.querySelector("b")).toBeNull(); // a name is text, never markup
   });
 
   it("dates like a person would", () => {

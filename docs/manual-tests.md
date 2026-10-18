@@ -761,9 +761,16 @@ Have a real `.docx` with a heading, a nested list, a table and an image
    Download saves it whole.
 6. **Too large to upload.** A file over 100 MB: refused at once with its
    size and the limit, nothing sent.
-7. **Progress.** Upload a 50–100 MB video: ten cells fill, the
-   percentage and `12M/80M` move until done; the list then shows the
-   file. Network: one PUT carrying the file (plus an OPTIONS), not two.
-8. **A format this browser lacks.** An H.264 `.mp4` in Fedora's Firefox
+7. **Progress.** Upload a 50–100 MB video, then three files at once: one
+   block, line 1 the queue ("Uploading 2 of 3 · name", a long name cut in
+   the middle with its extension kept), line 2 the file being sent (twelve
+   cells fill, the percentage and "12.0 MB of 80.0 MB" move, the digits
+   steady). The list does not jump while it shows; then it shows the
+   files. Network: one PUT per file (plus an OPTIONS), not two.
+8. **Reading width.** Open a long Markdown file on a wide screen: the path,
+   the buttons, the note and the card form one centred column; the text
+   runs about 70 characters to a line in the middle of the card, pictures
+   and tables take the card's width. A PDF or a video takes the whole space.
+9. **A format this browser lacks.** An H.264 `.mp4` in Fedora's Firefox
    without `libavcodec-freeworld`: "This browser cannot play …" and
    Download, not "the file is corrupt". The same file plays in Chrome.
