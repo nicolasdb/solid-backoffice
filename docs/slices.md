@@ -624,6 +624,13 @@ Suggesting agents: the "Your agent" step already offers a collective
 account its own `hs:agent`; D adds the WebIDs linked to the account on our
 provider, so nobody types an agent's WebID by hand.
 
+To do (noted 20 Oct 2026, from use): the named-people picker in "Who can
+access it" (C2) suggests only the members of the collectives joined and
+their agent, never the signed-in person's own delegated agents (seen
+creating `dashboard/` on a pod: no way to pick one's own agent). Add them.
+And in a collective of more than ~100 members, do not list every WebID:
+search or type to filter instead.
+
 The CSS account API beyond sign-up (J1 creates the account and the first
 pod): more pods on the same account, mint a WebID for an agent
 (the back-link to its human deferred, see "Where we are"), mint and revoke connectors. Then the
