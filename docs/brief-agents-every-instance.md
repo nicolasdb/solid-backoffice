@@ -44,7 +44,9 @@ Branch from `dev`, PR into `dev`. Two parts; A can ship without B.
    section, say what it would do and that this provider does not offer it:
    "Your provider does not offer agents. Servers running solid-css-overlay
    do." Do not name the other provider. No fake button, no nag. Replaces
-   "hidden, never greyed out" in the file header.
+   "hidden, never greyed out" in the file header, and the last rule of
+   `CLAUDE.md` ("hidden for WebIDs from other providers"), and the
+   `onProvider` mentions in its Architecture section.
 5. **A Client ID Document** (ADR 010, point 6). Today `loginWithIdentifier`
    (`src/lib/auth.ts:100`) registers dynamically (`clientName: APP_NAME`), so
    the consent page shows a random `client_id`. Serve
