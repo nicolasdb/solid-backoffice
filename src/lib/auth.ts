@@ -10,7 +10,7 @@
  * never derives one from the other — see `getPrimaryPodUrl` in `pod.ts` for the
  * storage half.
  */
-import { Session } from "@inrupt/solid-client-authn-browser";
+import { EVENTS, Session } from "@inrupt/solid-client-authn-browser";
 import { getSolidDataset, getThing, getUrl } from "@inrupt/solid-client";
 import { APP_NAME, SESSION_ID } from "../config";
 
@@ -115,6 +115,28 @@ export function redirectUrlFrom(href: string): string {
 }
 
 /**
+ * Where to put the address bar after a silent restore, or null to leave it.
+ *
+ * A reload re-activates the session by a round trip through the provider, and
+ * the provider sends the browser back to the redirect URL, which has no
+ * fragment (see `redirectUrlFrom`). An app with hash routes therefore lands on
+ * its home screen after every reload, wherever the user was. The library keeps
+ * the address from before the round trip and hands it back with the
+ * `sessionRestore` event; this puts it back. Same origin only: the value comes
+ * from localStorage, which is not a place to take a redirect from.
+ */
+export function restoredAddress(stored: string, here: string): string | null {
+  let to: URL;
+  try {
+    to = new URL(stored);
+  } catch {
+    return null;
+  }
+  if (to.origin !== new URL(here).origin) return null;
+  return to.pathname + to.search + to.hash;
+}
+
+/**
  * Call once on startup: processes a return-from-provider redirect if there is
  * one, and otherwise restores a previous session.
  *
@@ -123,6 +145,11 @@ export function redirectUrlFrom(href: string): string {
  * form in situations where login cannot work at all.
  */
 export async function completeLogin(): Promise<LoginState> {
+  // Emitted inside handleIncomingRedirect, so before the first render.
+  session.events.on(EVENTS.SESSION_RESTORED, (url) => {
+    const address = restoredAddress(url, window.location.href);
+    if (address) history.replaceState(null, "", address);
+  });
   try {
     const info = await session.handleIncomingRedirect({ restorePreviousSession: true });
     if (info?.isLoggedIn && info.webId) {
