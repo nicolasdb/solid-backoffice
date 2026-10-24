@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * sign-in fails, and the default ("Failed to fetch") tells them nothing.
  */
 vi.mock("@inrupt/solid-client-authn-browser", () => ({
+  EVENTS: { SESSION_RESTORED: "sessionRestore" },
   Session: class {
     info = { sessionId: "test" };
     async handleIncomingRedirect() {
@@ -32,7 +33,7 @@ vi.mock("@inrupt/solid-client", () => ({
   getUrl: (...a: unknown[]) => mockGetUrl(...a),
 }));
 
-const { discoverOidcIssuer, redirectUrlFrom } = await import("./auth");
+const { discoverOidcIssuer, redirectUrlFrom, restoredAddress } = await import("./auth");
 
 beforeEach(() => {
   mockGetSolidDataset.mockReset();
@@ -91,5 +92,18 @@ describe("redirectUrlFrom", () => {
   it("drops the query string and the fragment, which OIDC refuses", () => {
     expect(redirectUrlFrom("http://localhost:5173/#/")).toBe("http://localhost:5173/");
     expect(redirectUrlFrom("https://app.example/x/?code=1&state=2#/c/abc")).toBe("https://app.example/x/");
+  });
+});
+
+describe("restoredAddress", () => {
+  const HERE = "https://app.example/";
+
+  it("gives back the place, fragment included, that the reload lost", () => {
+    expect(restoredAddress("https://app.example/#/p/dashboard/now.md", HERE)).toBe("/#/p/dashboard/now.md");
+  });
+
+  it("refuses another origin or a value that is not a URL", () => {
+    expect(restoredAddress("https://evil.example/#/p/x", HERE)).toBeNull();
+    expect(restoredAddress("not a url", HERE)).toBeNull();
   });
 });
