@@ -55,7 +55,11 @@ export function readDescriptor(issuer: string, fetchImpl: typeof fetch = (...a) 
     hit = (async () => {
       try {
         // credentials omit: it is public, and this must never carry a cookie.
-        const res = await fetchImpl(new URL(".well-known/css/provider.json", issuer).href, { credentials: "omit" });
+        // no-cache: CSS serves every static file with max-age=86400, so the
+        // browser kept a descriptor from before the connector was turned on
+        // for a day, and a hard reload does not reach a script's fetch. Once
+        // per page, and a few hundred bytes.
+        const res = await fetchImpl(new URL(".well-known/css/provider.json", issuer).href, { credentials: "omit", cache: "no-cache" });
         if (!res.ok) return null;
         const d = parseDescriptor(issuer, await res.json());
         layouts.set(issuer, d?.layout ?? null);

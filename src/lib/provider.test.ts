@@ -39,6 +39,8 @@ describe("readDescriptor", () => {
     await readDescriptor(MOM, f as typeof fetch);
     expect(calls).toHaveLength(1);
     expect(calls[0].credentials).toBe("omit");
+    // CSS says max-age=86400: a cached copy would hide a capability turned on today.
+    expect(calls[0].cache).toBe("no-cache");
   });
 });
 

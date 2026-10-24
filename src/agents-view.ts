@@ -128,7 +128,7 @@ async function load(ctx: Ctx): Promise<void> {
     const canConnect = offer.onboard !== null;
     session ??= cookieSession(offer.issuer);
     const s = session;
-    let connectorProblem: string | null = canConnect ? null : `${new URL(offer.issuer).host} does not run a connector, so no AI can be connected to an agent yet.`;
+    let connectorProblem: string | null = null;
     const [links, connectors, walk] = await Promise.all([
       linkedWebIds(s),
       canConnect
@@ -209,7 +209,9 @@ function renderAgents(ctx: Ctx): string {
   const count = read.walk.folders.length;
   return `${head()}
     ${list}
-    ${read.connectorProblem ? `<p class="meta" role="status">Whether an agent is connected is unknown: ${esc(read.connectorProblem)}</p>` : ""}
+    ${!read.canConnect
+      ? `<p class="meta" role="status">${esc(providerHost())} does not run a connector, so no AI can be connected to an agent here.</p>`
+      : read.connectorProblem ? `<p class="meta" role="status">Whether an agent is connected is unknown: ${esc(read.connectorProblem)}</p>` : ""}
     <div><button type="button" class="small" id="agent-new">New agent</button></div>
     <p class="meta">Folders counted from the rules the app has read on your pod: ${count} folder${count === 1 ? "" : "s"}${read.walk.complete ? "" : ", not all of them"}, no single files.</p>
     <p class="step-error error" role="alert" hidden></p>
@@ -298,7 +300,8 @@ function agentCard(a: AgentRow, ctx: Ctx): string {
     </div>`;
 
   let status: string;
-  if (a.connector === undefined) status = `<span class="dot is-off" aria-hidden="true"></span><span>Whether an AI is connected is unknown right now.</span>`;
+  if (!read?.canConnect) status = `<span class="dot is-off" aria-hidden="true"></span><span>No AI can be connected on this server.</span>`;
+  else if (a.connector === undefined) status = `<span class="dot is-off" aria-hidden="true"></span><span>Whether an AI is connected is unknown right now.</span>`;
   else if (live) {
     const name = live.label ? ` as "${esc(live.label)}"` : "";
     const used = live.lastUsedAt ? `last used ${esc(ago(live.lastUsedAt))}` : "never used yet";

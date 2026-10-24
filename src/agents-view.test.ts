@@ -100,6 +100,7 @@ describe("your agents on You", () => {
     expect(app.querySelector("[data-agent]")).not.toBeNull();
     expect(app.querySelector("[data-agent-connect]")).toBeNull();
     expect(app.textContent).toContain("does not run a connector");
+    expect(app.textContent).not.toContain("unknown");
   });
 
   it("names a pod by its folder or by its subdomain", () => {
