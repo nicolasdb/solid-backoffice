@@ -18,7 +18,7 @@ import { sendWithProgress, type Progress } from "./upload";
 import { readTurtle } from "./read";
 import { readAccess, type ResourceAccess } from "./acl";
 import { writeIfMatch, type ConditionalError } from "./conditional";
-import { UPLOAD_LIMITS } from "../config";
+import { instance } from "../instance";
 
 const LDP = "http://www.w3.org/ns/ldp#";
 const DCT_MODIFIED = "http://purl.org/dc/terms/modified";
@@ -371,10 +371,10 @@ export async function createFile(parentUrl: string, name: string, body = ""): Pr
 /**
  * The largest file one upload can send to this pod, in bytes, or null when
  * not known. Not Solid: it is the gateway in front of a server
- * (`UPLOAD_LIMITS` in config.ts); a server not listed answers 413 instead.
+ * (`uploadLimits` in /instance.json, src/instance.ts); a server not listed answers 413 instead.
  */
 export function uploadLimit(podUrl: string): number | null {
-  return UPLOAD_LIMITS[new URL(podUrl).origin] ?? null;
+  return instance().uploadLimits[new URL(podUrl).origin] ?? null;
 }
 
 export async function uploadFile(parentUrl: string, file: File, progress?: Progress): Promise<string> {

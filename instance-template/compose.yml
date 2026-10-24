@@ -1,0 +1,40 @@
+# The backoffice from its image (solid-kit ADR 011). An instance is a checkout
+# of solid-backoffice at the tag it runs, used from this folder:
+#   git clone --branch v<version> https://github.com/nicolasdb/solid-backoffice /srv/<instance>
+#   cd /srv/<instance>/instance-template && cp .env.example .env   # then fill it
+#   docker compose pull && docker compose up -d
+# No build: the image is published (ghcr.io/nicolasdb/solid-backoffice). An
+# update is `git checkout v<new>`, the same version in .env, then the same two
+# commands. This file is never edited: what an instance adds is .env
+# (git-ignored) and its vertical's design-system repo, whose backoffice/ folder
+# holds instance.json, the skin and the compose.override.yml that mounts them
+# (.env's COMPOSE_FILE).
+
+# Names the compose project and the container (<INSTANCE_NAME>-web, what the
+# gateway proxies to). Without it both would be named after this folder, and a
+# second instance on the same host would collide.
+name: ${INSTANCE_NAME:?set INSTANCE_NAME in .env}
+
+services:
+  web:
+    image: ghcr.io/nicolasdb/solid-backoffice:${BACKOFFICE_VERSION:?set BACKOFFICE_VERSION in .env}
+    container_name: ${INSTANCE_NAME:?set INSTANCE_NAME in .env}-web
+    restart: unless-stopped
+    environment:
+      # This deploy's address, trailing slash included. /id.jsonld (the
+      # consent page's name for the app) is written from it at start; unset,
+      # the app signs in with a random client id, as before.
+      - PUBLIC_URL=${PUBLIC_URL:-}
+    # instance.json and skin.css are NOT mounted here (the checkout is never
+    # edited): the design-system repo's backoffice/compose.override.yml does.
+    # Absent, the image's defaults hold (pod.nicolasdb.eu's values, the Solid
+    # Kit look).
+    mem_limit: 64m
+    # No `ports:`: the gateway (Caddyfile.tmpl, or deploy/gateway-vhost.conf.tmpl
+    # for nginx) reaches it by container name over the gateway network.
+    networks: [gateway]
+
+networks:
+  gateway:
+    external: true
+    name: ${GATEWAY_NETWORK:-gateway}

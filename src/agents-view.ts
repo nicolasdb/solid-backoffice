@@ -36,7 +36,7 @@ import {
 import { PRESETS, presetOf, type Mode } from "./lib/acl";
 import { profileEdits, updateOwnProfile, type MemberDeclaration } from "./lib/collective";
 import { readTurtle } from "./lib/read";
-import { SIGNUP_PROVIDER } from "./config";
+import { instance } from "./instance";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { trimAddress } from "./ui/address";
@@ -51,11 +51,11 @@ function podName(podUrl: string): string {
 }
 
 /** The provider as people say it: `pod.nicolasdb.eu`. */
-const providerHost = () => new URL(SIGNUP_PROVIDER!).host;
+const providerHost = () => new URL(instance().signupProvider!).host;
 
 /** Whether the signed-in WebID is one of our provider's: the only case D shows. */
 export function onProvider(webId: string): boolean {
-  return Boolean(SIGNUP_PROVIDER && webId.startsWith(SIGNUP_PROVIDER));
+  return Boolean(instance().signupProvider && webId.startsWith(instance().signupProvider!));
 }
 
 export interface AgentRow {
@@ -115,7 +115,7 @@ export function agentsSlot(webId: string): string {
 
 /** Reads your agents, their connectors and the rules of your pod's folders. */
 async function load(ctx: Ctx): Promise<void> {
-  session ??= cookieSession(SIGNUP_PROVIDER!);
+  session ??= cookieSession(instance().signupProvider!);
   const s = session;
   try {
     let connectorProblem: string | null = null;
@@ -520,7 +520,7 @@ function bindAgents(slot: HTMLElement, ctx: Ctx, draw: () => void): void {
     const email = (unlock.elements.namedItem("email") as HTMLInputElement).value;
     const password = (unlock.elements.namedItem("password") as HTMLInputElement).value;
     void run(unlock.querySelector("button")!, async () => {
-      session = await unlockWithPassword(SIGNUP_PROVIDER!, email, password);
+      session = await unlockWithPassword(instance().signupProvider!, email, password);
       failure = null;
       await load(ctx);
       announce("Account open.");

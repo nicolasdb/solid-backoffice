@@ -15,7 +15,7 @@ import "./styles/patterns.css";
 import "./styles/editorial.css";
 import { completeLogin, logout } from "./lib/auth";
 import { describePodError, getPrimaryPodUrl, isAuthError } from "./lib/pod";
-import { SIGNUP_PROVIDER } from "./config";
+import { instance, loadInstance } from "./instance";
 import { focusView, trackInputModality } from "./ui/a11y";
 import { renderError, renderPending } from "./ui/patterns";
 import { renderMembership } from "./onboarding";
@@ -40,6 +40,8 @@ function esc(value: string): string {
 async function main(): Promise<void> {
   // Before sign-in: the redirect back from the provider drops the query string.
   captureInvite();
+  // Before anything renders: the login screen shows its values.
+  await loadInstance();
   const state = await completeLogin();
 
   if (!state.loggedIn) {
@@ -64,7 +66,7 @@ async function main(): Promise<void> {
 
 /** Sign in, or create an account on our provider: src/signup.ts. */
 function renderLoginView(message?: string): void {
-  renderWelcome(app, { provider: SIGNUP_PROVIDER, message });
+  renderWelcome(app, { provider: instance().signupProvider, message });
 }
 
 function renderLoadingView(webId: string): void {

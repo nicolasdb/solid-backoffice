@@ -74,7 +74,7 @@ one changes, change the other. Never point it at the real provider.
   `src/lib/settings.ts` writes `settings/README.md`.
 - `src/lib/css-account.ts` — **provider-specific**: account, password login
   and pod through the CSS account API (J1). Shown only when
-  `SIGNUP_PROVIDER` is set. `test/pods/` creates its whole cast with it.
+  `signupProvider` is set (`/instance.json`, `src/instance.ts`). `test/pods/` creates its whole cast with it.
 - `src/signup.ts` — the screen before sign-in: sign in, or create an account
   (invitation → create first), inside the landing of `src/welcome.ts`
   (generic words, or the invited collective's from its public `config.ttl`,

@@ -48,7 +48,7 @@ that does not pass its own checks.
 **Do:** open the dev server URL.
 
 **Expect:** the sign-in screen, styled — heading, explanatory line, a labelled
-field prefilled with `DEFAULT_IDENTIFIER`, one primary button. No unstyled flash
+field prefilled with `defaultIdentifier` (`/instance.json`), one primary button. No unstyled flash
 before the CSS lands.
 
 **Observed:**
