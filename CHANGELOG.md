@@ -4,6 +4,14 @@ Versions follow `package.json`. A tag `v<version>` publishes the image
 `ghcr.io/nicolasdb/solid-backoffice:<version>` (`.github/workflows/ci.yml`);
 an instance pins it in `instance-template/.env`.
 
+## 0.2.1 — 2026-10-24
+
+- **The descriptor is read fresh** (`cache: "no-cache"`, one small request
+  per server and page load; pod reads are unchanged): CSS serves it with
+  `max-age=86400`, so a connector turned on today stayed invisible for a day.
+- A server with no connector says so on each card ("No AI can be connected
+  on this server"), not "unknown".
+
 ## 0.2.0 — 2026-10-24
 
 Agents on every instance (solid-kit ADR 010, part A of
