@@ -1,4 +1,6 @@
-# Checks every push; deploys the `dev` branch to test.nicolasdb.eu.
+# Checks every push; deploys the `dev` branch to test.nicolasdb.eu. A tag
+# v<version> (v0.1.0) also publishes the image ghcr.io/nicolasdb/solid-backoffice:<version>
+# (solid-kit ADR 011): what every instance runs, from instance-template/.
 #
 # claude/* branches are work in progress, tried locally first; `dev` is what
 # gets pushed for a check online. There is no production deploy from CI yet:
@@ -9,6 +11,8 @@
 # so it can only write into the test copy's dist/: no shell, no other folder,
 # no reading. The container bind-mounts dist/, so a new build is served without
 # a restart; compose or nginx changes still go through `make vps-deploy TARGET=test`.
+# Production (backoffice.nicolasdb.eu) is still `make vps-deploy` until it moves
+# to the image (README, "Run from the image").
 name: CI
 
 on:
@@ -46,6 +50,70 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:pods
+
+  image:
+    # The image an instance runs, built and started as one: what it serves
+    # with nothing mounted, with an instance's files, and its /id.jsonld.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t solid-backoffice:ci .
+      - name: nothing mounted and no PUBLIC_URL, the app serves and the instance's files 404
+        run: |
+          docker run -d --name bare -p 8081:80 solid-backoffice:ci
+          sleep 2
+          curl -fsS http://localhost:8081/ | grep -q '<div id="app">'
+          for f in instance.json skin.css id.jsonld fonts/skin/x.woff2; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8081/$f")
+            [ "$code" = 404 ] || { echo "/$f answered $code, not 404"; exit 1; }
+          done
+      - name: an instance's files and PUBLIC_URL
+        run: |
+          echo '{"signupProvider":null}' > "$RUNNER_TEMP/instance.json"
+          echo ':root{}' > "$RUNNER_TEMP/skin.css"
+          docker run -d --name inst -p 8082:80 -e PUBLIC_URL=https://backoffice.example.org/ \
+            -v "$RUNNER_TEMP/instance.json:/usr/share/nginx/html/instance.json:ro" \
+            -v "$RUNNER_TEMP/skin.css:/usr/share/nginx/html/skin.css:ro" solid-backoffice:ci
+          sleep 2
+          curl -fsS http://localhost:8082/instance.json | grep -q signupProvider
+          curl -fsS http://localhost:8082/skin.css | grep -q ':root'
+          curl -fsSI http://localhost:8082/id.jsonld | grep -qi '^content-type: application/ld+json'
+          curl -fsS http://localhost:8082/id.jsonld | jq -e '.client_id == "https://backoffice.example.org/id.jsonld" and .redirect_uris == ["https://backoffice.example.org/"]'
+      - name: a malformed PUBLIC_URL stops the container
+        run: |
+          docker run -d --name badurl -e PUBLIC_URL=https://backoffice.example.org solid-backoffice:ci
+          sleep 2
+          [ "$(docker inspect -f '{{.State.Running}}' badurl)" = false ]
+      - name: the Caddy template parses
+        run: |
+          sed -e 's/{{INSTANCE_NAME}}/ci/g' -e 's/{{DOMAIN}}/backoffice.example.org/g' \
+            instance-template/Caddyfile.tmpl > "$RUNNER_TEMP/Caddyfile"
+          docker run --rm -v "$RUNNER_TEMP/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2 caddy validate --config /etc/caddy/Caddyfile
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [verify, pods, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: the tag must match package.json and have a CHANGELOG entry
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          [ "$(jq -r .version package.json)" = "$tag" ] || { echo "package.json is not $tag"; exit 1; }
+          grep -q "^## $tag" CHANGELOG.md || { echo "CHANGELOG.md has no '## $tag'"; exit 1; }
+          echo "VERSION=$tag" >> "$GITHUB_ENV"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: build and push
+        run: |
+          docker build -t ghcr.io/nicolasdb/solid-backoffice:$VERSION .
+          docker push ghcr.io/nicolasdb/solid-backoffice:$VERSION
 
   deploy-test:
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'

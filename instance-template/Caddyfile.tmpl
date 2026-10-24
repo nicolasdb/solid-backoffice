@@ -1,0 +1,28 @@
+# =============================================================================
+# SERVICE: the backoffice ({{INSTANCE_NAME}})
+# DOMAIN:  {{DOMAIN}}
+# BACKEND: container {{INSTANCE_NAME}}-web:80, on the gateway's Docker network
+# TLS:     Caddy's own certificate for {{DOMAIN}} (HTTP challenge; no wildcard)
+#
+# TO INSTALL: fill the placeholders, add to the gateway's Caddyfile (or a file
+# it imports), `caddy validate`, then reload Caddy. For an nginx gateway:
+# deploy/gateway-vhost.conf.tmpl.
+#
+# Placeholders: {{INSTANCE_NAME}} {{DOMAIN}}
+#
+# Same site as the pod server, on purpose (solid-kit ADR 010): the account
+# features (agents) run only when this host and the server share a registrable
+# domain, backoffice.example.org beside pod.example.org.
+# =============================================================================
+
+{{DOMAIN}} {
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000"
+	}
+
+	# Static files only: the app's uploads go straight from the browser to the
+	# pod server, so no request body limit is needed here.
+	reverse_proxy {{INSTANCE_NAME}}-web:80
+}

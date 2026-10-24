@@ -18,7 +18,7 @@ import { loginWithIdentifier } from "./lib/auth";
 import { AccountError, createAccount, emailProblem, passwordProblem, podAddress, usernameProblem } from "./lib/css-account";
 import { loadCollective, type Collective } from "./lib/collective";
 import { slugify } from "./lib/pod";
-import { DEFAULT_IDENTIFIER } from "./config";
+import { instance } from "./instance";
 import { pendingInvite, rememberNewcomer } from "./invite";
 import { esc } from "./ui/patterns";
 import { focusView } from "./ui/a11y";
@@ -126,7 +126,7 @@ function signInForm(provider: string | null, message?: string): string {
       <div class="field">
         <label for="identifier">Pod or WebID</label>
         <input id="identifier" name="identifier" type="url"
-               value="${esc(DEFAULT_IDENTIFIER)}" required />
+               value="${esc(instance().defaultIdentifier)}" required />
         <p class="hint">
           Your pod's address, or your WebID if you don't know which provider
           hosts it: it will be found from your profile.

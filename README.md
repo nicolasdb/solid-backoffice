@@ -55,3 +55,41 @@ make             # deploy targets
 
 Sign-in and every write to a real pod are covered only by
 [`docs/manual-tests.md`](docs/manual-tests.md), never by `npm run verify`.
+
+## Run from the image
+
+One image for every instance ([solid-kit ADR 011](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/011-an-app-is-one-image-an-instance-brings-its-look.md)).
+A tag `v<version>` publishes `ghcr.io/nicolasdb/solid-backoffice:<version>`
+(`.github/workflows/ci.yml`, versions in [`CHANGELOG.md`](CHANGELOG.md)). An
+instance is a checkout at that tag, run from `instance-template/`, which is
+never edited:
+
+```sh
+git clone --branch v<version> https://github.com/nicolasdb/solid-backoffice /srv/<instance>
+cd /srv/<instance>/instance-template && cp .env.example .env   # then fill it
+docker compose pull && docker compose up -d
+```
+
+What an instance brings, all read at run time:
+
+| Path in the container | What | From |
+|---|---|---|
+| `/instance.json` | the login field's default, the sign-up provider (or `null`), upload limits per server ([`src/instance.ts`](src/instance.ts)) | mounted |
+| `/skin.css`, `/fonts/skin/` | the vertical's look, loaded after the kit's theme | mounted |
+| `/id.jsonld` | the Client ID Document: the consent page names this deploy | written at start from `PUBLIC_URL` |
+
+Absent, the image's defaults hold: pod.nicolasdb.eu's values and the Solid
+Kit look. The mounts live in the vertical's design-system repo
+(`backoffice/compose.override.yml`, loaded through `COMPOSE_FILE` in `.env`),
+not here. The gateway: `instance-template/Caddyfile.tmpl`, or
+`deploy/gateway-vhost.conf.tmpl` for nginx, proxying to
+`<INSTANCE_NAME>-web:80`.
+
+An update: `git fetch --tags && git checkout v<new>`, the same version in
+`.env`, then `docker compose pull && docker compose up -d`.
+
+**Not yet on the image:** backoffice.nicolasdb.eu and test.nicolasdb.eu still
+run `dist/` behind a stock nginx (`docker-compose.yml`, `make vps-deploy`, CI's
+`deploy-test`). Moving them is a later step: a checkout at a tag with an `.env`
+(no `instance.json` needed, the defaults are theirs), the gateway vhost pointed
+at `<INSTANCE_NAME>-web`, then `make vps-push` and the rsync deploy go.

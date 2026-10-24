@@ -3,7 +3,7 @@
  * Server account API (`/.account/`).
  *
  * PROVIDER-SPECIFIC. None of this is Solid protocol: another provider has no
- * such API, so the screen only offers it when `SIGNUP_PROVIDER` is set. The
+ * such API, so the screen only offers it when `signupProvider` is set (/instance.json). The
  * steps and field names were first recorded in the old backoffice
  * (`pocpod0/backoffice/pod-api.js`, `registerAccount`) and are exercised
  * against a real CSS 7 by `npm run test:pods`, which builds its whole cast

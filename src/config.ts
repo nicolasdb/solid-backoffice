@@ -1,5 +1,5 @@
 /**
- * Everything an app built from this kit is expected to change.
+ * What is the app's own, the same in every deploy of it.
  *
  * Keeping these here rather than scattered through the code is what makes the
  * rest of `src/lib/` copyable between apps without a diff.
@@ -19,27 +19,9 @@ export const APP_NAME = "Backoffice";
  */
 export const SESSION_ID = "solid-backoffice";
 
-/**
- * Prefilled in the login field. Either an OIDC issuer URL or a WebID works —
- * `loginWithIdentifier` accepts both. An issuer is the friendlier default: most
- * people know where their pod lives, not what their WebID is.
- */
-export const DEFAULT_IDENTIFIER = "https://pod.nicolasdb.eu/";
-
-/**
- * Where "Create an account" makes new accounts, or null to offer sign-in only.
- * It uses the Community Solid Server account API, which is not Solid protocol:
- * an instance whose people live on another provider sets this to null.
- */
-export const SIGNUP_PROVIDER: string | null = "https://pod.nicolasdb.eu/";
-
-/**
- * The largest file one upload may send, per pod server (origin), in bytes.
- * Not Solid: it is what the gateway in front of a server accepts
- * (`client_max_body_size` in hetzner-gateway's `04-pocpod0.conf` for ours).
- * A server not listed is not checked before sending; its 413 still says why.
- */
-export const UPLOAD_LIMITS: Record<string, number> = { "https://pod.nicolasdb.eu": 100 * 1024 * 1024 };
+// What changes from one deploy to the next (the login field's default, the
+// sign-up provider, upload limits) is not compiled in: it is read at boot from
+// /instance.json, see src/instance.ts (solid-kit ADR 011).
 
 // No list of collectives lives here. Which collectives someone sees comes from
 // their own profile (`org:memberOf`), an invitation link (`?collective=`), or
