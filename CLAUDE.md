@@ -45,7 +45,8 @@ one changes, change the other. Never point it at the real provider.
 
 ## Architecture
 
-- `src/config.ts` — the kit's settings. **No collective is listed in the
+- `src/config.ts` — what is the app's own (`APP_NAME`, `SESSION_ID`); what
+  an instance sets is `/instance.json` (`src/instance.ts`, ADR 011). **No collective is listed in the
   app**: a person sees the collectives their profile's `org:memberOf` links
   lead to, plus an invitation (`?collective=`) or a pasted address. The
   collective's IRI is `config.ttl#<name>`, which is also the group IRI, so
@@ -124,12 +125,16 @@ one changes, change the other. Never point it at the real provider.
   `src/raw-rules.ts` (C6) edits an item's own `.acl` by hand, desktop only:
   two taps, refused unless it parses and you keep Control.
 - `src/lib/agents.ts` — **provider-specific** (slice D): the account
-  session (the provider's cookie, or a password unlock kept in memory),
-  agents at `profile/<name>#me` (four writes, undone on failure), folder
-  grants, the connector's `/onboard/` mint, grants and revoke, delete in
-  order (connector, rules, profile, unlink, retire). `src/agents-view.ts`
-  draws it on You, only for our provider's WebIDs (`onProvider`), and
-  forgets it all at sign-out.
+  session (the provider's cookie; a password session exists for
+  `test/pods/` only, the app never asks for one), agents at
+  `profile/<name>#me` (four writes, undone on failure), folder grants, the
+  connector's `/onboard/` mint, grants and revoke, delete in order
+  (connector, rules, profile, unlink, retire). `src/agents-view.ts` draws it
+  on You for everyone, offered when the WebID's issuer lists `account` in
+  its descriptor and this app is on the issuer's site
+  (`src/lib/provider.ts`, solid-kit ADR 010), and forgets it all at
+  sign-out. `src/lib/provider.ts` also gives the server's pod layout, for
+  the addresses the landing and sign-up show.
 - `src/ui/address.ts` — addresses on screen without your provider's host
   (`…/neil/profile/card#me`). A whole WebID is copied with a click on the
   members lists (`copyable` in `src/steps.ts`, like the invitation link);
@@ -179,5 +184,9 @@ agent, snapshots or the protocol belongs in solid-kit's ADRs, not here.
 - **Everything the backoffice writes is on the signed-in user's pod**, except
   messages POSTed to an inbox (pocpod0 BP-6, single writer).
 - **Provider-specific features** (CSS account API, minting, access logs) go in
-  their own module and are hidden for WebIDs from other providers. Everything
+  their own module and are **detected, not listed** (solid-kit ADR 010): offered
+  when the issuer's `/.well-known/css/provider.json` lists them and the app is
+  on the issuer's site; otherwise shown with what they would do and why not
+  here, never a fake button. Endpoints are called on the issuer's own origin
+  only. No password field for a provider's account inside the app. Everything
   else must work against any Solid server.

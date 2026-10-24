@@ -21,6 +21,8 @@
  * Plain `fetch`, never `authFetch`: nobody is signed in yet.
  */
 
+import { knownLayout, podAddress as addressIn, type Layout } from "./provider";
+
 export type AccountErrorCode =
   | "bad-username"
   | "username-taken"
@@ -75,9 +77,13 @@ export function passwordProblem(password: string): string | null {
   return password.length >= 8 ? null : "Use at least 8 characters.";
 }
 
-/** Where the pod will live: shown under the username field. */
-export function podAddress(issuer: string, username: string): string {
-  return new URL(`${username}/`, issuer).href;
+/**
+ * Where the pod will live: shown under the username field. In the server's
+ * layout when its descriptor was read (`<name>.pod.example/` or
+ * `pod.example/<name>/`), folders otherwise.
+ */
+export function podAddress(issuer: string, username: string, layout: Layout | null = knownLayout(issuer)): string {
+  return addressIn(issuer, username, layout);
 }
 
 /** One registration in progress, so a retry resumes it instead of starting over. */

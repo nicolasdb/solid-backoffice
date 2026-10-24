@@ -275,8 +275,8 @@ now allows test.nicolasdb.eu. **Run live the same day:** an agent created,
 connected in claude.ai, given two folders (read and edit), its connector
 revoked, then deleted and retired (a new "Claude" became `claude-2`).
 Closed with four checks still to run, listed in
-[manual tests](manual-tests.md) "D · Your agents": 1 (hidden for another
-provider), 2 (the password form when the provider's session has ended), 9
+[manual tests](manual-tests.md) "D · Your agents": 1 (offered, or why not:
+see ADR 010), 2 (the way back when the provider's session has ended), 9
 (the card's states, the menu), 10 (phone, themes). A failure there reopens
 D.
 Deferred on purpose (27 Sep 2026): **the mini handshake**, the agent's

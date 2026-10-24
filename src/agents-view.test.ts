@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
+// @vitest-environment-options {"url":"https://test.nicolasdb.eu/"}
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
- * The agents section on You (slice D), against a mocked provider: shown only
- * for our provider's WebIDs, the unlock form when the account session has
- * ended, each agent with its connector and folders, and the drawer's steps.
+ * The agents section on You (slice D), against a mocked provider: what it
+ * says when the server offers no agents or only to its own site (ADR 010),
+ * the way back when the account session has ended (no password here), each
+ * agent with its connector and folders, and the drawer's steps.
  * The writes themselves are pinned in src/lib/agents.test.ts.
  */
 const POD = "https://pod.nicolasdb.eu/amina/";
@@ -15,7 +17,20 @@ const lib = vi.hoisted(() => ({
   ended: false,
   connectorsDown: false,
   calls: [] as string[],
+  descriptor: null as unknown,
 }));
+const OVERLAY = { layout: "suffix", capabilities: { account: { path: "/.account/" }, onboard: { path: "/onboard/" } } };
+
+vi.mock("./lib/auth", () => ({
+  discoverOidcIssuer: async () => "https://pod.nicolasdb.eu/",
+}));
+vi.mock("./lib/provider", async (original) => {
+  const real = await original<typeof import("./lib/provider")>();
+  return {
+    ...real,
+    readDescriptor: async (issuer: string) => (lib.descriptor ? real.parseDescriptor(issuer, lib.descriptor) : null),
+  };
+});
 
 vi.mock("./lib/agents", async (original) => {
   const real = await original<typeof import("./lib/agents")>();
@@ -41,11 +56,6 @@ vi.mock("./lib/agents", async (original) => {
         { url: POD + "projects/", depth: 1, own: null },
       ],
     }),
-    unlockWithPassword: async () => {
-      lib.ended = false;
-      lib.calls.push("unlock");
-      return { issuer: "https://pod.nicolasdb.eu/", token: "t" };
-    },
     connectAgent: async () => {
       lib.calls.push("mint");
       return "https://solid-mcp.nicolasdb.eu/mcp/secret-slug";
@@ -61,10 +71,10 @@ const view = await import("./agents-view");
 const profile = { name: "Amina", delegates: [CLAUDE], memberOf: [], inbox: null } as never;
 
 async function mount(): Promise<HTMLElement> {
-  document.body.innerHTML = `<div id="app">${view.agentsSlot(ME)}</div>`;
+  document.body.innerHTML = `<div id="app">${view.agentsSlot()}</div>`;
   const app = document.getElementById("app")!;
   view.mountAgents(app, { webId: ME, podUrl: POD, profile, rerender: () => view.mountAgents(app, { webId: ME, podUrl: POD, profile, rerender: () => undefined }) });
-  await vi.waitFor(() => expect(app.textContent).not.toContain("Reading your agents"));
+  await vi.waitFor(() => expect(app.textContent).not.toMatch(/Reading your agents|^\s*Your agents[^]*An agent is a WebID[^.]*\.\s*$/));
   return app;
 }
 
@@ -73,12 +83,28 @@ beforeEach(() => {
   lib.ended = false;
   lib.connectorsDown = false;
   lib.calls = [];
+  lib.descriptor = OVERLAY;
 });
 
 describe("your agents on You", () => {
-  it("is not there for a WebID from another provider", () => {
-    expect(view.agentsSlot("https://elsewhere.example/me/profile/card#me")).toBe("");
-    expect(view.onProvider(ME)).toBe(true);
+  it("says the provider does not offer agents when it has no descriptor, and calls no account", async () => {
+    lib.descriptor = null;
+    const app = await mount();
+    expect(app.textContent).toContain("Your provider does not offer agents. Servers running solid-css-overlay do.");
+    expect(app.querySelector("#agent-new")).toBeNull();
+  });
+
+  it("offers agents without a connector, and then no Connect to AI", async () => {
+    lib.descriptor = { capabilities: { account: { path: "/.account/" } } };
+    const app = await mount();
+    expect(app.querySelector("[data-agent]")).not.toBeNull();
+    expect(app.querySelector("[data-agent-connect]")).toBeNull();
+    expect(app.textContent).toContain("does not run a connector");
+  });
+
+  it("names a pod by its folder or by its subdomain", () => {
+    expect(view.podName("https://pod.nicolasdb.eu/amina/")).toBe("amina");
+    expect(view.podName("https://amina.pod.mapsofmaking.org/")).toBe("amina");
   });
 
   it("shows each agent as on the canvas: who, whether an AI can use it, how much it reaches, the next step", async () => {
@@ -130,16 +156,15 @@ describe("your agents on You", () => {
     expect(document.activeElement).toBe(app.querySelector("[data-agent-menu]"));
   });
 
-  it("asks for the password when the account session has ended, and reads again once open", async () => {
+  it("sends you to the provider's own page when the account session has ended, never asks for a password", async () => {
     lib.ended = true;
     const app = await mount();
-    const form = app.querySelector<HTMLFormElement>("#agents-unlock")!;
-    expect(form).not.toBeNull();
-    (form.elements.namedItem("email") as HTMLInputElement).value = "amina@example.org";
-    (form.elements.namedItem("password") as HTMLInputElement).value = "secret";
-    form.dispatchEvent(new Event("submit", { cancelable: true }));
+    expect(app.querySelector("input[type=password]")).toBeNull();
+    const link = app.querySelector<HTMLAnchorElement>('a[href="https://pod.nicolasdb.eu/.account/"]')!;
+    expect(link.target).toBe("_blank");
+    lib.ended = false;
+    app.querySelector<HTMLButtonElement>("#agents-retry")!.click();
     await vi.waitFor(() => expect(app.querySelector("[data-agent]")).not.toBeNull());
-    expect(lib.calls).toEqual(["unlock"]);
   });
 
   it("opens the drawer on its first step, with 'may act for me' ticked", async () => {
