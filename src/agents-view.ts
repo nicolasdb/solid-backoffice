@@ -4,9 +4,13 @@
  * drawer that names it, connects it to an AI and chooses its folders; the
  * `···` menu revokes the connector or deletes the agent.
  *
- * Our provider only (`onProvider`): hidden, never greyed out, for a WebID
- * from anywhere else. The writes are `src/lib/agents.ts`; this file draws
- * them. What it keeps is in memory and forgotten at sign-out: the account
+ * Shown for everyone, offered where the person's pod server offers it
+ * (solid-kit ADR 010): the WebID's issuer publishes a descriptor listing
+ * `account` (src/lib/provider.ts), and this app is on the issuer's site, so
+ * its account cookie is sent. Otherwise the section says why, without a fake
+ * button. The app never asks for the account password: a lapsed session sends
+ * the person to the provider's own page. The writes are `src/lib/agents.ts`;
+ * this file draws them. What it keeps is in memory and forgotten at sign-out: the account
  * session, the last read of your agents, and where the drawer is. Nothing of
  * it is stored; a connector URL is shown once and never kept.
  */
@@ -25,7 +29,6 @@ import {
   reachOf,
   revokeConnector,
   setFolderAccess,
-  unlockWithPassword,
   walkRules,
   type AccountSession,
   type Connector,
@@ -36,7 +39,8 @@ import {
 import { PRESETS, presetOf, type Mode } from "./lib/acl";
 import { profileEdits, updateOwnProfile, type MemberDeclaration } from "./lib/collective";
 import { readTurtle } from "./lib/read";
-import { instance } from "./instance";
+import { discoverOidcIssuer } from "./lib/auth";
+import { agentsOffer, forgetDescriptors, readDescriptor, type AgentsOffer } from "./lib/provider";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { trimAddress } from "./ui/address";
@@ -44,19 +48,14 @@ import { run } from "./bind";
 import { bindCopy, copyable } from "./steps";
 import { isoDate } from "./lib/pod";
 
-/** The pod's own name (`amina` for `…/amina/`), for a connector's label. */
-function podName(podUrl: string): string {
+/** The pod's own name (`amina` for `…/amina/` or `amina.pod.example/`), for a connector's label. */
+export function podName(podUrl: string): string {
   const url = new URL(podUrl);
-  return url.pathname.split("/").filter(Boolean).pop() ?? url.host;
+  return url.pathname.split("/").filter(Boolean).pop() ?? url.hostname.split(".")[0];
 }
 
-/** The provider as people say it: `pod.nicolasdb.eu`. */
-const providerHost = () => new URL(instance().signupProvider!).host;
-
-/** Whether the signed-in WebID is one of our provider's: the only case D shows. */
-export function onProvider(webId: string): boolean {
-  return Boolean(instance().signupProvider && webId.startsWith(instance().signupProvider!));
-}
+/** The person's pod server as people say it: `pod.nicolasdb.eu`. */
+const providerHost = () => (offer ? new URL(offer.issuer).host : "your provider");
 
 export interface AgentRow {
   webId: string;
@@ -75,6 +74,8 @@ interface Read {
   at: number;
   /** Why the connectors could not be read, when they could not. */
   connectorProblem: string | null;
+  /** The server lists `onboard`: an agent can be connected to an AI. */
+  canConnect: boolean;
 }
 
 type Drawer =
@@ -89,6 +90,7 @@ interface Ctx {
   rerender: () => void;
 }
 
+let offer: AgentsOffer | null = null;
 let session: AccountSession | null = null;
 let read: Read | null = null;
 let failure: string | null = null;
@@ -99,6 +101,8 @@ let loading: Promise<void> | null = null;
 
 /** Sign-out: nothing about the account stays in the page. */
 export function forgetAgents(): void {
+  offer = null;
+  forgetDescriptors();
   session = null;
   read = null;
   failure = null;
@@ -109,23 +113,31 @@ export function forgetAgents(): void {
 }
 
 /** Where You puts the section; filled by `mountAgents`. */
-export function agentsSlot(webId: string): string {
-  return onProvider(webId) ? `<section class="stack agents step-host" id="agents" aria-labelledby="agents-title"></section>` : "";
+export function agentsSlot(): string {
+  return `<section class="stack agents step-host" id="agents" aria-labelledby="agents-title"></section>`;
 }
 
 /** Reads your agents, their connectors and the rules of your pod's folders. */
 async function load(ctx: Ctx): Promise<void> {
-  session ??= cookieSession(instance().signupProvider!);
-  const s = session;
   try {
-    let connectorProblem: string | null = null;
+    if (!offer) {
+      const issuer = await discoverOidcIssuer(ctx.webId);
+      offer = agentsOffer(issuer, await readDescriptor(issuer), location.origin);
+    }
+    if (offer.kind !== "offered") return;
+    const canConnect = offer.onboard !== null;
+    session ??= cookieSession(offer.issuer);
+    const s = session;
+    let connectorProblem: string | null = canConnect ? null : `${new URL(offer.issuer).host} does not run a connector, so no AI can be connected to an agent yet.`;
     const [links, connectors, walk] = await Promise.all([
       linkedWebIds(s),
-      listConnectors(s).catch((err) => {
-        if (err instanceof AccountSessionError && err.code === "ended") throw err;
-        connectorProblem = err instanceof Error ? err.message : String(err);
-        return undefined;
-      }),
+      canConnect
+        ? listConnectors(s).catch((err) => {
+            if (err instanceof AccountSessionError && err.code === "ended") throw err;
+            connectorProblem = err instanceof Error ? err.message : String(err);
+            return undefined;
+          })
+        : Promise.resolve(undefined),
       walkRules(ctx.podUrl, ctx.webId),
     ]);
     const mine = agentsOf(links, ctx.podUrl, ctx.webId);
@@ -144,7 +156,7 @@ async function load(ctx: Ctx): Promise<void> {
       })
     );
     agents.sort((a, b) => a.name.localeCompare(b.name));
-    read = { agents, walk, at: Date.now(), connectorProblem };
+    read = { agents, walk, at: Date.now(), connectorProblem, canConnect };
     failure = null;
   } catch (err) {
     if (err instanceof AccountSessionError && err.code === "ended") {
@@ -167,7 +179,7 @@ export function mountAgents(root: HTMLElement, ctx: Ctx): void {
     bindAgents(slot, ctx, draw);
   };
   draw();
-  if (loading || (read && Date.now() - read.at < 60_000) || failure === "ended") return;
+  if (loading || (read && Date.now() - read.at < 60_000) || failure === "ended" || (offer && offer.kind !== "offered")) return;
   loading = load(ctx).finally(() => (loading = null));
   void loading.then(draw);
 }
@@ -184,7 +196,8 @@ function head(): string {
 }
 
 function renderAgents(ctx: Ctx): string {
-  if (failure === "ended") return head() + unlockForm();
+  if (offer && offer.kind !== "offered") return head() + notHere(offer);
+  if (failure === "ended") return head() + ended();
   if (!read) {
     return head() + (failure
       ? `<p class="error" role="alert">Could not read your agents: ${esc(failure)}</p><div><button type="button" class="ghost small" id="agents-retry">Try again</button></div>`
@@ -205,16 +218,33 @@ function renderAgents(ctx: Ctx): string {
     ${deleteHtml(ctx)}`;
 }
 
-function unlockForm(): string {
+/** Shown, not hidden (ADR 010): what the section would do, and why not here. */
+function notHere(o: Exclude<AgentsOffer, { kind: "offered" }>): string {
+  const host = esc(new URL(o.issuer).host);
+  if (o.kind === "elsewhere") {
+    return `
+    <div class="inherit-card">
+      <p class="lead">Your agents are managed from an app on ${host}'s own site.</p>
+      <p class="meta">Your account there is only opened for apps on the same site as ${host}, and this one is not.
+        <a href="${esc(o.account)}" target="_blank" rel="noopener">Open your account on ${host}</a>.</p>
+    </div>`;
+  }
+  return `
+    <div class="inherit-card">
+      <p class="lead">Your provider does not offer agents. Servers running solid-css-overlay do.</p>
+      <p class="meta">An agent is how an AI works in your pod without your own identity: it reaches only the folders you give it, and you can stop it on its own.</p>
+    </div>`;
+}
+
+/** No password here (ADR 010): the provider's own page opens a new session, its address bar naming the server. */
+function ended(): string {
+  const host = esc(providerHost());
+  const account = offer?.kind === "offered" ? offer.account : null;
   return `
     <div class="inherit-card step-host">
-      <p class="lead">Your account session on ${esc(providerHost())} has ended, so your agents cannot be read. Your email and password open a new one, kept in this page only.</p>
-      <form id="agents-unlock" class="stack">
-        <div class="field"><label for="unlock-email">Email</label><input id="unlock-email" name="email" type="email" autocomplete="username" required /></div>
-        <div class="field"><label for="unlock-password">Password</label><input id="unlock-password" name="password" type="password" autocomplete="current-password" required /></div>
-        <div><button type="submit">Open my account</button></div>
-      </form>
-      <p class="step-error error" role="alert" hidden></p>
+      <p class="lead">Your account session on ${host} has ended, so your agents cannot be read.</p>
+      <p class="meta">Sign in on ${host}'s own page${account ? `: <a href="${esc(account)}" target="_blank" rel="noopener">open it in a new tab</a>` : ""}, then come back here.</p>
+      <div><button type="button" class="small" id="agents-retry">I have signed in, read again</button></div>
     </div>`;
 }
 
@@ -294,7 +324,7 @@ function agentCard(a: AgentRow, ctx: Ctx): string {
 
   const connectPrimary = live === null || a.connector === undefined;
   const buttons = [
-    connectPrimary ? `<button type="button" class="small" data-agent-connect="${esc(a.webId)}">Connect to AI</button>` : "",
+    connectPrimary && read?.canConnect ? `<button type="button" class="small" data-agent-connect="${esc(a.webId)}">Connect to AI</button>` : "",
     `<button type="button" class="${live && !reached ? "" : "ghost "}small" data-agent-folders="${esc(a.webId)}">${connectPrimary && !reached ? "Choose folders first" : "Choose folders"}</button>`,
   ].join("");
 
@@ -321,7 +351,7 @@ function agentMenu(a: AgentRow, delegate: boolean): string {
       <div class="menu-sec">
         ${a.connector
           ? `<button class="menu-item" role="menuitem" type="button" data-agent-revoke="${esc(a.connector.grantId)}">Revoke the connector</button>`
-          : `<button class="menu-item" role="menuitem" type="button" data-agent-connect="${esc(a.webId)}">Connect to AI</button>`}
+          : read?.canConnect ? `<button class="menu-item" role="menuitem" type="button" data-agent-connect="${esc(a.webId)}">Connect to AI</button>` : ""}
         <button class="menu-item" role="menuitem" type="button" data-agent-folders="${esc(a.webId)}">Choose folders</button>
         <button class="menu-item" role="menuitem" type="button" data-agent-delegate="${esc(a.webId)}" data-on="${delegate ? "" : "1"}">${delegate ? "Stop it acting for you" : "Let it act for you"}</button>
       </div>
@@ -514,19 +544,6 @@ function bindAgents(slot: HTMLElement, ctx: Ctx, draw: () => void): void {
     mountAgents(slot.parentElement ?? slot, ctx);
   });
 
-  const unlock = slot.querySelector<HTMLFormElement>("#agents-unlock");
-  unlock?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const email = (unlock.elements.namedItem("email") as HTMLInputElement).value;
-    const password = (unlock.elements.namedItem("password") as HTMLInputElement).value;
-    void run(unlock.querySelector("button")!, async () => {
-      session = await unlockWithPassword(instance().signupProvider!, email, password);
-      failure = null;
-      await load(ctx);
-      announce("Account open.");
-    }, draw);
-  });
-
   on("#agent-new", () => {
     drawer = { step: "name" };
     menu = null;
@@ -596,7 +613,8 @@ function bindAgents(slot: HTMLElement, ctx: Ctx, draw: () => void): void {
       if (problem) throw new Error(problem);
       const agent = await createAgent(session!, ctx.podUrl, ctx.webId, agentNameValue);
       if (delegate) await updateOwnProfile(ctx.webId, profileEdits.addDelegate(agent.webId));
-      drawer = { step: "connect", webId: agent.webId, url: null };
+      // Without a connector on this server, its folders are the next step.
+      drawer = read?.canConnect === false ? { step: "folders", webId: agent.webId } : { step: "connect", webId: agent.webId, url: null };
       await reload();
       toast(`Agent ${agent.name} created.`);
       announce(`Agent ${agent.name} created. Next: connect it to an AI.`);

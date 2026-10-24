@@ -573,22 +573,30 @@ in use.
 `ONBOARD_CORS_ORIGINS` lists `https://test.nicolasdb.eu` (done 27 Sep
 2026; connector status confirmed live); without it, the card says whether
 an AI is connected is unknown, and Connect says the connector did not
-answer this site. On localhost, the
-provider's cookie is not sent (another site): use the password form.
+answer this site. On localhost the provider's cookie is not sent (another
+site): the section says agents are managed from an app on the provider's
+own site. Run D on a deploy beside its server (test.nicolasdb.eu,
+backoffice.mapsofmaking.org).
 
 **Run 27 Sep 2026, test.nicolasdb.eu:** 3 create, 4 connect (claude.ai
 connects), 5 two folders granted (read and edit), 6 revoke, 7 delete and
 retire (a new "Claude" became `claude-2`) passed. D was closed on that run;
 still to run: 1, 2, 8 (optional), 9, 10.
 
-1. **Shown, or not.** Signed in with a pod.nicolasdb.eu WebID, You has
-   "Your agents" under the steps; with a WebID from elsewhere it is absent
-   (not greyed). Agents the old backoffice made in `agents/` are listed
-   too; your own WebID is not.
-2. **The account session.** Right after signing in, the list reads without
-   a password. Sign out of the provider's own page (or wait for its cookie
-   to lapse), reload You: the email and password form shows; filled in,
-   the list reads. Reload: asked again (nothing is stored).
+1. **Offered, or why not** (solid-kit ADR 010). Signed in with a WebID whose
+   server publishes `provider.json` with `account`, on a backoffice of the
+   same site: You has "Your agents" with its list. A server without the
+   descriptor (another provider): the section says "Your provider does not
+   offer agents. Servers running solid-css-overlay do.", no button. A
+   server that offers it, from a backoffice on another site: the section
+   says where agents are managed, with a link. A server with `account` but
+   no `onboard`: agents, and no Connect to AI. Agents the old backoffice
+   made in `agents/` are listed too; your own WebID is not.
+2. **The account session.** Right after signing in, the list reads with no
+   password. Sign out on the provider's own page (or wait for its cookie to
+   lapse), reload You: no password field; a link opens the provider's page
+   in a new tab. Sign in there, come back, "I have signed in, read again":
+   the list reads.
 3. **Create.** New agent → "Test agent", "It may act for me" ticked: the
    address hint reads `…/profile/test-agent#me`. Create: the drawer moves to
    Connect to AI; You's source shows the `acl:delegates` line marked. In

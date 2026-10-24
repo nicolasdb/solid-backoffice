@@ -20,7 +20,7 @@ import { bindButton, bindForm } from "./bind";
 import { routeHref } from "./router";
 import { copyable } from "./steps";
 import type { Loaded, ViewContext } from "./onboarding";
-import { agentsSlot, agentSuggestionsFromAccount, mountAgents, onProvider } from "./agents-view";
+import { agentsSlot, agentSuggestionsFromAccount, mountAgents } from "./agents-view";
 
 /** Your profile document as the pod holds it, or why it could not be read. */
 export type Source = { text: string } | { error: string };
@@ -123,7 +123,7 @@ export function renderYouView(data: Loaded, webId: string, podUrl: string, sourc
           ${stepInbox(profile, unadvertisedInbox)}
           ${stepAgent(profile, run?.collective ?? null)}
         </div>
-        ${agentsSlot(webId)}
+        ${agentsSlot()}
       </div>
       <section class="stack you-source" aria-labelledby="source-title">
         <div class="source-head">
@@ -133,7 +133,7 @@ export function renderYouView(data: Loaded, webId: string, podUrl: string, sourc
         ${copyable(webId, "WebID copied.")}
         ${src}
         <p class="meta">Your profile as your pod holds it, read just now: everything the steps beside it write, marked. Collectives read it; they never write it. Read only here; in Pods, its editor saves only if nobody changed it meanwhile.</p>
-        ${onProvider(webId) ? `<p class="meta">An agent's own document is separate: <code>profile/&lt;name&gt;</code>, public, so servers can check who it is. Your profile only names it when it may act for you.</p>` : ""}
+        <p class="meta">An agent's own document is separate: <code>profile/&lt;name&gt;</code>, public, so servers can check who it is. Your profile only names it when it may act for you.</p>
       </section>
     </div>`;
 }
@@ -205,7 +205,7 @@ function stepName(profile: MemberDeclaration): string {
 
 /**
  * Agents the pods already name, offered with one click: a collective
- * account's own agent (`hs:agent` in its config.ttl), and on our provider
+ * account's own agent (`hs:agent` in its config.ttl), and, where the server offers agents,
  * the agents linked to your account (slice D, read by agents-view.ts).
  */
 function agentSuggestions(profile: MemberDeclaration, run: Collective | null): string[] {

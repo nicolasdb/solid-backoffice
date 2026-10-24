@@ -16,6 +16,7 @@ import "./styles/editorial.css";
 import { completeLogin, logout } from "./lib/auth";
 import { describePodError, getPrimaryPodUrl, isAuthError } from "./lib/pod";
 import { instance, loadInstance } from "./instance";
+import { readDescriptor } from "./lib/provider";
 import { focusView, trackInputModality } from "./ui/a11y";
 import { renderError, renderPending } from "./ui/patterns";
 import { renderMembership } from "./onboarding";
@@ -45,7 +46,7 @@ async function main(): Promise<void> {
   const state = await completeLogin();
 
   if (!state.loggedIn) {
-    renderLoginView(
+    await renderLoginView(
       state.offline
         ? "Could not reach the identity layer from here — check the connection, or try again from the app's own address."
         : undefined
@@ -65,8 +66,11 @@ async function main(): Promise<void> {
 }
 
 /** Sign in, or create an account on our provider: src/signup.ts. */
-function renderLoginView(message?: string): void {
-  renderWelcome(app, { provider: instance().signupProvider, message });
+async function renderLoginView(message?: string): Promise<void> {
+  // The provider's layout first, so the landing shows pod addresses its way.
+  const provider = instance().signupProvider;
+  if (provider) await readDescriptor(provider);
+  renderWelcome(app, { provider, message });
 }
 
 function renderLoadingView(webId: string): void {
@@ -106,7 +110,7 @@ function renderErrorView(webId: string, err: unknown): void {
   `;
   document.querySelector<HTMLButtonElement>("#logout")!.addEventListener("click", async () => {
     await logout();
-    renderLoginView();
+    await renderLoginView();
   });
 
   focusView(app);

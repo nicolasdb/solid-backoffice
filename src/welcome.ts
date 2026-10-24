@@ -16,6 +16,7 @@
 import type { Collective } from "./lib/collective";
 import { APP_NAME } from "./config";
 import { esc } from "./ui/patterns";
+import { knownLayout, podAddress } from "./lib/provider";
 import { renderThemeButton } from "./ui/theme";
 
 export interface Invitation {
@@ -45,17 +46,17 @@ export interface LandingCopy {
   collectiveLabel: string;
 }
 
-/** "pod.example/your-name/", the shape of a pod address on this provider. */
+/** "pod.example/your-name/" or "your-name.pod.example/", the shape of a pod address on this provider. */
 function examplePod(provider: string | null): string {
-  let host = "your-provider.example";
+  let shown = "your-provider.example/your-name/";
   if (provider) {
     try {
-      host = new URL(provider).host;
+      shown = podAddress(provider, "your-name", knownLayout(provider)).replace(/^https?:\/\//, "");
     } catch {
       // Keep the placeholder.
     }
   }
-  return `<code>${esc(host)}/your-name/</code>`;
+  return `<code>${esc(shown)}</code>`;
 }
 
 export function landingCopy(invitation: Invitation | null, provider: string | null): LandingCopy {

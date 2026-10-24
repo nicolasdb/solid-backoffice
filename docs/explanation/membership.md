@@ -28,7 +28,9 @@ the collective's files sit at that root. The kit already reads it first when
 finding a pod, and never guesses a root from the WebID's shape.
 
 Your WebID's provider is the only role check that is not Solid protocol.
-Everything that depends on it is hidden for WebIDs from other providers.
+What depends on it (agents) is offered when the provider says it offers it
+(`/.well-known/css/provider.json`, solid-kit ADR 010), and otherwise shown
+with why not.
 
 ## Newcomers
 

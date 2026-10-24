@@ -82,3 +82,9 @@ describe("usernames", () => {
     expect(podAddress(ISSUER, "ines")).toBe("https://pod.example/ines/");
   });
 });
+
+describe("podAddress follows the server's layout", () => {
+  it("is a subdomain on a server whose descriptor says so", () => {
+    expect(podAddress("https://pod.mapsofmaking.org/", "ines", "subdomain")).toBe("https://ines.pod.mapsofmaking.org/");
+  });
+});
