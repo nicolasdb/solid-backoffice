@@ -205,16 +205,20 @@ function stepName(profile: MemberDeclaration): string {
 
 /**
  * Agents the pods already name, offered with one click: a collective
- * account's own agent (`hs:agent` in its config.ttl), and, where the server offers agents,
- * the agents linked to your account (slice D, read by agents-view.ts).
+ * account's own agent (`sc:agent` in its config.ttl, when it names one), and, where the
+ * server offers agents, the agents linked to your account (slice D, read by agents-view.ts).
  */
 function agentSuggestions(profile: MemberDeclaration, run: Collective | null): string[] {
-  const fromRun = run && !profile.delegates.includes(run.agent) ? [run.agent] : [];
-  return [...new Set([...fromRun, ...agentSuggestionsFromAccount(profile)])];
+  return [...new Set([...runAgent(profile, run), ...agentSuggestionsFromAccount(profile)])];
+}
+
+/** The agent your collective's config.ttl names, when your profile does not declare it yet. */
+function runAgent(profile: MemberDeclaration, run: Collective | null): string[] {
+  return run?.agent && !profile.delegates.includes(run.agent) ? [run.agent] : [];
 }
 
 function stepAgent(profile: MemberDeclaration, run: Collective | null): string {
-  const fromRun = run && !profile.delegates.includes(run.agent);
+  const fromRun = runAgent(profile, run).length > 0;
   const suggested = agentSuggestions(profile, run)
     .map(
       (agent) => `<li><code>${esc(agent)}</code>

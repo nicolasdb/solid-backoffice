@@ -712,16 +712,21 @@ subdomains: the address is `https://openfab.pod.mapsofmaking.org/`.
    backoffice with it.
 2. **Inbox.** You → "Create my inbox": `inbox/` exists, a signed-in stranger
    can Append and not read.
-3. **config.ttl.** Upload it with `hs:agent` naming
-   `https://openfab.pod.mapsofmaking.org/profile/<name>#me`. Make it public;
-   in a private window it opens.
+3. **config.ttl.** Upload the template in `sc:`, sharing lines left
+   commented (membership only). Make it public; in a private window it
+   opens.
 4. **Roster.** `membres.ttl` with rules of its own (Only me); an unrelated
    account cannot read it.
 5. **The invitation.** The link
    `?collective=https://openfab.pod.mapsofmaking.org/config.ttl` shows the
-   collective's welcome to a signed-out person.
-6. **The agent.** Create it from You: its address on You equals step 3's. If
-   not, correct `config.ttl`.
+   collective's welcome to a signed-out person, promising no shared folder.
+   **Membership only:** someone asks to join and is accepted; they read the
+   roster and nothing else; their collective's tab says it does not collect
+   shared folders, with no Share button; the admin's members table has no
+   "Shares".
+6. **The agent.** Create it from You, then switch sharing on in
+   `config.ttl` (`sc:feature sc:Sharing`, `sc:agent` with the address You
+   shows); the member from step 5 is now offered to share.
 7. **May act for you.** One click on You; the profile declares
    `acl:delegates` the agent.
 8. **Pipeline files.** `principles/` filled, the whole of `guide/` public (a
@@ -731,7 +736,7 @@ subdomains: the address is `https://openfab.pod.mapsofmaking.org/`.
    the creation file's diagnosis, one next step, and a draft `config.ttl`; it
    writes nothing.
 10. **The skill, after.** Asked to check, it reads only, reports `config.ttl`
-    parsing, the roster refused to it, `hs:agent` equal to its own WebID, and
+    parsing, the roster refused to it, `sc:agent` equal to its own WebID, and
     ends with one next step.
 11. **A newcomer.** Someone with no WebID asks the agent in a channel: it
     gives the invitation address read from `config.ttl` (`schema:url`, if

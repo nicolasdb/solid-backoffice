@@ -7,11 +7,12 @@ uploading an `.acl` (the server holds those; an upload is refused). What
 ends up where, and why: [the pod tree](../reference/collective-files.md#the-pod-tree).
 
 Two halves. **Membership** (steps 1–5) is enough to invite people and accept
-them. **Pipeline** (steps 6–11) is only for a collective with an agent that
-collects what members share. Today `config.ttl` must still name an agent
-(`hs:agent`), so the first half writes the address the agent will have; until
-the agent exists, members' sharing grants Read to a WebID that answers
-nothing, and no pull happens. Making the agent optional is planned, not built.
+them: a collective of members only names no agent, offers no sharing, and
+accepting someone lets them read the roster, nothing else. **Pipeline**
+(steps 6–11) is only for a collective with an agent that collects what
+members share; it switches sharing on in `config.ttl` once the agent exists
+(step 8). What the terms mean: solid-kit
+[ADR 006 §7](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md).
 
 ## Membership
 
@@ -24,16 +25,12 @@ nothing, and no pull happens. Making the agent optional is planned, not built.
    account and the collective share one.
 3. **Upload `config.ttl`** at the pod root, from the
    [template](../../templates/collective/config.ttl): replace every
-   UPPERCASE value (filled: [HyperScope's](../examples/hyperscope-config.ttl);
-   Maps of Making's, membership only, [`examples/mapsofmaking/`](../examples/mapsofmaking/)).
-   Keep the `hs:` prefix as it is (solid-kit ADR 006 §7).
-   For `hs:agent`, write the address the agent **will** have: the pod's root,
-   then `profile/<name>#me`, where `<name>` is the name you will give the
-   agent in step 6. On a pod in a folder:
-   `https://pod.nicolasdb.eu/hyperscope/profile/hyperscope-agent#me`; on a pod
-   with its own subdomain: `https://openfab.pod.mapsofmaking.org/profile/openfab-agent#me`.
-   It is a WebID, never a group. A collective with no agent yet still writes
-   it; step 8 checks it matches once the agent exists.
+   UPPERCASE value. Keep the `sc:` prefix as it is, and leave the three
+   commented sharing lines at the end as they are: the file is then a
+   collective of members only, with no agent to name. (Filled examples in
+   the old `hs:` namespace, which is still read:
+   [HyperScope's](../examples/hyperscope-config.ttl), and Maps of Making's,
+   membership only, [`examples/mapsofmaking/`](../examples/mapsofmaking/).)
 4. **Make it public**: Who can access it → **Anyone with the link**, Save.
    Public, because the invitation's welcome screen reads it before anyone
    signs in ([why](../reference/collective-files.md#configttl)). It holds
@@ -56,8 +53,13 @@ nothing, and no pull happens. Making the agent optional is planned, not built.
    offers the agent in one click. That writes `acl:delegates` in the
    account's profile, which is how the agent's skill checks it acts for this
    collective. Creating the agent does not do it.
-8. **Check `hs:agent`** in `config.ttl` names exactly the address from step 6.
-   If it differs, replace the file with a corrected one and keep it public.
+8. **Switch sharing on** in `config.ttl`: uncomment `sc:feature sc:Sharing`,
+   `sc:agent` and, if you suggest a folder, `sc:suggestedFolder`. `sc:agent`
+   is exactly the address from step 6 (on a pod in a folder:
+   `https://pod.nicolasdb.eu/hyperscope/profile/hyperscope-agent#me`; on a pod
+   with its own subdomain: `https://openfab.pod.mapsofmaking.org/profile/openfab-agent#me`),
+   a WebID, never a group. Replace the file with the edited one and keep it
+   public. Members are offered to share a folder from then on.
 9. **Give the agent Read on `inbox/`**, with `acl:default` so it applies to
    the messages inside (Pods → technical rules → Edit these rules, desktop
    only). Read only: the agent's pull reads the announcements and never
@@ -76,8 +78,9 @@ nothing, and no pull happens. Making the agent optional is planned, not built.
     rights are in
     [ADR 006 §5](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md).
     Accepting a member adds them, and each agent their profile declares, to
-    every one of these, so accepting is refused while one of them still
-    inherits: a grant written there would replace what it inherits.
+    every one of these once sharing is on (step 8), so accepting is refused
+    while one of them still inherits: a grant written there would replace
+    what it inherits.
     `depots/` and `confrontations/` are created by the agent on its first
     pull and confrontation: give them their rules once they exist.
 

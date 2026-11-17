@@ -37,7 +37,8 @@ import { esc } from "./ui/patterns";
 
 export interface Group {
   name: string;
-  agent: string;
+  /** Its agent, when it names one (a membership-only collective may not). */
+  agent?: string;
   members: { webId: string; label: string }[];
   /** Once members: the roster keeps their short name, or their profile left. */
   left: { webId: string; label: string }[];
@@ -211,7 +212,8 @@ function renderChips(draft: Draft, env: AccessEnv): string {
   const taken = new Set([env.webId, ...draft.agents.map((a) => a.webId)]);
   return env.groups
     .map((g) => {
-      const people = [...g.members, { webId: g.agent, label: env.names.get(g.agent) ?? `${g.name}'s agent` }]
+      const agent = g.agent ? [{ webId: g.agent, label: env.names.get(g.agent) ?? `${g.name}'s agent` }] : [];
+      const people = [...g.members, ...agent]
         .filter((m, i, all) => !taken.has(m.webId) && all.findIndex((o) => o.webId === m.webId) === i);
       if (!people.length) return "";
       return `

@@ -3,7 +3,7 @@
 > Ébauche du 2026-10-01, à relire par Nicolas avant de figer. Modifiée le
 > 2026-11-17 (adresse d'invitation, accueil sans droits, guide public).
 > Générique : copiée à la racine de chaque pod collectif (`guide/`, voir
-> `config.ttl`, `hs:guide`).
+> `config.ttl`, `sc:guide`).
 
 Pour l'agent qui accueille. Il diagnostique l'état du nouveau venu et ne
 propose **qu'une étape suivante** (loi de Hick). Le parcours peut commencer

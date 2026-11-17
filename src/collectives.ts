@@ -151,9 +151,11 @@ function collectiveCard(view: CollectiveView): string {
   if (answer) return card(collective, answerPill(answer), answerLabel(answer, collective.name));
   const line =
     state === "member"
-      ? published
+      ? published && view.folderUrl
         ? `You share ${nameOf(view.folderUrl)}`
-        : "Your folder is not shared with it yet"
+        : collective.sharing
+          ? "Your folder is not shared with it yet"
+          : "Membership only: it collects no shared folders"
       : stateLabel(state, collective.name);
   return card(collective, statePill(state), line);
 }

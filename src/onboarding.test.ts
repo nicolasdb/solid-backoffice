@@ -15,7 +15,8 @@ const COLLECTIVE = {
   roster: "https://pod.example/hs/membres.ttl",
   inbox: "https://pod.example/hs/inbox/",
   agent: "https://pod.example/hs/agents/agent#me",
-  bundleFolder: "output2/hyperscope/",
+  suggestedFolder: "output2/hyperscope/",
+  sharing: true as const,
 };
 
 let profile = { name: null as string | null, memberOf: [] as string[], delegates: [] as string[], inbox: null as string | null };
@@ -43,7 +44,16 @@ const OUTSIDER = "https://pod.example/ana/profile/card#me";
 const shareRules = (agents: { webId: string; modes: string[] }[], pub: string[] = []) => ({ agents, public: pub, authenticated: [] });
 let plan: Record<string, unknown> = {};
 /** Collectives besides COLLECTIVE that loadCollective knows. */
-let extraCollectives: (typeof COLLECTIVE)[] = [];
+let extraCollectives: import("./lib/collective").Collective[] = [];
+/** A membership-only collective (no sc:feature sc:Sharing, solid-kit ADR 006 §7). */
+const OPENFAB = {
+  configUrl: "https://pod.example/openfab/config.ttl",
+  group: "https://pod.example/openfab/config.ttl#openfab",
+  name: "OpenFab",
+  roster: "https://pod.example/openfab/membres.ttl",
+  inbox: "https://pod.example/openfab/inbox/",
+  sharing: false as const,
+};
 
 vi.mock("./lib/auth", () => ({ authFetch: vi.fn() }));
 vi.mock("./lib/pod", () => ({
@@ -402,6 +412,42 @@ describe("slice A — the member's side of the handshake", () => {
       `acl ${POD}notes/ ${COLLECTIVE.agent} read`,
       "inbox Announce",
     ]);
+  });
+
+  it("offers no sharing in a membership-only collective: says why, with no button and no agent", async () => {
+    sessionStorage.clear();
+    extraCollectives = [OPENFAB];
+    profile.inbox = POD + "inbox/";
+    profile.memberOf = [OPENFAB.group];
+    listed = true;
+    const list = await render("#/c");
+    expect(list.querySelector(".ccard")!.textContent).toContain("Membership only: it collects no shared folders");
+    const app = await render(tab(OPENFAB));
+    expect(app.textContent).toContain("You are a member.");
+    expect(app.textContent).toContain("OpenFab does not collect shared folders");
+    expect(app.querySelector("#publish-0")).toBeNull();
+    expect(app.querySelector("#folder-0")).toBeNull();
+    expect(app.textContent).not.toContain("Its agent");
+    expect(app.querySelector("#leave-0")).not.toBeNull();
+  });
+
+  it("asks for a folder when a collective that shares suggests none, and writes nothing until then", async () => {
+    sessionStorage.clear();
+    const { suggestedFolder: _none, ...noSuggestion } = { ...COLLECTIVE, configUrl: OPENFAB.configUrl, group: OPENFAB.group, name: "OpenFab" };
+    extraCollectives = [noSuggestion];
+    profile.inbox = POD + "inbox/";
+    profile.memberOf = [OPENFAB.group];
+    listed = true;
+    const app = await render(tab(OPENFAB));
+    expect(app.textContent).toContain("OpenFab suggests none: any folder of yours will do.");
+    await click(app, "#publish-0");
+    expect(app.querySelector(".step-error")!.textContent).toBe("Pick a folder first.");
+    expect(calls).toEqual([]);
+    const picker = app.querySelector<HTMLSelectElement>("#folder-0")!;
+    await vi.waitFor(() => expect(picker.options.length).toBe(3));
+    picker.value = POD + "notes/";
+    await click(app, "#publish-0");
+    expect(calls).toEqual([`choose ${POD}notes/`, `acl ${POD}notes/ ${COLLECTIVE.agent} read`, "inbox Announce"]);
   });
 
   it("asks what the folder's rules become before stopping; keeps everything else by default", async () => {

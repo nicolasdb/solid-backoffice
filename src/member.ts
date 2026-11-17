@@ -8,11 +8,16 @@
  * member may read once accepted; and its agent, the one WebID the folder is
  * shared with. An unreadable roster is "not yet", never "refused".
  *
- * Sharing (slice G): you pick the folder; the collective's `hs:bundleFolder`
- * is only the suggestion. Before sharing, the screen answers the four
- * questions (docs/explanation/four-questions.md). Order of writes, pinned in
- * src/onboarding.test.ts: the choice, the folder's grant, then the
- * announcement.
+ * Sharing (slice G): you pick the folder; the collective's
+ * `sc:suggestedFolder` is only the suggestion. Before sharing, the screen
+ * answers the four questions (docs/explanation/four-questions.md). Order of
+ * writes, pinned in src/onboarding.test.ts: the choice, the folder's grant,
+ * then the announcement.
+ *
+ * A membership-only collective (no `sc:feature sc:Sharing`, solid-kit ADR
+ * 006 §7) offers no sharing: the screen says so in words, with no button,
+ * and shows no agent. A folder still shared from before stays shown, so it
+ * can be stopped.
  */
 import { routeHref } from "./router";
 import { restoreRules, shareFolder, shareableFolders, stopPlan, stopSharingAs, type StopChoice, type StopPlan } from "./lib/sharing";
@@ -103,11 +108,11 @@ function membersCard(collective: Collective, roster: RosterMember[] | null, webI
     </section>`;
 }
 
-function agentCard(collective: Collective): string {
+function agentCard(agent: string): string {
   return `
     <section class="step is-quiet">
       <div class="step-head"><h2>Its agent</h2></div>
-      <p class="meta"><code>${esc(collective.agent)}</code></p>
+      <p class="meta"><code>${esc(agent)}</code></p>
       <p class="meta">Sharing lets it read your folder; it never writes on your pod. Whoever else could reach the folder (your own agent, say) keeps that access.</p>
     </section>`;
 }
@@ -184,7 +189,7 @@ export function renderStopPanel(plan: StopPlan, i: number, view: CollectiveView,
   const options = plan.options
     .map((o, n) => {
       const changes = o.choice === "keep" ? [] : changeWords(keep, o.rules, label);
-      const named = (r: Rules, agent: string) => r.agents.some((a) => a.webId === agent && a.modes.includes("read"));
+      const named = (r: Rules, agent: string | undefined) => r.agents.some((a) => a.webId === agent && a.modes.includes("read"));
       const notes = [
         ...alsoSharedWith.filter((c) => named(keep, c.agent) && !named(o.rules, c.agent)).map((c) => `${esc(c.name)} loses access too.`),
         ...(named(o.rules, collective.agent) ? [`${name}'s agent is still named, by the folder above.`] : []),
@@ -218,15 +223,38 @@ export function renderStopPanel(plan: StopPlan, i: number, view: CollectiveView,
     </form>`;
 }
 
+/**
+ * What sharing would do and why it is not offered: the collective's own
+ * config.ttl does not switch it on. No button, since there is nothing to do.
+ */
+function noSharing(name: string): string {
+  return `
+    <section class="step is-quiet">
+      <div class="step-head"><h2>Sharing</h2><span class="pill">Not offered</span></div>
+      <p class="lead">${name} does not collect shared folders: belonging to it is all there is. Nothing of your pod is shared with it.</p>
+      <p class="meta">A collective that collects them names, in its config.ttl, the one agent you would let read a folder you pick.</p>
+    </section>`;
+}
+
 export function renderMemberView(view: CollectiveView, i: number, roster: RosterMember[] | null, webId: string, podUrl: string): string {
   const { collective, state, published, answer, folderUrl } = view;
   const name = esc(collective.name);
   const nick = roster?.find((m) => m.webId === webId)?.nick ?? null;
-  const path = pathOf(folderUrl, podUrl);
+  const path = folderUrl ? pathOf(folderUrl, podUrl) : "";
+
+  const option = folderUrl
+    ? `<option value="${esc(folderUrl)}" selected>${esc(path)}${view.chosen ? "" : ` (suggested by ${name})`}</option>`
+    : `<option value="" selected disabled>Pick one of your folders</option>`;
+  const note = view.chosen
+    ? "The folder you picked last time. Created if it does not exist yet."
+    : folderUrl
+      ? `${name} suggests this one; any folder of yours will do. Created if it does not exist yet.`
+      : `${name} suggests none: any folder of yours will do.`;
 
   const body = published
     ? `
       <p class="lead">You share <code>${esc(path)}</code> with ${name}.</p>
+      ${collective.sharing ? "" : `<p class="meta is-warn">${name} no longer collects shared folders, but its agent can read this one until you stop sharing it.</p>`}
       ${fourQuestions(name, true)}
       <p class="actions">
         <a class="button-ghost" href="${routeHref({ name: "places", path })}">Open folder</a>
@@ -238,15 +266,17 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
       <div class="field share-picker">
         <label for="folder-${i}">Folder</label>
         <select id="folder-${i}" name="folder" aria-describedby="folder-${i}-note">
-          <option value="${esc(folderUrl)}" selected>${esc(path)}${view.chosen ? "" : ` (suggested by ${name})`}</option>
+          ${option}
         </select>
-        <p class="meta" id="folder-${i}-note">${view.chosen ? "The folder you picked last time." : `${name} suggests this one; any folder of yours will do.`} Created if it does not exist yet.</p>
+        <p class="meta" id="folder-${i}-note">${note}</p>
       </div>
       ${fourQuestions(name, false)}
-      <p class="actions"><button id="publish-${i}">Share this folder</button></p>
-      }`;
+      <p class="actions"><button id="publish-${i}">Share this folder</button></p>`;
 
-  const sharing = `
+  const sharing =
+    !published && !collective.sharing
+      ? noSharing(name)
+      : `
     <section class="step">
       <div class="step-head">
         <h2>Sharing</h2>
@@ -281,7 +311,9 @@ export function renderMemberView(view: CollectiveView, i: number, roster: Roster
     )}
     <div class="member-grid">
       <div class="stack">${sharing}${membership}</div>
-      <aside class="stack">${membersCard(collective, roster, webId, state === "pending")}${agentCard(collective)}</aside>
+      <aside class="stack">${membersCard(collective, roster, webId, state === "pending")}${
+        collective.agent && (collective.sharing || published) ? agentCard(collective.agent) : ""
+      }</aside>
     </div>`;
 }
 
@@ -325,6 +357,7 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   }
 
   const share = async (folder: string) => {
+    if (!collective.sharing) throw new Error(`${collective.name} does not collect shared folders.`);
     // The choice first (readable by you and your agents only), so your agents
     // know where to write; then the grant, then the announcement.
     await chooseFolder(ctx.podUrl, webId, collective.group, folder, profile.delegates);
@@ -337,7 +370,9 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
     bindButton(publish, async () => {
       // The grant IS the consent (ADR 006 §1.1): per-WebID, on the member's
       // own pod, revocable here. Never a group.
-      await share(picker?.value || folderUrl);
+      const folder = picker?.value || folderUrl;
+      if (!folder) throw new Error("Pick a folder first.");
+      await share(folder);
       announce(`Your folder is shared with ${collective.name}.`);
     }, rerender);
   }
@@ -345,7 +380,9 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
   // Stopping asks first what the folder's rules become (renderStopPanel).
   const unpublish = app.querySelector<HTMLButtonElement>(`#unpublish-${i}`);
   const panel = app.querySelector<HTMLElement>(`#stop-panel-${i}`);
-  if (unpublish && panel) {
+  // Shown only while shared, which needs both: the folder and the agent it is shared with.
+  const agent = collective.agent;
+  if (unpublish && panel && folderUrl && agent) {
     const actions = unpublish.closest<HTMLElement>(".actions");
     const close = () => {
       panel.hidden = true;
@@ -354,7 +391,7 @@ export function bindMember(app: HTMLElement, view: CollectiveView, i: number, ct
       unpublish.focus();
     };
     bindButton(unpublish, async () => {
-      const plan = await stopPlan(folderUrl, webId, ctx.podUrl, collective.agent, profile.delegates);
+      const plan = await stopPlan(folderUrl, webId, ctx.podUrl, agent, profile.delegates);
       panel.innerHTML = renderStopPanel(plan, i, view, { webId, podUrl: ctx.podUrl, delegates: profile.delegates });
       panel.hidden = false;
       if (actions) actions.hidden = true;

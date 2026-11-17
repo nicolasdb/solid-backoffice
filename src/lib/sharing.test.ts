@@ -59,4 +59,34 @@ describe("settings/collectives.ttl", () => {
     const elsewhere = new Map([["https://pod.example/hs/config.ttl#hs", "https://pod.example/other/notes/"]]);
     expect(parseChoices(serializeChoices(elsewhere, DOC), DOC, POD).size).toBe(0);
   });
+
+  // solid-kit ADR 006 §7: read both namespaces, write sc: only.
+  const HS = "https://pod.nicolasdb.eu/hyperscope/vocab#";
+  const SC = "https://w3id.org/solid-collective/vocab#";
+
+  it("reads a file still in the old namespace, and writes it back in sc: only", () => {
+    const old = `@prefix hs: <${HS}>.
+<#a> a hs:SharedFolder; hs:collective <https://pod.example/hs/config.ttl#hs>; hs:folder <${POD}notes/>.`;
+    const read = parseChoices(old, DOC, POD);
+    expect(read).toEqual(new Map([["https://pod.example/hs/config.ttl#hs", POD + "notes/"]]));
+    const written = serializeChoices(read, DOC);
+    expect(written).toContain(`@prefix sc: <${SC}>`);
+    expect(written).toContain("sc:SharedFolder");
+    expect(written).not.toContain(HS);
+  });
+
+  it("reads every entry of a file holding both namespaces once, the sc: one winning", () => {
+    const mixed = `@prefix hs: <${HS}>. @prefix sc: <${SC}>.
+<#a> a hs:SharedFolder; hs:collective <https://pod.example/hs/config.ttl#hs>; hs:folder <${POD}old/>.
+<#b> a sc:SharedFolder; sc:collective <https://pod.example/hs/config.ttl#hs>; sc:folder <${POD}new/>.
+<#c> a hs:SharedFolder; hs:collective <https://pod.example/mom/config.ttl#mom>; hs:folder <${POD}maps/>.
+<#d> a sc:SharedFolder, hs:SharedFolder; sc:collective <https://pod.example/of/config.ttl#of>; sc:folder <${POD}of/>.`;
+    expect(parseChoices(mixed, DOC, POD)).toEqual(
+      new Map([
+        ["https://pod.example/hs/config.ttl#hs", POD + "new/"],
+        ["https://pod.example/mom/config.ttl#mom", POD + "maps/"],
+        ["https://pod.example/of/config.ttl#of", POD + "of/"],
+      ])
+    );
+  });
 });
