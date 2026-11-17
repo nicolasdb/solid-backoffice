@@ -7,9 +7,9 @@ each path is and who may read it:
 
 | Here | On the pod | |
 |---|---|---|
-| `config.ttl` | `config.ttl` | replace every UPPERCASE value; filled examples in [`docs/examples/`](../../docs/examples/) |
+| `config.ttl` | `config.ttl` | replace every UPPERCASE value; filled examples in [`docs/examples/`](../../docs/examples/). `hs:agent` is the address You shows for the agent; `schema:url`, optional, is the invitation address an agent hands to a newcomer |
 | `membres.ttl` | `membres.ttl` (`hs:roster`) | as is; accepting a request writes each member's lines |
-| `guide/` | `guide/` (`hs:guide`) | onboarding, FAQ and glossary, in French, for members and agents |
+| `guide/` | `guide/` (`hs:guide`) | onboarding, FAQ and glossary, in French, for members and agents; public, the whole folder |
 
 The agent's procedures are not here: they ship with the connector they call,
 in solid-css-overlay
@@ -21,6 +21,10 @@ annexes. These files are the reference that copies are compared against,
 and where a fix to the generic text lands first. Keeping a copy in step
 (a version in each file, a backoffice command run as a ceremony) is open:
 [collective files](../../docs/reference/collective-files.md#open).
+
+Any agent may greet a newcomer, with no rights on any pod; in a shared
+channel the common agent only greets. The invitation address it hands out is
+read from `config.ttl`.
 
 `config.ttl` is parsed by the backoffice's own tests
 (`src/lib/collective.test.ts`), like the examples, so a property the app

@@ -204,7 +204,7 @@ describe("docs/examples — the files to upload", () => {
       name: "NOM-DU-COLLECTIF",
       roster: "https://pod.example/collective/membres.ttl",
       inbox: "https://pod.example/collective/inbox/",
-      agent: "https://pod.example/collective/agents/agent#me",
+      agent: "https://pod.example/collective/profile/AGENT#me",
       bundleFolder: "output2/NOM/",
     });
   });
