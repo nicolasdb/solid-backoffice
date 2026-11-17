@@ -12,7 +12,7 @@ whatever applies. One account can hold several roles at once.
 
 | Role | Read from | Shown as |
 |---|---|---|
-| Runs a collective | `pim:storage` in your profile, then a `config.ttl` at that pod root declaring an `hs:Collective` | "You run" |
+| Runs a collective | `pim:storage` in your profile, then a `config.ttl` at that pod root declaring an `sc:Collective` (or `hs:Collective`, the old namespace) | "You run" |
 | Belongs to a collective | each `org:memberOf` in your profile, and the collective's roster | "You belong to", with the state from both sides |
 | Invited | `?collective=` in the link that opened the app | that collective's card, even before sign-in |
 | Account holder on our provider | your WebID's login server is ours | agents, connectors, access logs |

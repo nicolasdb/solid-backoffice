@@ -79,7 +79,7 @@ it the file is no longer valid Turtle):
 ```turtle
 @prefix schema: <http://schema.org/> .
 
-<#openfab> a hs:Collective ;
+<#openfab> a sc:Collective ;
     foaf:name "OpenFab" ;
     schema:url <https://BACKOFFICE/?collective=https://openfab.pod.mapsofmaking.org/config.ttl> ;
     …

@@ -1,7 +1,7 @@
 /**
  * Which folder you share with each collective (slice G), kept in
  * `settings/collectives.ttl` on your own pod: you pick the folder, the
- * collective's `hs:bundleFolder` is only the suggestion. Only you and your
+ * collective's `sc:suggestedFolder` is only the suggestion. Only you and your
  * own agents (`acl:delegates`, Read) can read the file: they need it to
  * know where to put your contributions (docs/reference/collectives-file.md).
  *
@@ -10,20 +10,25 @@
  *
  * Writes go through `updateDocument`, like `following.ts`: a second window
  * changing the same file is never overwritten unseen.
+ *
+ * Both namespaces are read, only `sc:` is written (solid-kit ADR 006 §7): a
+ * file still in the old `hs:` is rewritten in `sc:` on its next save, and
+ * not before. Your agents read this file too; they read both as well.
  */
 import { DataFactory, Parser, Writer } from "n3";
 import { authFetch } from "./auth";
 import { updateDocument, type ConditionalError } from "./conditional";
 import { readTurtle } from "./read";
-import { NS } from "./vocab";
+import { NS, scTerm } from "./vocab";
 import { ensureSettingsReadme } from "./settings";
 import { getAccess, PRESETS, setAccess } from "./acl";
 import { addGrants } from "./sharing";
 
+/** What is written. */
 const T = {
-  SharedFolder: NS.hs + "SharedFolder",
-  collective: NS.hs + "collective",
-  folder: NS.hs + "folder",
+  SharedFolder: NS.sc + "SharedFolder",
+  collective: NS.sc + "collective",
+  folder: NS.sc + "folder",
 };
 
 /** Collective IRI → the folder's full address. */
@@ -39,23 +44,30 @@ function idFor(group: string): string {
   return "c-" + h.toString(36);
 }
 
-/** Entries pointing outside `podUrl` are dropped: you only share from your own pod. */
+/**
+ * Entries pointing outside `podUrl` are dropped: you only share from your own
+ * pod. An entry is read in either namespace; when one collective has entries
+ * in both (a file another app wrote half in each), the `sc:` one wins.
+ */
 export function parseChoices(turtle: string, docUrl: string, podUrl: string): FolderChoices {
   const quads = new Parser({ baseIRI: docUrl }).parse(turtle);
-  const value = (s: string, p: string) => quads.find((q) => q.subject.value === s && q.predicate.value === p)?.object.value;
   const choices: FolderChoices = new Map();
-  for (const q of quads) {
-    if (q.predicate.value !== NS.rdf + "type" || q.object.value !== T.SharedFolder) continue;
-    const group = value(q.subject.value, T.collective);
-    const folder = value(q.subject.value, T.folder);
-    if (group && folder && folder.endsWith("/") && folder.startsWith(podUrl) && folder !== podUrl) choices.set(group, folder);
+  // Old namespace first, so an `sc:` entry for the same collective replaces it.
+  for (const ns of [NS.hsLegacy, NS.sc]) {
+    const value = (s: string, p: string) => quads.find((q) => q.subject.value === s && q.predicate.value === ns + p)?.object.value;
+    for (const q of quads) {
+      if (q.predicate.value !== NS.rdf + "type" || !scTerm("SharedFolder").includes(q.object.value)) continue;
+      const group = value(q.subject.value, "collective");
+      const folder = value(q.subject.value, "folder");
+      if (group && folder && folder.endsWith("/") && folder.startsWith(podUrl) && folder !== podUrl) choices.set(group, folder);
+    }
   }
   return choices;
 }
 
 export function serializeChoices(choices: FolderChoices, docUrl: string): string {
   const { namedNode, quad } = DataFactory;
-  const writer = new Writer({ baseIRI: docUrl, prefixes: { hs: NS.hs } });
+  const writer = new Writer({ baseIRI: docUrl, prefixes: { sc: NS.sc } });
   for (const [group, folder] of choices) {
     const s = namedNode(docUrl + "#" + idFor(group));
     writer.addQuad(quad(s, namedNode(NS.rdf + "type"), namedNode(T.SharedFolder)));

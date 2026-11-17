@@ -52,8 +52,12 @@ export interface ViewContext {
 export interface CollectiveView {
   collective: Collective;
   state: MembershipState;
-  /** The folder you picked for it, or else its suggestion (`hs:bundleFolder`). */
-  folderUrl: string;
+  /**
+   * The folder you picked for it, or else its suggestion
+   * (`sc:suggestedFolder`). `null` when there is neither, or when the
+   * collective does not collect shared folders and you never picked one.
+   */
+  folderUrl: string | null;
   /** Whether you picked it: false means the suggestion, which may not exist yet. */
   chosen: boolean;
   published: boolean;
@@ -133,10 +137,15 @@ export async function load(webId: string, podUrl: string): Promise<Loaded> {
   const views = Promise.all(
     found.map(async (collective): Promise<CollectiveView> => {
       const picked = (await choices).get(collective.group);
-      const folderUrl = picked ?? new URL(collective.bundleFolder, podUrl).href;
+      // A membership-only collective suggests nothing. A folder picked for
+      // it earlier is still checked: it may stay shared with an agent the
+      // collective names, and only you can stop that.
+      const suggested = collective.sharing && collective.suggestedFolder ? new URL(collective.suggestedFolder, podUrl).href : null;
+      const folderUrl = picked ?? suggested;
+      const { agent } = collective;
       const [listed, published] = await Promise.all([
         isListed(collective, webId),
-        sharedWith(folderUrl, webId, podUrl, collective.agent),
+        folderUrl && agent ? sharedWith(folderUrl, webId, podUrl, agent) : false,
       ]);
       return {
         collective,
@@ -377,7 +386,7 @@ async function compose(
 function agentNames(data: Loaded): Map<string, string> {
   const names = new Map<string, string>();
   for (const c of [...(data.run ? [data.run.collective] : []), ...data.collectives.map((v) => v.collective)]) {
-    names.set(c.agent, `${c.name}'s agent`);
+    if (c.agent) names.set(c.agent, `${c.name}'s agent`);
   }
   for (const m of data.run?.members ?? []) {
     if (m.profile?.name) names.set(m.webId, m.profile.name);
@@ -410,7 +419,7 @@ async function groupsOf(data: Loaded, names: Map<string, string>): Promise<Group
     const label = (webId: string) => names.get(webId) ?? nicks.get(webId) ?? webId;
     groups.push({
       name: collective.name,
-      agent: collective.agent,
+      ...(collective.agent ? { agent: collective.agent } : {}),
       members: members.filter((m) => !leftOwnSide.has(m.webId)).map((m) => ({ webId: m.webId, label: label(m.webId) })),
       left: [
         ...[...nicks.keys()].filter((w) => !listed.has(w)),

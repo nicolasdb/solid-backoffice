@@ -22,9 +22,24 @@ the invitation address an agent hands out, and the connector's `collectif`
 skill v2 with a `creation.md` for the person creating a collective. Run
 live: not yet ([manual tests](manual-tests.md#creating-a-collective--openfab-on-maps-of-making)).
 
-**Next, in order:** (a) settle the vocabulary's namespace (solid-kit ADR 006
-§7, w3id.org), and record `schema:url` there; (b) make the agent optional in
-`config.ttl`, in this parser and the connector's; (c) mom-home
+**The namespace, settled and read (17 Nov 2026).** solid-kit ADR 006 §7,
+amended: `sc:` (`https://w3id.org/solid-collective/vocab#`), terms in
+solid-kit `docs/vocab/vocab.ttl`, `hs:bundleFolder` renamed
+`sc:suggestedFolder`, and the agent optional: only `sc:feature sc:Sharing`
+needs one. Here: `src/lib/vocab.ts` holds `sc` and, read only, `hsLegacy`;
+`config.ttl` is read in both (an old one exactly as before, a term in both
+refused), `settings/collectives.ttl` and `settings/following.ttl` are read
+in both and written in `sc:` on their next save; a membership-only
+collective offers no sharing, shows no "Shares", and accepting grants Read
+on the roster alone. The template starts membership only, the how-to's
+step 8 switches sharing on. `test/pods/` adds OpenFab, membership only in
+`sc:`; HyperScope and the network stay in `hs:`. Run live: not yet.
+
+**Next, in order:** (a) the namespace: done here and in the ADR; left, the
+connector reading both (solid-css-overlay), the w3id pull request, each
+live `config.ttl` edited by its owner, and `schema:url` still to record in
+the ADR; (b) the agent optional: done in this parser, the connector's in
+progress; (c) mom-home
 (`mapsofmaking/mom-home`) writes the membership half by default for every
 space it onboards, on the space's first signed-in screen, inbox and roster
 first, `config.ttl` last and then public, with a tile that guides the

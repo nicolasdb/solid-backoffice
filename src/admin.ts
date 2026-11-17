@@ -237,9 +237,9 @@ function renderMember(member: MemberView, i: number, collective: Collective, own
         <span class="visually-hidden">${esc(stateText(member, collective))}</span>
         ${member.state === "member" ? "" : `<br><span class="meta">${esc(stateText(member, collective))}</span>`}
       </td>
-      <td data-label="Shares">
+      ${collective.sharing ? `<td data-label="Shares">
         ${member.announced.length ? member.announced.map((a) => `<code title="${esc(a)}">${esc(shortFolder(a, member.webId))}</code>`).join("<br>") : `<span class="meta">nothing announced</span>`}
-      </td>
+      </td>` : ""}
       <td class="row-actions">
         ${
           !member.canReadRoster
@@ -297,6 +297,15 @@ export function invitationFace(link: string): string {
 }
 
 /**
+ * A membership-only collective (no `sc:feature sc:Sharing` in its
+ * config.ttl, solid-kit ADR 006 §7): no "Shares" column, and this line in
+ * its place, saying what sharing would add and where it is switched on.
+ */
+function noSharingLine(collective: Collective): string {
+  return `<p class="meta">${esc(collective.name)} does not collect shared folders: accepting someone lets them read the roster, nothing else. Sharing is switched on in config.ttl (<code>sc:feature sc:Sharing</code>, with the one <code>sc:agent</code> members would share with).</p>`;
+}
+
+/**
  * The collective's own screen (layout L2): requests beside members on a wide
  * screen, one above the other on a phone with chips to jump between them.
  * The chips are buttons, not `#` links: the address's fragment is the router's.
@@ -319,14 +328,16 @@ export function renderRunView(view: RunView): string {
       ? `<table class="members">
            <thead><tr>
              <th scope="col">Member</th><th scope="col">Short name</th><th scope="col">Both sides</th>
-             <th scope="col">Shares</th><th scope="col"><span class="visually-hidden">Actions</span></th>
+             ${collective.sharing ? `<th scope="col">Shares</th>` : ""}<th scope="col"><span class="visually-hidden">Actions</span></th>
            </tr></thead>
            <tbody>${members.map((m, i) => renderMember(m, i, collective, owner)).join("")}</tbody>
          </table>
          <p class="meta" id="find-none" hidden>No member matches.</p>
-         <p class="meta">"Shares" comes from each member's messages (shared, stopped): only their pod can confirm the folder is still shared.</p>
+         ${collective.sharing
+           ? `<p class="meta">"Shares" comes from each member's messages (shared, stopped): only their pod can confirm the folder is still shared.</p>`
+           : noSharingLine(collective)}
          <p class="step-error error" role="alert" hidden></p>`
-      : `<p class="lead">Nobody yet. Accepted requests appear here.</p>`;
+      : `<p class="lead">Nobody yet. Accepted requests appear here.</p>${collective.sharing ? "" : noSharingLine(collective)}`;
 
   return `
     ${collectiveHead(

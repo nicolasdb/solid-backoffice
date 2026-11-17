@@ -59,7 +59,8 @@ const COLLECTIVE = {
   roster: POD + "membres.ttl",
   inbox: POD + "inbox/",
   agent: POD + "agent#me",
-  bundleFolder: "output2/hs/",
+  suggestedFolder: "output2/hs/",
+  sharing: true as const,
 };
 const OWNER = POD + "profile/card#me";
 const INES = "https://pod.example/ines/profile/card#me";
@@ -246,6 +247,32 @@ describe("order of writes", () => {
     expect(calls).toEqual([
       `acl ${COLLECTIVE.roster} ${INES} none`,
       `acl ${POD}depots/ ${INES} none`,
+      `roster ${COLLECTIVE.roster}`,
+      "send https://pod.example/ines/inbox/ Remove",
+    ]);
+  });
+
+  // Membership only (no sc:feature sc:Sharing, solid-kit ADR 006 §7): the
+  // pipeline's folders are not this collective's, even when its pod holds
+  // one (depots/ exists here): the roster alone, in the same order.
+  const MEMBERSHIP_ONLY = { ...COLLECTIVE, sharing: false as const, agent: undefined, suggestedFolder: undefined };
+
+  it("accepts into a membership-only collective with Read on the roster alone", async () => {
+    await admin.accept(MEMBERSHIP_ONLY, OWNER, join, ines({ delegates: [INES_AGENT] }), "ines");
+    expect(calls).toEqual([
+      `roster ${COLLECTIVE.roster}`,
+      `acl ${COLLECTIVE.roster} ${INES} read`,
+      `acl ${COLLECTIVE.roster} ${INES_AGENT} read`,
+      "send https://pod.example/ines/inbox/ Accept",
+      `DELETE ${JOIN_URL}`,
+    ]);
+  });
+
+  it("removes from a membership-only collective: the roster's grants, then the roster", async () => {
+    rosterText = admin.addMemberText(rosterText, COLLECTIVE.roster, COLLECTIVE.group, INES, "ines");
+    await admin.removeMember(MEMBERSHIP_ONLY, OWNER, ines());
+    expect(calls).toEqual([
+      `acl ${COLLECTIVE.roster} ${INES} none`,
       `roster ${COLLECTIVE.roster}`,
       "send https://pod.example/ines/inbox/ Remove",
     ]);

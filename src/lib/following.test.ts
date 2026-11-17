@@ -40,6 +40,32 @@ describe("settings/following.ttl", () => {
     expect(parseFollowing(turtle, DOC)).toEqual(entries);
   });
 
+  // solid-kit ADR 006 §7: read both namespaces, write sc: only.
+  const HS = "https://pod.nicolasdb.eu/hyperscope/vocab#";
+  const SC = "https://w3id.org/solid-collective/vocab#";
+
+  it("reads a list still in the old namespace, and writes it back in sc: only", () => {
+    const old = `@prefix hs: <${HS}>. @prefix schema: <http://schema.org/>. @prefix dct: <http://purl.org/dc/terms/>.
+<#x> a hs:Followed; schema:url <${X}>; dct:title "Xavier"; hs:favourite true;
+  hs:lastSeen "2026-09-26T09:12:00.000Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>.`;
+    const read = parseFollowing(old, DOC);
+    expect(read).toEqual([entry(X, { title: "Xavier", favourite: true, lastSeen: new Date("2026-09-26T09:12:00Z") })]);
+    const written = serializeFollowing(read, DOC);
+    expect(written).toContain(`@prefix sc: <${SC}>`);
+    expect(written).toMatch(/sc:Followed[\s\S]*sc:lastSeen[\s\S]*sc:favourite/);
+    expect(written).not.toContain(HS);
+    expect(parseFollowing(written, DOC)).toEqual(read);
+  });
+
+  it("reads every entry of a list holding both namespaces once", () => {
+    const Y = "https://pod.example/yann/notes.md";
+    const mixed = `@prefix hs: <${HS}>. @prefix sc: <${SC}>. @prefix schema: <http://schema.org/>. @prefix dct: <http://purl.org/dc/terms/>.
+<#x> a hs:Followed, sc:Followed; schema:url <${X}>; dct:title "Xavier"; hs:favourite true; sc:favourite false.
+<#x2> a hs:Followed; schema:url <${X}>; dct:title "Xavier, again".
+<#y> a sc:Followed; schema:url <${Y}>; dct:title "Yann"; sc:favourite true.`;
+    expect(parseFollowing(mixed, DOC)).toEqual([entry(X, { title: "Xavier" }), entry(Y, { title: "Yann", favourite: true })]);
+  });
+
   it("ignores entries without an http(s) address", () => {
     const turtle = `@prefix hs: <https://pod.nicolasdb.eu/hyperscope/vocab#>. @prefix schema: <http://schema.org/>.
 <#a> a hs:Followed; schema:url <javascript:alert(1)>.`;

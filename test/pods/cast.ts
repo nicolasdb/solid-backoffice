@@ -10,6 +10,12 @@
  *   ines        applicant: declared HyperScope, has an inbox, sent an as:Join
  *   outsider    signed in, unrelated
  *   network     a second collective, for J6; shares shared/ with amina (C5)
+ *   openfab     a membership-only collective in the new namespace (sc:, no
+ *               sc:feature sc:Sharing, no agent), as the template starts one
+ *
+ * HyperScope and the network stay in the old namespace (hs:), as the real
+ * pods are until their owners edit them: that is the path read "as before"
+ * (solid-kit ADR 006 §7).
  *
  * Amina's pod also holds files for Places (slice C): projects/ follows the
  * pod root's rules, projects/drafts/ has its own (HyperScope's agent reads),
@@ -20,7 +26,8 @@ import { createPerson, signIn, type Person } from "./accounts";
 import { buildJoin } from "../../src/lib/activity";
 
 const HS = "https://pod.nicolasdb.eu/hyperscope/vocab#";
-export const ROLES = ["hyperscope", "hsagent", "amina", "neil", "ines", "outsider", "network"] as const;
+const SC = "https://w3id.org/solid-collective/vocab#";
+export const ROLES = ["hyperscope", "hsagent", "amina", "neil", "ines", "outsider", "network", "openfab"] as const;
 export type Role = (typeof ROLES)[number];
 export type Cast = Record<Role, Person>;
 
@@ -47,17 +54,26 @@ function acl(target: string, owner: string, container: boolean, extra: string[])
   ].join("\n");
 }
 
-function config(name: string, slug: string, agent: string): string {
+/** A collective that shares, in the old namespace. `agent: null`: membership only, in sc:, as the template is. */
+function config(name: string, slug: string, agent: string | null): string {
+  if (!agent) {
+    return `@prefix sc: <${SC}>. @prefix foaf: <http://xmlns.com/foaf/0.1/>. @prefix ldp: <http://www.w3.org/ns/ldp#>.
+<#${slug}> a sc:Collective, foaf:Group; foaf:name "${name}"; sc:roster <membres.ttl>; ldp:inbox <inbox/>.`;
+  }
   return `@prefix hs: <${HS}>. @prefix foaf: <http://xmlns.com/foaf/0.1/>. @prefix ldp: <http://www.w3.org/ns/ldp#>.
 <#${slug}> a hs:Collective, foaf:Group; foaf:name "${name}"; hs:roster <membres.ttl>;
   ldp:inbox <inbox/>; hs:agent <${agent}>; hs:bundleFolder "output2/${slug}/".`;
 }
 
-/** A collective's pod, by the how-to: config, roster, inbox, and their ACLs. */
+/**
+ * A collective's pod, by the how-to: config, roster, inbox, and their ACLs.
+ * With no agent, the membership half only: nobody else reads the roster or the inbox.
+ */
 async function setUpCollective(
-  s: Session, owner: Person, name: string, slug: string, agent: string, members: Record<string, string>
+  s: Session, owner: Person, name: string, slug: string, agent: string | null, members: Record<string, string>
 ): Promise<void> {
   const p = owner.pod;
+  const agentReads = agent ? [`acl:agent <${agent}>; acl:mode acl:Read`] : [];
   await put(s, p + "config.ttl", config(name, slug, agent));
   await put(s, p + "config.ttl.acl", acl("config.ttl", owner.webId, false, [
     "acl:agentClass <http://xmlns.com/foaf/0.1/Agent>; acl:mode acl:Read",
@@ -69,12 +85,12 @@ async function setUpCollective(
   await put(s, p + "membres.ttl", lines.join("\n"));
   await put(s, p + "membres.ttl.acl", acl("membres.ttl", owner.webId, false, [
     ...Object.keys(members).map((m) => `acl:agent <${m}>; acl:mode acl:Read`),
-    `acl:agent <${agent}>; acl:mode acl:Read`,
+    ...agentReads,
   ]));
   await put(s, p + "inbox/", "");
   await put(s, p + "inbox/.acl", acl("./", owner.webId, true, [
     "acl:agentClass acl:AuthenticatedAgent; acl:mode acl:Append",
-    `acl:agent <${agent}>; acl:mode acl:Read`,
+    ...agentReads,
   ]));
 }
 
@@ -111,6 +127,14 @@ export async function createCast(base: string): Promise<Cast> {
     `acl:agent <${cast.amina.webId}>; acl:mode acl:Read`,
   ]));
   await net.logout();
+
+  // A principles/ with rules of its own, as a collective that later adds the
+  // pipeline would have: accepting into a membership-only one must not grant it.
+  const of = await as("openfab");
+  await setUpCollective(of, cast.openfab, "OpenFab", "openfab", null, {});
+  await put(of, cast.openfab.pod + "principles/charter.md", "# Charter\n", "text/markdown");
+  await put(of, cast.openfab.pod + "principles/.acl", acl("./", cast.openfab.webId, true, []));
+  await of.logout();
 
   const amina = await as("amina");
   await patchProfile(amina, cast.amina.webId,

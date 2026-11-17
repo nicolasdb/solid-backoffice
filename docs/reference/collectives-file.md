@@ -18,20 +18,26 @@ Each collective is a subject `<#c-…>` (a short hash of its IRI).
 
 | Property | Count | Meaning |
 |---|---|---|
-| `a hs:SharedFolder` | 1 | marks the entry |
-| `hs:collective` | 1 | the collective's IRI (`config.ttl#<name>`, the group IRI) |
-| `hs:folder` | 1 | the folder you picked, a full address ending in `/` inside your pod; any other is ignored |
+| `a sc:SharedFolder` | 1 | marks the entry |
+| `sc:collective` | 1 | the collective's IRI (`config.ttl#<name>`, the group IRI) |
+| `sc:folder` | 1 | the folder you picked, a full address ending in `/` inside your pod; any other is ignored |
 
-`hs:` is the provisional namespace in `src/lib/vocab.ts`
-(`https://pod.nicolasdb.eu/hyperscope/vocab#`).
+`sc:` is `https://w3id.org/solid-collective/vocab#` (the terms:
+[solid-kit `vocab.ttl`](https://github.com/nicolasdb/solid-kit/blob/main/docs/vocab/vocab.ttl)).
+A file written before ADR 006 §7 holds the same terms under `hs:`
+(`https://pod.nicolasdb.eu/hyperscope/vocab#`): it is read as it is, and
+rewritten in `sc:` the next time the backoffice saves it, not before. A file
+holding both reads each collective once; its `sc:` entry wins.
 
 ## Who reads it
 
 - **The backoffice**, to show and share the folder you picked. No entry:
-  the collective's suggestion (`hs:bundleFolder`) is shown instead.
+  the collective's suggestion (`sc:suggestedFolder`, `hs:bundleFolder` in
+  an old `config.ttl`) is shown instead, or, when it suggests none, you
+  pick one.
 - **Your own agents**, to know where to put your contributions
   (solid-kit `procedure-contribution`); with no entry they fall back to
-  `hs:bundleFolder`.
+  that suggestion.
 
 An entry is written when you share, and removed when you stop sharing
 (the message's Undo puts it back).

@@ -356,6 +356,17 @@ export async function readRoster(collective: Collective): Promise<ReturnType<typ
 export const MEMBER_READ_OPTIONAL = ["depots/", "confrontations/", "chantiers/", "briefs/", "principles/"];
 
 /**
+ * The folders above that apply to this collective. They exist for the
+ * agent's pipeline (snapshots, confrontations, its procedures), which runs
+ * only on what members share: a membership-only collective (no
+ * `sc:feature sc:Sharing`, ADR 006 §7) grants its members Read on the roster
+ * alone, whatever folders its pod happens to hold.
+ */
+function memberFolders(collective: Collective): string[] {
+  return collective.sharing ? MEMBER_READ_OPTIONAL : [];
+}
+
+/**
  * Who reads as this member: the member, and each agent their own profile
  * declares with `acl:delegates`, one WebID per grant (ADR 006 §2). An agent
  * acts for its human, in the pod and in the collective's graph.
@@ -370,7 +381,7 @@ export function readersOf(person: Person): string[] {
  * silently drop every other grant (the agent's, for example).
  */
 export async function memberReadTargets(collective: Collective, owner: string): Promise<string[]> {
-  const optional = MEMBER_READ_OPTIONAL.map((p) => new URL(p, collective.configUrl).href);
+  const optional = memberFolders(collective).map((p) => new URL(p, collective.configUrl).href);
   const present = await Promise.all(optional.map(exists));
   const targets = [collective.roster, ...optional.filter((_, i) => present[i])];
   for (const target of targets) {
@@ -512,7 +523,7 @@ function readersIn(access: { agents: { webId: string; modes: string[] }[] }): Se
 /** Who can read each shared folder that exists and has rules of its own. One that cannot be read is skipped. */
 async function folderReaders(collective: Collective, owner: string): Promise<{ path: string; readers: Set<string> }[]> {
   const found = await Promise.all(
-    MEMBER_READ_OPTIONAL.map(async (path) => {
+    memberFolders(collective).map(async (path) => {
       const url = new URL(path, collective.configUrl).href;
       try {
         if (!(await exists(url))) return null;

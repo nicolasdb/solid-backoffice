@@ -19,12 +19,12 @@ At the root of the collective's pod. What to copy is in
 | Path | Origin | Access |
 |---|---|---|
 | `config.ttl` | [template](../../templates/collective/config.ttl), filled at creation | public read; **written by the owner only, never the agent** |
-| `membres.ttl` (`hs:roster`) | [template](../../templates/collective/membres.ttl), empty | members + agent read; written by the backoffice (owner) |
+| `membres.ttl` (`sc:roster`) | [template](../../templates/collective/membres.ttl), empty | members + agent read; written by the backoffice (owner) |
 | `inbox/` (`ldp:inbox`) | created empty | any signed-in agent appends; the common agent reads |
 | `profile/<name>` | the common agent's profile, made from You (its WebID is `profile/<name>#me`); `agents/agent` on pods set up before slice D, still read | public |
-| `principles/procedure-*.md` (`hs:procedures`) | **copied from** the connector's [`procedures/`](https://github.com/nicolasdb/solid-css-overlay/blob/main/mcp-connector/procedures/) (generic) | members + agent read; owner writes, by ceremony |
+| `principles/procedure-*.md` (`sc:procedures`) | **copied from** the connector's [`procedures/`](https://github.com/nicolasdb/solid-css-overlay/blob/main/mcp-connector/procedures/) (generic) | members + agent read; owner writes, by ceremony |
 | `principles/cultivate.md` (or equivalent) | **local**: the collective's principles | same |
-| `guide/` (`hs:guide`) | **copied from** [`templates/collective/guide/`](../../templates/collective/guide/) (generic) | public, the whole folder: generic text, and an agent reads `onboarding.md` for someone who is not a member yet |
+| `guide/` (`sc:guide`) | **copied from** [`templates/collective/guide/`](../../templates/collective/guide/) (generic) | public, the whole folder: generic text, and an agent reads `onboarding.md` for someone who is not a member yet |
 | `depots/`, `confrontations/` | created by the common agent | agent edits; members read |
 | `chantiers/`, `briefs/`, `public/` | to be specified | **à délibérer** |
 
@@ -45,29 +45,47 @@ The files the backoffice itself reads are below.
 
 ## config.ttl
 
-Example: [`examples/hyperscope-config.ttl`](../examples/hyperscope-config.ttl).
+Template: [`templates/collective/config.ttl`](../../templates/collective/config.ttl)
+(membership only, sharing commented out). Examples, both still in the old
+namespace: [`examples/hyperscope-config.ttl`](../examples/hyperscope-config.ttl),
+[`examples/mapsofmaking/`](../examples/mapsofmaking/).
 
 The subject, `<#hyperscope>`, is the collective's IRI **and** its group IRI.
 Members write `org:memberOf <…/config.ttl#hyperscope>`, so following that
 link from a profile leads to this description.
 
+`sc:` is `https://w3id.org/solid-collective/vocab#`. What each term means,
+and why the namespace changed, is
+[solid-kit ADR 006 §7](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md)
+(amended 2026-11-17) and its
+[`vocab.ttl`](https://github.com/nicolasdb/solid-kit/blob/main/docs/vocab/vocab.ttl);
+the table says what the backoffice does with each.
+
 | Property | Count | Meaning |
 |---|---|---|
-| `a hs:Collective` | 1 | marks the subject as a collective |
+| `a sc:Collective` | 1 | marks the subject as a collective |
 | `foaf:name` | 1 | shown to people |
-| `hs:roster` | 1 | the roster document |
+| `sc:roster` | 1 | the roster document |
 | `ldp:inbox` | 1 | where requests and announcements go |
-| `hs:agent` | 1 | the WebID members grant Read to when sharing, never a group. The address is the one You shows for the agent made from it: `profile/<name>#me` in the collective's pod |
-| `hs:bundleFolder` | 1 | the folder members share through, relative to their pod root: `output2/hyperscope/` ([why](../explanation/sharing.md#folder)). Plain segments only; `..` or an absolute path is refused, because this file decides where a member's app creates a folder |
+| `sc:feature sc:Sharing` | 0–1 | members share a folder with `sc:agent`. Without it the collective is **membership only**: no agent needed, no sharing offered, and accepting grants Read on the roster alone. Other features are ignored |
+| `sc:agent` | 1 with `sc:Sharing`, else 0–1 | the WebID members grant Read to when sharing, never a group. The address is the one You shows for the agent made from it: `profile/<name>#me` in the collective's pod. Named without `sc:Sharing`, it is only shown |
+| `sc:suggestedFolder` | 0–1 | the folder suggested to members, relative to their pod root: `output2/hyperscope/` ([why](../explanation/sharing.md#folder)); each member picks their own. Plain segments only; `..` or an absolute path is refused, because this file decides where a member's app creates a folder |
 | `schema:slogan` | 0–1 | the welcome screen's title for people invited to this collective ([below](#welcome-copy)) |
 | `schema:description` | 0–1 | the paragraph under that title |
 | `schema:url` | 0–1 | the invitation address, for agents ([below](#invitation-address)); the backoffice ignores it |
-| `hs:requires` | 0–1 | **reserved**, see below |
-| `hs:procedures` | 0–1 | the folder holding the agent's procedures and the collective's principles: `<principles/>` ([below](#agent-entry-points)) |
-| `hs:guide` | 0–1 | the folder holding onboarding, FAQ and glossary: `<guide/>` |
+| `sc:requires` | 0–1 | **reserved**, see below |
+| `sc:procedures` | 0–1 | the folder holding the agent's procedures and the collective's principles: `<principles/>` ([below](#agent-entry-points)) |
+| `sc:guide` | 0–1 | the folder holding onboarding, FAQ and glossary: `<guide/>` |
 
 A missing or repeated property is refused, not guessed: a guessed agent is a
-grant to the wrong party. `hs:` is provisional (ADR 006, open questions).
+grant to the wrong party. For the same reason a property given in both
+namespaces (`sc:agent` and `hs:agent`) is refused, naming both.
+
+**The old namespace** (`hs:`, `https://pod.nicolasdb.eu/hyperscope/vocab#`)
+is still read, as before: a collective typed `hs:Collective` needs exactly
+one `hs:agent` and one `hs:bundleFolder` (the old name of
+`sc:suggestedFolder`), and sharing is on without `sc:feature`. The backoffice
+never writes a `config.ttl`; its owner moves it to `sc:` by hand.
 
 Read access is **public** (`foaf:Agent`): people read it before they are
 members, to know where to send their request, and the welcome screen an
@@ -77,18 +95,18 @@ login server, but our pods use WAC.
 
 ### Agent entry points
 
-`hs:procedures` and `hs:guide` are for agents, not for the backoffice, which
+`sc:procedures` and `sc:guide` are for agents, not for the backoffice, which
 ignores them. The `collectif` skill follows them instead of writing a path
 in, and accepts a procedure only from the pod that hosts this `config.ttl`.
 The folders' contents are copied at creation ([the pod tree](#the-pod-tree)).
-The common agent must not be able to write `config.ttl`: it names `hs:agent`
-and `hs:procedures`, so an agent that could write it could rename itself or
+The common agent must not be able to write `config.ttl`: it names `sc:agent`
+and `sc:procedures`, so an agent that could write it could rename itself or
 repoint its own rules (2026-10-01: the agent's attempt to add
 `hs:procedures` was refused with 403, as it should be).
 
 ### Welcome copy
 
-`schema:slogan` and `schema:description` (schema.org, so no new `hs:` term)
+`schema:slogan` and `schema:description` (schema.org, so no new `sc:` term)
 let a collective speak for itself on the welcome screen an invitation link
 opens. Without them, the screen uses the backoffice's own copy with the
 collective's `foaf:name`. They are presentation only: a repeated one is
@@ -106,7 +124,7 @@ Built in layout L3 (`src/welcome.ts`): both `http://schema.org/` and
 
 ### Invitation address
 
-`schema:url` (schema.org, so no new `hs:` term) holds the collective's
+`schema:url` (schema.org, so no new `sc:` term) holds the collective's
 invitation link: the backoffice's address, `?collective=`, then the address
 of this `config.ttl`. It is for an agent that greets someone who is not a
 member yet: it reads the link here and hands it out. The backoffice ignores
@@ -117,7 +135,7 @@ ADR 006 is still to do.
 
 ### Requirements
 
-`hs:requires` will point to a SHACL shape describing what a member's profile
+`sc:requires` will point to a SHACL shape describing what a member's profile
 must contain (Maps of Making: a website and an address, for the map). The
 backoffice will show a member what is missing, and show the admin a
 pre-checked request. Reserved, not built; the parser ignores it today.
@@ -164,13 +182,12 @@ collective's account WebID), `as:target` (the collective's IRI) and
 
 ## Open
 
-- **Members' Read on `guide/`.** Accepting a member grants Read on the
-  shared folders the backoffice knows (`depots/`, `confrontations/`,
-  `chantiers/`, `briefs/`, `principles/`), not on `guide/`. Moot while the
-  whole of `guide/` is public, as the how-to says.
-- **The agent optional.** `hs:agent` and `hs:bundleFolder` are required by
-  the backoffice's parser, and `hs:agent` by the connector's, so a
-  membership-only collective still names an agent's address. Not built.
+- **Members' Read on `guide/`.** Accepting a member into a collective that
+  shares grants Read on the shared folders the backoffice knows (`depots/`,
+  `confrontations/`, `chantiers/`, `briefs/`, `principles/`), not on
+  `guide/`. Moot while the whole of `guide/` is public, as the how-to says.
+  A membership-only collective grants the roster alone: those folders exist
+  for the agent's pipeline.
 - **Keeping a pod copy in step** with `templates/collective/` and the
   procedures: a version in each file (the procedures carry one in their
   title), a `principles/VERSION`, and a backoffice command run as a

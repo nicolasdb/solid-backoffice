@@ -38,7 +38,8 @@ const COLLECTIVE = {
   roster: POD + "membres.ttl",
   inbox: POD + "inbox/",
   agent: POD + "agent#me",
-  bundleFolder: "output2/hs/",
+  suggestedFolder: "output2/hs/",
+  sharing: true as const,
 };
 const INES = "https://pod.example/ines/profile/card#me";
 const AMINA = "https://pod.example/amina/profile/card#me";
@@ -119,6 +120,16 @@ describe("You run", () => {
     remove.click();
     await tick();
     expect(calls).toEqual([`remove ${AMINA}`, "rerender"]);
+  });
+
+  it("shows no Shares for a membership-only collective, and says what accepting grants instead", () => {
+    view.collective = { ...COLLECTIVE, sharing: false, agent: undefined, suggestedFolder: undefined };
+    const app = render();
+    expect([...app.querySelectorAll("th")].map((th) => th.textContent)).not.toContain("Shares");
+    expect(app.querySelector("[data-label=Shares]")).toBeNull();
+    expect(app.textContent).toContain("HyperScope does not collect shared folders: accepting someone lets them read the roster, nothing else.");
+    view.members = [];
+    expect(render().textContent).toContain("does not collect shared folders");
   });
 
   it("asks for an optional reason only once removing is armed, and sends it", async () => {
