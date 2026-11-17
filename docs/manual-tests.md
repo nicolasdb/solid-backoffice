@@ -701,6 +701,44 @@ member through the new flow.
    one block, its spacing kept, scrolled sideways on a phone; headings and
    paragraphs spaced. Both themes.
 
+## Creating a collective · OpenFab on Maps of Making
+
+Not yet run. On the Maps of Making provider, signed in as a new OpenFab
+account, following [set up a collective's pod](how-to/set-up-a-collective.md)
+with an agent that has the `collectif` skill beside you. Pods there are
+subdomains: the address is `https://openfab.pod.mapsofmaking.org/`.
+
+1. **Account and pod.** Create the `openfab` account and pod; sign in to the
+   backoffice with it.
+2. **Inbox.** You → "Create my inbox": `inbox/` exists, a signed-in stranger
+   can Append and not read.
+3. **config.ttl.** Upload it with `hs:agent` naming
+   `https://openfab.pod.mapsofmaking.org/profile/<name>#me`. Make it public;
+   in a private window it opens.
+4. **Roster.** `membres.ttl` with rules of its own (Only me); an unrelated
+   account cannot read it.
+5. **The invitation.** The link
+   `?collective=https://openfab.pod.mapsofmaking.org/config.ttl` shows the
+   collective's welcome to a signed-out person.
+6. **The agent.** Create it from You: its address on You equals step 3's. If
+   not, correct `config.ttl`.
+7. **May act for you.** One click on You; the profile declares
+   `acl:delegates` the agent.
+8. **Pipeline files.** `principles/` filled, the whole of `guide/` public (a
+   private window opens `guide/onboarding.md`), the agent's Read on `inbox/`
+   set in the raw editor, each shared folder with rules of its own.
+9. **The skill, before step 3.** With no `config.ttl` yet, the agent gives
+   the creation file's diagnosis, one next step, and a draft `config.ttl`; it
+   writes nothing.
+10. **The skill, after.** Asked to check, it reads only, reports `config.ttl`
+    parsing, the roster refused to it, `hs:agent` equal to its own WebID, and
+    ends with one next step.
+11. **A newcomer.** Someone with no WebID asks the agent in a channel: it
+    gives the invitation address read from `config.ttl` (`schema:url`, if
+    written) and one step; it starts no pull.
+12. **A member.** The newcomer follows the link, asks to join, is accepted,
+    shares a folder: J1 to J4 on this pod.
+
 ## H · Mermaid in the Markdown preview
 
 1. **The plan.** In Pods, open `hyperscope_ndb/tasks/now.md`: the

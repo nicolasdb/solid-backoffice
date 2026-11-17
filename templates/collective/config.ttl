@@ -20,14 +20,19 @@
     foaf:name "NOM-DU-COLLECTIF" ;
     hs:roster <membres.ttl> ;
     ldp:inbox <inbox/> ;
-    # The WebID members grant Read to when they share. Never a group.
-    hs:agent <agents/agent#me> ;
+    # The WebID members grant Read to when they share. Never a group. AGENT
+    # is the name you give the agent: the address is the one You shows for it
+    # once it is created (profile/<name>#me), written here before if need be.
+    hs:agent <profile/AGENT#me> ;
     # For agents (the backoffice ignores them): procedures + principles,
     # and onboarding/FAQ/glossary (copied from guide/ beside this file).
     hs:procedures <principles/> ;
     hs:guide <guide/> ;
     # schema:slogan "[A title for newcomers]" ;
     # schema:description "[One paragraph: what joining means]" ;
+    # The invitation link, for an agent that greets newcomers: the
+    # backoffice's address, ?collective=, then this file's address.
+    # schema:url <INVITATION-ADDRESS> ;
     # The folder suggested to members, relative to their own pod; each
     # member picks their own (settings/collectives.ttl).
     hs:bundleFolder "output2/NOM/" .

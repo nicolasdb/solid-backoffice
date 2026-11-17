@@ -21,10 +21,10 @@ At the root of the collective's pod. What to copy is in
 | `config.ttl` | [template](../../templates/collective/config.ttl), filled at creation | public read; **written by the owner only, never the agent** |
 | `membres.ttl` (`hs:roster`) | [template](../../templates/collective/membres.ttl), empty | members + agent read; written by the backoffice (owner) |
 | `inbox/` (`ldp:inbox`) | created empty | any signed-in agent appends; the common agent reads |
-| `agents/agent` | the common agent's profile | public |
+| `profile/<name>` | the common agent's profile, made from You (its WebID is `profile/<name>#me`); `agents/agent` on pods set up before slice D, still read | public |
 | `principles/procedure-*.md` (`hs:procedures`) | **copied from** the connector's [`procedures/`](https://github.com/nicolasdb/solid-css-overlay/blob/main/mcp-connector/procedures/) (generic) | members + agent read; owner writes, by ceremony |
 | `principles/cultivate.md` (or equivalent) | **local**: the collective's principles | same |
-| `guide/` (`hs:guide`) | **copied from** [`templates/collective/guide/`](../../templates/collective/guide/) (generic) | `guide/faq.md` public; the rest members |
+| `guide/` (`hs:guide`) | **copied from** [`templates/collective/guide/`](../../templates/collective/guide/) (generic) | public, the whole folder: generic text, and an agent reads `onboarding.md` for someone who is not a member yet |
 | `depots/`, `confrontations/` | created by the common agent | agent edits; members read |
 | `chantiers/`, `briefs/`, `public/` | to be specified | **à délibérer** |
 
@@ -57,10 +57,11 @@ link from a profile leads to this description.
 | `foaf:name` | 1 | shown to people |
 | `hs:roster` | 1 | the roster document |
 | `ldp:inbox` | 1 | where requests and announcements go |
-| `hs:agent` | 1 | the WebID members grant Read to when sharing |
+| `hs:agent` | 1 | the WebID members grant Read to when sharing, never a group. The address is the one You shows for the agent made from it: `profile/<name>#me` in the collective's pod |
 | `hs:bundleFolder` | 1 | the folder members share through, relative to their pod root: `output2/hyperscope/` ([why](../explanation/sharing.md#folder)). Plain segments only; `..` or an absolute path is refused, because this file decides where a member's app creates a folder |
 | `schema:slogan` | 0–1 | the welcome screen's title for people invited to this collective ([below](#welcome-copy)) |
 | `schema:description` | 0–1 | the paragraph under that title |
+| `schema:url` | 0–1 | the invitation address, for agents ([below](#invitation-address)); the backoffice ignores it |
 | `hs:requires` | 0–1 | **reserved**, see below |
 | `hs:procedures` | 0–1 | the folder holding the agent's procedures and the collective's principles: `<principles/>` ([below](#agent-entry-points)) |
 | `hs:guide` | 0–1 | the folder holding onboarding, FAQ and glossary: `<guide/>` |
@@ -102,6 +103,17 @@ host.
 
 Built in layout L3 (`src/welcome.ts`): both `http://schema.org/` and
 `https://schema.org/` are read.
+
+### Invitation address
+
+`schema:url` (schema.org, so no new `hs:` term) holds the collective's
+invitation link: the backoffice's address, `?collective=`, then the address
+of this `config.ttl`. It is for an agent that greets someone who is not a
+member yet: it reads the link here and hands it out. The backoffice ignores
+it and builds the link from its own address, so a wrong one here misleads an
+agent and nothing else. How to write it: [invite people](../how-to/invite-people.md#the-invitation-address-for-agents-optional).
+It is a field of the protocol all the same; recording it in solid-kit
+ADR 006 is still to do.
 
 ### Requirements
 
@@ -154,8 +166,11 @@ collective's account WebID), `as:target` (the collective's IRI) and
 
 - **Members' Read on `guide/`.** Accepting a member grants Read on the
   shared folders the backoffice knows (`depots/`, `confrontations/`,
-  `chantiers/`, `briefs/`, `principles/`); `guide/` is not among them yet.
-  Until it is, make the whole of `guide/` public, or grant it by hand.
+  `chantiers/`, `briefs/`, `principles/`), not on `guide/`. Moot while the
+  whole of `guide/` is public, as the how-to says.
+- **The agent optional.** `hs:agent` and `hs:bundleFolder` are required by
+  the backoffice's parser, and `hs:agent` by the connector's, so a
+  membership-only collective still names an agent's address. Not built.
 - **Keeping a pod copy in step** with `templates/collective/` and the
   procedures: a version in each file (the procedures carry one in their
   title), a `principles/VERSION`, and a backoffice command run as a
