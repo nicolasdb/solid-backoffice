@@ -3,31 +3,46 @@
 # Copy to <POD-COLLECTIF>/config.ttl and replace every UPPERCASE value.
 # Field by field, and the pod tree it points to:
 # docs/reference/collective-files.md. Steps: docs/how-to/set-up-a-collective.md.
-# Filled examples: docs/examples/ (HyperScope, Maps of Making).
+# Filled examples: docs/examples/ (HyperScope, Maps of Making; both still in
+# the old hs: namespace, which is read as before).
 #
 # <#NOM> is the collective's IRI and its group IRI: members write
 # `org:memberOf <POD-COLLECTIF/config.ttl#NOM>`.
 #
-# hs: is the common, provisional vocabulary, the same for every collective:
-# do not replace it with your own pod's address (solid-kit ADR 006, open).
+# sc: is the common vocabulary, the same for every collective: do not
+# replace it with your own pod's address. Its terms: solid-kit
+# docs/vocab/vocab.ttl (ADR 006 §7).
+#
+# As it is, this file is a collective of members only: people ask to join,
+# you accept them, they read the roster. Nothing is shared with it. Sharing
+# (members each share a folder with the collective's agent) is the three
+# commented sc: lines at the end, uncommented once the agent exists.
 
-@prefix hs:   <https://pod.nicolasdb.eu/hyperscope/vocab#> .
+@prefix sc:   <https://w3id.org/solid-collective/vocab#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix ldp:  <http://www.w3.org/ns/ldp#> .
 @prefix schema: <http://schema.org/> .
 
-<#NOM> a hs:Collective, foaf:Group ;
+<#NOM> a sc:Collective, foaf:Group ;
     foaf:name "NOM-DU-COLLECTIF" ;
-    hs:roster <membres.ttl> ;
+    sc:roster <membres.ttl> ;
     ldp:inbox <inbox/> ;
-    # The WebID members grant Read to when they share. Never a group.
-    hs:agent <agents/agent#me> ;
     # For agents (the backoffice ignores them): procedures + principles,
     # and onboarding/FAQ/glossary (copied from guide/ beside this file).
-    hs:procedures <principles/> ;
-    hs:guide <guide/> ;
+    sc:procedures <principles/> ;
+    sc:guide <guide/> ;
     # schema:slogan "[A title for newcomers]" ;
     # schema:description "[One paragraph: what joining means]" ;
-    # The folder suggested to members, relative to their own pod; each
-    # member picks their own (settings/collectives.ttl).
-    hs:bundleFolder "output2/NOM/" .
+    # The invitation link, for an agent that greets newcomers: the
+    # backoffice's address, ?collective=, then this file's address.
+    # schema:url <INVITATION-ADDRESS> ;
+    #
+    # Sharing. sc:Sharing needs exactly one sc:agent: the WebID members grant
+    # Read to when they share. Never a group. AGENT is the name you give the
+    # agent: the address is the one You shows for it once it is created
+    # (profile/<name>#me). The folder is only suggested to members, relative
+    # to their own pod; each member picks their own (settings/collectives.ttl).
+    # sc:feature sc:Sharing ;
+    # sc:agent <profile/AGENT#me> ;
+    # sc:suggestedFolder "output2/NOM/" ;
+    .

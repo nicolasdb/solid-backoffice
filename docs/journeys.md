@@ -16,6 +16,7 @@ the docs, the slices and the tests. Why the app behaves this way:
 | J7 | Following: add any address shared with you, read it with your WebID | slice C5, built, live test pending |
 | J8 | Let Claude use a folder: create an agent WebID, connect Claude as it, grant it folders without pasting a WebID; later, read the access log | slice D ([brief](layout-brief-d.md)) |
 | J9 | Working in someone else's pod where they granted you Write (the Xavier case): open it as a place, edit files there, never their rules | to write up; not in C |
+| J10 | A coordinator creates a collective: account and pod → inbox → `config.ttl` → public → roster, then, with an agent, the pipeline half | by hand today ([how-to](how-to/set-up-a-collective.md)); an agent can accompany with the `collectif` skill's `creation.md`; guided in mom-home next; live run pending |
 
 The order of writes inside each journey is part of the design: a step that
 fails halfway leaves the pods in a state the next visit picks up from. The

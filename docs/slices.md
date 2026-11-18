@@ -4,7 +4,52 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (18 Oct 2026)
+## Where we are (17 Nov 2026)
+
+**Creating a collective, reviewed on OpenFab (Maps of Making); docs only,
+no code.** Followed as written, the how-to produced a collective whose agent
+did not exist: the template and step 1 named `agents/agent#me` (the app
+makes agents at `profile/<name>#me`); creating the agent was said to declare
+`acl:delegates`, which is the separate step "May act for you"; only
+`guide/faq.md` was public and `guide/` is not granted at acceptance, so no
+agent could read `onboarding.md` for a newcomer; the agent's Read on
+`inbox/` needs the raw editor (desktop only); and a membership-only
+collective must still name an agent (the parser requires `hs:agent`). Fixed
+in the docs: setup in two halves, **membership** (account, inbox,
+`config.ttl`, public, `membres.ttl`) and **pipeline** (agent, "May act for
+you", `hs:agent`, folders, guide), `guide/` public whole, `schema:url` as
+the invitation address an agent hands out, and the connector's `collectif`
+skill v2 with a `creation.md` for the person creating a collective. Run
+live: not yet ([manual tests](manual-tests.md#creating-a-collective--openfab-on-maps-of-making)).
+
+**The namespace, settled and read (17 Nov 2026).** solid-kit ADR 006 §7,
+amended: `sc:` (`https://w3id.org/solid-collective/vocab#`), terms in
+solid-kit `docs/vocab/vocab.ttl`, `hs:bundleFolder` renamed
+`sc:suggestedFolder`, and the agent optional: only `sc:feature sc:Sharing`
+needs one. Here: `src/lib/vocab.ts` holds `sc` and, read only, `hsLegacy`;
+`config.ttl` is read in both (an old one exactly as before, a term in both
+refused), `settings/collectives.ttl` and `settings/following.ttl` are read
+in both and written in `sc:` on their next save; a membership-only
+collective offers no sharing, shows no "Shares", and accepting grants Read
+on the roster alone. The template starts membership only, the how-to's
+step 8 switches sharing on. `test/pods/` adds OpenFab, membership only in
+`sc:`; HyperScope and the network stay in `hs:`. Run live: not yet.
+
+**Next, in order:** (a) the namespace: done here and in the ADR; left, the
+connector reading both (solid-css-overlay), the w3id pull request, each
+live `config.ttl` edited by its owner, and `schema:url` still to record in
+the ADR; (b) the agent optional: done in this parser, the connector's in
+progress; (c) mom-home
+(`mapsofmaking/mom-home`) writes the membership half by default for every
+space it onboards, on the space's first signed-in screen, inbox and roster
+first, `config.ttl` last and then public, with a tile that guides the
+pipeline half; (d) which Oxigraph holds a collective's graph: the Maps of
+Making one is readable from outside and the connector is its only access
+control, so a collective's graph must not go there, and a dedicated one per
+collective would be new connector code. Then `guide/` at acceptance (moot
+once public) and admin rotation.
+
+## Where we were (18 Oct 2026)
 
 **On the kit's design system, run live 18 Oct** (`dev`, test.nicolasdb.eu):
 the backoffice takes the kit's styles unchanged (solid-kit PR #9; the
@@ -739,7 +784,8 @@ the account signed in; rotating means admins by WebID in `config.ttl`, not
 blocking yet) and **creating a collective** from the app (a recipe not
 settled: pod, `inbox/`, agent, `config.ttl`, `membres.ttl`, procedures,
 required profile fields, members-only documents such as a machines list;
-maybe a script or its own app, with the collective's own landing page).
+maybe a script or its own app, with the collective's own landing page;
+see [Where we are (17 Nov 2026)](#where-we-are-17-nov-2026)).
 
 ## F — Maps of Making landing
 

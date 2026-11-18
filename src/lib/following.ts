@@ -11,25 +11,30 @@
  *
  * Writes go through `updateDocument` (read, change, `If-Match`), so a second
  * window or another app editing the same list is never overwritten unseen.
+ *
+ * Its own terms are read in both namespaces and written only in `sc:`
+ * (solid-kit ADR 006 §7): a list still in the old `hs:` is rewritten in
+ * `sc:` the next time it is saved, and not before.
  */
 import { DataFactory, Parser, Writer } from "n3";
 import { authFetch } from "./auth";
 import { updateDocument, type ConditionalError } from "./conditional";
 import { readTurtle } from "./read";
 import { listFolder, nameOf, readFile, type FileContent, type Item } from "./files";
-import { NS } from "./vocab";
+import { NS, scTerm } from "./vocab";
 import { ensureSettingsReadme } from "./settings";
 
 const DCT = "http://purl.org/dc/terms/";
+/** What is written. Reading also accepts the old namespace (`scTerm`). */
 const T = {
-  Followed: NS.hs + "Followed",
+  Followed: NS.sc + "Followed",
   url: NS.schema + "url",
   title: DCT + "title",
   excerpt: NS.schema + "abstract",
   modified: DCT + "modified",
-  lastSeen: NS.hs + "lastSeen",
-  favourite: NS.hs + "favourite",
-  unreadableSince: NS.hs + "unreadableSince",
+  lastSeen: NS.sc + "lastSeen",
+  favourite: NS.sc + "favourite",
+  unreadableSince: NS.sc + "unreadableSince",
 };
 
 export interface Followed {
@@ -62,11 +67,25 @@ const date = (value: string | undefined) => {
   return isNaN(d.getTime()) ? null : d;
 };
 
+/**
+ * Every entry once: one typed in both namespaces, or the same address under
+ * two subjects (a list another app wrote half in each), is read once, the
+ * first one kept. A term in both namespaces reads its `sc:` value.
+ */
 export function parseFollowing(turtle: string, docUrl: string): Followed[] {
   const quads = new Parser({ baseIRI: docUrl }).parse(turtle);
-  const subjects = quads.filter((q) => q.predicate.value === NS.rdf + "type" && q.object.value === T.Followed).map((q) => q.subject.value);
-  const value = (s: string, p: string) => quads.find((q) => q.subject.value === s && q.predicate.value === p)?.object.value;
-  return subjects
+  const followed = scTerm("Followed");
+  const subjects = new Set(
+    quads.filter((q) => q.predicate.value === NS.rdf + "type" && followed.includes(q.object.value)).map((q) => q.subject.value)
+  );
+  const first = (s: string, p: string) => quads.find((q) => q.subject.value === s && q.predicate.value === p)?.object.value;
+  const value = (s: string, p: string) => {
+    if (!p.startsWith(NS.sc)) return first(s, p);
+    const [current, legacy] = scTerm(p.slice(NS.sc.length));
+    return first(s, current) ?? first(s, legacy);
+  };
+  const seen = new Set<string>();
+  return [...subjects]
     .map((s) => ({
       address: value(s, T.url) ?? "",
       title: value(s, T.title) ?? "",
@@ -76,12 +95,16 @@ export function parseFollowing(turtle: string, docUrl: string): Followed[] {
       favourite: value(s, T.favourite) === "true",
       unreadableSince: date(value(s, T.unreadableSince)),
     }))
-    .filter((f) => /^https?:\/\//.test(f.address));
+    .filter((f) => {
+      if (!/^https?:\/\//.test(f.address) || seen.has(f.address)) return false;
+      seen.add(f.address);
+      return true;
+    });
 }
 
 export function serializeFollowing(entries: Followed[], docUrl: string): string {
   const { namedNode, literal, quad } = DataFactory;
-  const writer = new Writer({ baseIRI: docUrl, prefixes: { hs: NS.hs, schema: NS.schema, dct: DCT, xsd: NS.xsd } });
+  const writer = new Writer({ baseIRI: docUrl, prefixes: { sc: NS.sc, schema: NS.schema, dct: DCT, xsd: NS.xsd } });
   const when = (d: Date) => literal(d.toISOString(), namedNode(NS.xsd + "dateTime"));
   for (const f of entries) {
     const s = namedNode(docUrl + "#" + idFor(f.address));

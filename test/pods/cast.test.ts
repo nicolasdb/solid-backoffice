@@ -79,7 +79,7 @@ describe("src/lib against the test server", () => {
   it("shares the way the Share button does: nested folder, grant, then the agent can read", async () => {
     await actAs("neil");
     const hs = await loadCollective(hsConfig);
-    const folder = new URL(hs.bundleFolder, cast.neil.pod).href;
+    const folder = new URL(hs.suggestedFolder!, cast.neil.pod).href;
     expect(folder).toBe(cast.neil.pod + "output2/hyperscope/");
     await ensureContainer(folder);
     const put = await current.fetch(folder + "draft.md", {

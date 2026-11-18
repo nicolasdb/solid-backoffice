@@ -67,3 +67,27 @@ from `config.ttl` each time someone opens the link, so a change shows on the
 next visit, with no code change and no deploy. If either line appears twice,
 the page ignores it and uses its own words. Details:
 [collective files, welcome copy](../reference/collective-files.md#welcome-copy).
+
+## The invitation address, for agents (optional)
+
+An agent that greets someone with no account yet needs the invitation link,
+and should read it rather than compose it. The collective can write it in its
+`config.ttl` with one more line, next to `foaf:name`, **and the
+`@prefix schema:` line at the top** (as for the welcome words above, without
+it the file is no longer valid Turtle):
+
+```turtle
+@prefix schema: <http://schema.org/> .
+
+<#openfab> a sc:Collective ;
+    foaf:name "OpenFab" ;
+    schema:url <https://BACKOFFICE/?collective=https://openfab.pod.mapsofmaking.org/config.ttl> ;
+    …
+```
+
+For a pod in a folder, the address after `?collective=` is
+`https://pod.nicolasdb.eu/hyperscope/config.ttl`. The line is the same link
+the collective's tab copies. The backoffice ignores it; an agent reads it from
+`config.ttl` and hands it out, with the next step from the collective's
+`guide/onboarding.md`. Details:
+[collective files, invitation address](../reference/collective-files.md#invitation-address).

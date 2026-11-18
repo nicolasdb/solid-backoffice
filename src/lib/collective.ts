@@ -48,8 +48,14 @@ const INBOX = NS.ldp + "inbox";
  * `org:memberOf` link in a member's profile, followed, leads straight to this
  * description — the app finds a member's collectives from their profile, with
  * no list of collectives built into it.
+ *
+ * Whether members share a folder with it is `sharing` (solid-kit ADR 006 §7,
+ * amended 2026-11-17): on with `sc:feature sc:Sharing`, which then needs
+ * exactly one agent, and always on for a config still in the old `hs:`
+ * namespace. Off, the collective is membership only: no agent is needed and
+ * nothing is shared with it.
  */
-export interface Collective {
+interface CollectiveBase {
   configUrl: string;
   /** The IRI members point at with `org:memberOf`, and the roster lists under. */
   group: string;
@@ -58,15 +64,34 @@ export interface Collective {
   roster: string;
   /** Where `as:Join` and `as:Announce` go. Signed-in agents may Append. */
   inbox: string;
-  /** The collective's agent: the WebID a member grants Read to when publishing. */
-  agent: string;
-  /** The folder a member shares through, relative to their pod root, e.g. "output2/hyperscope/". */
-  bundleFolder: string;
+  /**
+   * The folder the collective suggests a member shares through, relative to
+   * their pod root, e.g. "output2/hyperscope/" (`sc:suggestedFolder`, which
+   * was `hs:bundleFolder`). Only a suggestion: the member picks the folder
+   * (`settings/collectives.ttl`). Always there in the old namespace.
+   */
+  suggestedFolder?: string;
   /** The welcome screen's title for people it invites (`schema:slogan`), when it has exactly one. */
   slogan?: string;
   /** The paragraph under it (`schema:description`), when it has exactly one. */
   description?: string;
 }
+
+export type Collective = CollectiveBase &
+  (
+    | {
+        /** Members share a folder with `agent`. */
+        sharing: true;
+        /** The collective's agent: the one WebID a member grants Read to when sharing. */
+        agent: string;
+      }
+    | {
+        /** Membership only: nothing is shared with it. */
+        sharing: false;
+        /** An agent it names anyway: a name to show, never a grant. */
+        agent?: string;
+      }
+  );
 
 function parse(turtle: string, base: string): Quad[] {
   return new Parser({ baseIRI: base }).parse(turtle);
@@ -78,13 +103,10 @@ function objectsOf(quads: Quad[], subject: string, predicate: string): string[] 
     .map((q) => q.object.value);
 }
 
-/**
- * Parses a collective's `config.ttl`. Throws, naming what is missing, rather
- * than filling a default: a guessed agent WebID is a grant to the wrong party.
- */
 /** The prefix line a config.ttl needs for each namespace it may use. */
 const KNOWN_PREFIXES: Record<string, string> = {
-  hs: NS.hs,
+  sc: NS.sc,
+  hs: NS.hsLegacy,
   foaf: NS.foaf,
   ldp: NS.ldp,
   schema: NS.schema,
@@ -105,6 +127,17 @@ function explainParseError(err: unknown, configUrl: string): Error {
   return new Error(`${configUrl} is not valid Turtle: ${message}.${fix}`);
 }
 
+/**
+ * Parses a collective's `config.ttl`. Throws, naming what is wrong, rather
+ * than filling a default: a guessed agent WebID is a grant to the wrong party.
+ *
+ * Both namespaces are read (solid-kit ADR 006 §7): `sc:` and the old `hs:`.
+ * A collective typed only `hs:Collective` is read exactly as before: its
+ * agent and its folder are required, and sharing is on. One typed
+ * `sc:Collective` shares only with `sc:feature sc:Sharing`. A term given in
+ * both namespaces (`sc:agent` and `hs:agent`) is refused, not merged: which
+ * one is meant cannot be told, and for the agent a guess is a grant.
+ */
 export function parseCollectiveConfig(turtle: string, configUrl: string, expected?: string): Collective {
   let quads: Quad[];
   try {
@@ -112,28 +145,52 @@ export function parseCollectiveConfig(turtle: string, configUrl: string, expecte
   } catch (err) {
     throw explainParseError(err, configUrl);
   }
-  const declared = quads
-    .filter((q) => q.predicate.value === NS.rdf + "type" && q.object.value === NS.hs + "Collective")
-    .map((q) => q.subject.value);
+  const typed = (type: string) =>
+    quads.filter((q) => q.predicate.value === NS.rdf + "type" && q.object.value === type).map((q) => q.subject.value);
+  const declared = [...new Set([...typed(NS.sc + "Collective"), ...typed(NS.hsLegacy + "Collective")])];
   const subject = expected ? declared.find((d) => d === expected) : declared[0];
   if (!subject) {
-    throw new Error(`${configUrl} declares no hs:Collective${expected ? ` named ${expected}` : ""}.`);
+    throw new Error(`${configUrl} declares no sc:Collective${expected ? ` named ${expected}` : ""}.`);
   }
   if (!expected && declared.length > 1) {
     throw new Error(`${configUrl} declares several collectives; use the address of one of them.`);
   }
+  // Typed in the old namespace only: read as before §7.
+  const legacy = !typed(NS.sc + "Collective").includes(subject);
 
-  const one = (predicate: string, label: string): string => {
-    const values = objectsOf(quads, subject, predicate);
-    if (values.length !== 1) {
-      throw new Error(`${configUrl}: expected exactly one ${label}, found ${values.length}.`);
+  /** A term's values, from whichever namespace gives it, and its name in errors. */
+  const term = (current: string, old: string): { values: string[]; label: string } => {
+    const now = objectsOf(quads, subject, NS.sc + current);
+    const before = objectsOf(quads, subject, NS.hsLegacy + old);
+    if (now.length && before.length) {
+      throw new Error(
+        `${configUrl} gives both sc:${current} and hs:${old}: keep sc:${current} only. ` +
+          "Which one is meant cannot be guessed (solid-kit ADR 006 §7)."
+      );
     }
+    return { values: now.length ? now : before, label: before.length || (legacy && !now.length) ? `hs:${old}` : `sc:${current}` };
+  };
+  const exactlyOne = ({ values, label }: { values: string[]; label: string }, why = ""): string => {
+    if (values.length !== 1) throw new Error(`${configUrl}: ${why}expected exactly one ${label}, found ${values.length}.`);
     return values[0];
   };
+  const atMostOne = ({ values, label }: { values: string[]; label: string }): string | undefined => {
+    if (values.length > 1) throw new Error(`${configUrl}: expected at most one ${label}, found ${values.length}.`);
+    return values[0];
+  };
+  const one = (predicate: string, label: string): string => exactlyOne({ values: objectsOf(quads, subject, predicate), label });
 
-  const bundleFolder = one(NS.hs + "bundleFolder", "hs:bundleFolder");
-  if (!isFolderPath(bundleFolder)) {
-    throw new Error(`${configUrl}: hs:bundleFolder must be a folder path like "output2/hyperscope/".`);
+  // `sc:feature` is new with §7: the old namespace never had one.
+  const sharing = legacy || objectsOf(quads, subject, NS.sc + "feature").includes(NS.sc + "Sharing");
+  const agentTerm = term("agent", "agent");
+  const folderTerm = term("suggestedFolder", "bundleFolder");
+  const agent = sharing
+    ? exactlyOne(agentTerm, legacy ? "" : "sc:feature sc:Sharing needs an agent: ")
+    : atMostOne(agentTerm);
+  // The old namespace required the folder; it stays required there.
+  const suggestedFolder = legacy ? exactlyOne(folderTerm) : atMostOne(folderTerm);
+  if (suggestedFolder !== undefined && !isFolderPath(suggestedFolder)) {
+    throw new Error(`${configUrl}: ${folderTerm.label} must be a folder path like "output2/hyperscope/".`);
   }
 
   // Presentation only, so a repeated one is ignored rather than refused:
@@ -149,17 +206,18 @@ export function parseCollectiveConfig(turtle: string, configUrl: string, expecte
   const slogan = optional("slogan");
   const description = optional("description");
 
-  return {
+  const base: CollectiveBase = {
     configUrl,
     group: subject,
     name: one(FOAF_NAME, "foaf:name"),
-    roster: one(NS.hs + "roster", "hs:roster"),
+    roster: exactlyOne(term("roster", "roster")),
     inbox: one(INBOX, "ldp:inbox"),
-    agent: one(NS.hs + "agent", "hs:agent"),
-    bundleFolder,
+    ...(suggestedFolder !== undefined ? { suggestedFolder } : {}),
     ...(slogan ? { slogan } : {}),
     ...(description ? { description } : {}),
   };
+  if (sharing && agent !== undefined) return { ...base, sharing: true, agent };
+  return { ...base, sharing: false, ...(agent !== undefined ? { agent } : {}) };
 }
 
 /**

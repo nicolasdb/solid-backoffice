@@ -15,8 +15,9 @@ const {
 } = await import("./collective");
 
 const CONFIG_URL = "https://pod.example/hyperscope/config.ttl";
+/** A config in the old namespace, as HyperScope's still is: read exactly as before §7. */
 const CONFIG = `
-@prefix hs:   <${NS.hs}> .
+@prefix hs:   <${NS.hsLegacy}> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix ldp:  <http://www.w3.org/ns/ldp#> .
 <#hyperscope> a hs:Collective ;
@@ -36,7 +37,8 @@ describe("parseCollectiveConfig", () => {
       roster: "https://pod.example/hyperscope/membres.ttl",
       inbox: "https://pod.example/hyperscope/inbox/",
       agent: "https://pod.example/hyperscope/agents/agent#me",
-      bundleFolder: "output2/hyperscope/",
+      suggestedFolder: "output2/hyperscope/",
+      sharing: true,
     });
   });
 
@@ -69,19 +71,122 @@ describe("parseCollectiveConfig", () => {
 
   it("refuses a config with no agent rather than guessing one", () => {
     const noAgent = CONFIG.replace("hs:agent <agents/agent#me> ;", "");
-    expect(() => parseCollectiveConfig(noAgent, CONFIG_URL)).toThrow(/hs:agent/);
+    expect(() => parseCollectiveConfig(noAgent, CONFIG_URL)).toThrow(/expected exactly one hs:agent, found 0/);
+  });
+
+  it("still requires the folder in the old namespace", () => {
+    const noFolder = CONFIG.replace(';\n  hs:bundleFolder "output2/hyperscope/" .', " .");
+    expect(() => parseCollectiveConfig(noFolder, CONFIG_URL)).toThrow(/expected exactly one hs:bundleFolder, found 0/);
   });
 
   it("accepts a folder path inside the member's pod, and nothing that climbs out of it", () => {
     const at = (folder: string) => CONFIG.replace('"output2/hyperscope/"', `"${folder}"`);
-    expect(parseCollectiveConfig(at("output2/hyperscope/"), CONFIG_URL).bundleFolder).toBe("output2/hyperscope/");
+    expect(parseCollectiveConfig(at("output2/hyperscope/"), CONFIG_URL).suggestedFolder).toBe("output2/hyperscope/");
     for (const bad of ["../private/", "output2/../settings/", "/output2/", "output2/hyperscope", "./x/", "a//b/"]) {
-      expect(() => parseCollectiveConfig(at(bad), CONFIG_URL), bad).toThrow(/bundleFolder/);
+      expect(() => parseCollectiveConfig(at(bad), CONFIG_URL), bad).toThrow(/hs:bundleFolder must be a folder path/);
+      expect(() => parseCollectiveConfig(sc(`sc:feature sc:Sharing ; sc:agent <agent#me> ; sc:suggestedFolder "${bad}"`), CONFIG_URL), bad)
+        .toThrow(/sc:suggestedFolder must be a folder path/);
     }
   });
 
   it("refuses a document that declares no collective", () => {
-    expect(() => parseCollectiveConfig("<#x> <#y> <#z> .", CONFIG_URL)).toThrow(/no hs:Collective/);
+    expect(() => parseCollectiveConfig("<#x> <#y> <#z> .", CONFIG_URL)).toThrow(/no sc:Collective/);
+  });
+});
+
+/** A config in the new namespace (solid-kit ADR 006 §7, amended 2026-11-17), with `extra` terms. */
+function sc(extra: string): string {
+  return `
+@prefix sc:   <${NS.sc}> .
+@prefix hs:   <${NS.hsLegacy}> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix ldp:  <http://www.w3.org/ns/ldp#> .
+<#openfab> a sc:Collective ;
+  foaf:name "OpenFab" ;
+  sc:roster <membres.ttl> ;
+  ldp:inbox <inbox/> ${extra ? `; ${extra}` : ""} .
+`;
+}
+
+describe("parseCollectiveConfig, new namespace (sc:)", () => {
+  const base = {
+    configUrl: CONFIG_URL,
+    group: CONFIG_URL + "#openfab",
+    name: "OpenFab",
+    roster: "https://pod.example/hyperscope/membres.ttl",
+    inbox: "https://pod.example/hyperscope/inbox/",
+  };
+
+  it("without sc:Sharing is membership only: no agent, no folder needed", () => {
+    expect(parseCollectiveConfig(sc(""), CONFIG_URL)).toEqual({ ...base, sharing: false });
+  });
+
+  it("without sc:Sharing keeps an agent or a folder it names, and shares nothing", () => {
+    expect(parseCollectiveConfig(sc('sc:agent <agent#me> ; sc:suggestedFolder "shared/openfab/"'), CONFIG_URL)).toEqual({
+      ...base,
+      sharing: false,
+      agent: "https://pod.example/hyperscope/agent#me",
+      suggestedFolder: "shared/openfab/",
+    });
+    expect(() => parseCollectiveConfig(sc("sc:agent <a#me>, <b#me>"), CONFIG_URL)).toThrow(/at most one sc:agent, found 2/);
+  });
+
+  it("with sc:Sharing shares with its one agent; the folder stays a suggestion, optional", () => {
+    expect(parseCollectiveConfig(sc('sc:feature sc:Sharing ; sc:agent <agent#me> ; sc:suggestedFolder "shared/openfab/"'), CONFIG_URL)).toEqual({
+      ...base,
+      sharing: true,
+      agent: "https://pod.example/hyperscope/agent#me",
+      suggestedFolder: "shared/openfab/",
+    });
+    expect(parseCollectiveConfig(sc("sc:feature sc:Sharing ; sc:agent <agent#me>"), CONFIG_URL)).toEqual({
+      ...base,
+      sharing: true,
+      agent: "https://pod.example/hyperscope/agent#me",
+    });
+  });
+
+  it("refuses sc:Sharing without exactly one agent rather than guessing one", () => {
+    expect(() => parseCollectiveConfig(sc("sc:feature sc:Sharing"), CONFIG_URL)).toThrow(
+      /sc:feature sc:Sharing needs an agent: expected exactly one sc:agent, found 0/
+    );
+    expect(() => parseCollectiveConfig(sc("sc:feature sc:Sharing ; sc:agent <a#me>, <b#me>"), CONFIG_URL)).toThrow(/found 2/);
+  });
+
+  it("ignores a feature it does not know", () => {
+    expect(parseCollectiveConfig(sc("sc:feature sc:Graph"), CONFIG_URL).sharing).toBe(false);
+  });
+
+  it("refuses a term given in both namespaces, naming both", () => {
+    const both = sc("sc:feature sc:Sharing ; sc:agent <a#me> ; hs:agent <b#me>");
+    expect(() => parseCollectiveConfig(both, CONFIG_URL)).toThrow(/gives both sc:agent and hs:agent: keep sc:agent only/);
+    expect(() => parseCollectiveConfig(sc("hs:roster <old.ttl>"), CONFIG_URL)).toThrow(/sc:roster and hs:roster/);
+    expect(() => parseCollectiveConfig(sc('sc:suggestedFolder "a/" ; hs:bundleFolder "b/"'), CONFIG_URL)).toThrow(
+      /sc:suggestedFolder and hs:bundleFolder/
+    );
+    // The old file, half migrated: the same refusal.
+    const half = CONFIG.replace("hs:agent <agents/agent#me> ;", `hs:agent <agents/agent#me> ; <${NS.sc}agent> <other#me> ;`);
+    expect(() => parseCollectiveConfig(half, CONFIG_URL)).toThrow(/sc:agent and hs:agent/);
+  });
+
+  it("reads a term left in the old namespace when the new one does not give it", () => {
+    expect(parseCollectiveConfig(sc('sc:feature sc:Sharing ; hs:agent <agent#me> ; hs:bundleFolder "o/"'), CONFIG_URL)).toMatchObject({
+      sharing: true,
+      agent: "https://pod.example/hyperscope/agent#me",
+      suggestedFolder: "o/",
+    });
+  });
+
+  it("finds a collective typed in either namespace among several", () => {
+    const two = CONFIG + `<#openfab> a sc:Collective ; foaf:name "OpenFab" ; sc:roster <o.ttl> ; ldp:inbox <o/> .`;
+    const withPrefix = `@prefix sc: <${NS.sc}> .\n` + two;
+    expect(parseCollectiveConfig(withPrefix, CONFIG_URL, CONFIG_URL + "#openfab")).toMatchObject({ name: "OpenFab", sharing: false });
+    expect(parseCollectiveConfig(withPrefix, CONFIG_URL, CONFIG_URL + "#hyperscope")).toMatchObject({ name: "HyperScope", sharing: true });
+    expect(() => parseCollectiveConfig(withPrefix, CONFIG_URL)).toThrow(/several/);
+  });
+
+  it("names the sc: prefix line when it is missing", () => {
+    const noPrefix = sc("").replace(/@prefix sc:.*\n/, "");
+    expect(() => parseCollectiveConfig(noPrefix, CONFIG_URL)).toThrow(`@prefix sc: <${NS.sc}> .`);
   });
 });
 
@@ -189,23 +294,31 @@ describe("docs/examples — the files to upload", () => {
       roster: "https://pod.nicolasdb.eu/hyperscope/membres.ttl",
       inbox: "https://pod.nicolasdb.eu/hyperscope/inbox/",
       agent: "https://pod.nicolasdb.eu/hyperscope/agents/agent#me",
-      bundleFolder: "output2/hyperscope/",
+      suggestedFolder: "output2/hyperscope/",
+      sharing: true,
     });
   });
 
-  it("the template a collective starts from parses, placeholders and all", async () => {
+  it("the template a collective starts from parses, placeholders and all: membership only", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     const turtle = readFileSync(resolve(process.cwd(), "templates/collective/config.ttl"), "utf8");
     const url = "https://pod.example/collective/config.ttl";
-    expect(parseCollectiveConfig(turtle, url)).toEqual({
+    const membership = {
       configUrl: url,
       group: "https://pod.example/collective/config.ttl#NOM",
       name: "NOM-DU-COLLECTIF",
       roster: "https://pod.example/collective/membres.ttl",
       inbox: "https://pod.example/collective/inbox/",
-      agent: "https://pod.example/collective/agents/agent#me",
-      bundleFolder: "output2/NOM/",
+    };
+    expect(parseCollectiveConfig(turtle, url)).toEqual({ ...membership, sharing: false });
+    // The pipeline half: its three lines uncommented.
+    const sharing = turtle.replace(/^(\s*)# (sc:(feature|agent|suggestedFolder) )/gm, "$1$2");
+    expect(parseCollectiveConfig(sharing, url)).toEqual({
+      ...membership,
+      sharing: true,
+      agent: "https://pod.example/collective/profile/AGENT#me",
+      suggestedFolder: "output2/NOM/",
     });
   });
 

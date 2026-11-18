@@ -14,8 +14,11 @@ says so.
 ## Folder
 
 You pick the folder (slice G, 16 Oct 2026). The collective's `config.ttl`
-only suggests one (`hs:bundleFolder`, such as `output2/hyperscope/`); the
-picker offers it first, then the first two levels of your pod. The root,
+only suggests one (`sc:suggestedFolder`, such as `output2/hyperscope/`), or
+none; the picker offers it first, then the first two levels of your pod. A
+collective of members only (no `sc:feature sc:Sharing`,
+[collective files](../reference/collective-files.md#configttl)) offers no
+sharing at all, and says so. The root,
 `profile/`, `settings/` and `inbox/` are never offered: apps depend on them.
 A folder can be shared with several collectives.
 

@@ -98,16 +98,21 @@ export function landingCopy(invitation: Invitation | null, provider: string | nu
   const collective = invitation.collective;
   const name = collective ? esc(collective.name) : null;
   const inviter = name ?? `A collective at <code>${esc(invitation.host)}</code>`;
+  // Membership only (no sc:feature sc:Sharing, solid-kit ADR 006 §7): nothing
+  // is shared, so the page promises no folder. Unread yet: the usual words.
+  const shares = collective?.sharing ?? true;
   return {
     eyebrow: "You're invited to join a collective",
     title: collective?.slogan ?? "Your work stays yours.",
-    pull: "The collective reads only the folder you share with it.",
+    pull: shares ? "The collective reads only the folder you share with it." : "Belonging shares nothing: your work stays on your pod.",
     lead: collective?.description
       ? esc(collective.description)
       : `${inviter} invited you. Joining starts with a pod: an online space that
-        belongs to you, at an address like ${pod}. You keep your work there. The
-        collective's agent reads the one folder you share, and you can close it
-        whenever you want.`,
+        belongs to you, at an address like ${pod}. You keep your work there. ${
+          shares
+            ? "The collective's agent reads the one folder you share, and you can close it whenever you want."
+            : "Belonging to the collective shares none of it."
+        }`,
     whyTitle: "A collective, without a platform in the middle.",
     why: [
       "Members, a roster, shared work. Usually, all of it sits in one company's database, and leaving means leaving your work behind.",
@@ -120,13 +125,17 @@ export function landingCopy(invitation: Invitation | null, provider: string | nu
         text: "An address of your own, with your name and an inbox. Set up for you when the account is made.",
       },
       { title: "Ask to join", text: "One message to the collective's inbox. The answer lands in yours." },
-      {
-        title: "Share one folder",
-        text: "You pick one folder of your pod. Everything in it is shared with the collective's agent. Nothing else is.",
-      },
-      { title: "Stop any time", text: "Stopping prevents new copies. It does not remove copies already made." },
+      ...(shares
+        ? [
+            {
+              title: "Share one folder",
+              text: "You pick one folder of your pod. Everything in it is shared with the collective's agent. Nothing else is.",
+            },
+            { title: "Stop any time", text: "Stopping prevents new copies. It does not remove copies already made." },
+          ]
+        : [{ title: "Leave any time", text: "Leaving takes one line out of your profile, whenever you want." }]),
     ],
-    thenLead: "A collective joins another collective the same way you join this one: it asks, it is accepted, it shares a folder.",
+    thenLead: `A collective joins another collective the same way you join this one: it asks, it is accepted${shares ? ", it shares a folder" : ""}.`,
     collectiveLabel: collective?.name ?? "The collective",
   };
 }

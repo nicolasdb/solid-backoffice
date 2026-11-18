@@ -166,3 +166,49 @@ describe("removing a member (J5, admin side)", () => {
     await updateOwnProfile(cast.ines.webId, profileEdits.removeDelegate(cast.network.webId)); // the cast as it was
   });
 });
+
+/**
+ * A membership-only collective in the new namespace (solid-kit ADR 006 §7):
+ * join and accept grant Read on the roster alone, even with a principles/
+ * holding rules of its own on its pod. The outsider stands in for a newcomer
+ * and leaves the cast as it was.
+ */
+describe("a membership-only collective (sc:, no sc:Sharing)", () => {
+  const ofConfig = cast.openfab.pod + "config.ttl";
+  const ofOwner = cast.openfab.webId;
+
+  it("reads as membership only, with no agent and nothing to share", async () => {
+    await actAs("outsider");
+    const of = await loadCollective(ofConfig);
+    expect(of).toMatchObject({ name: "OpenFab", group: ofConfig + "#openfab", sharing: false });
+    expect(of.agent).toBeUndefined();
+    expect(of.suggestedFolder).toBeUndefined();
+  });
+
+  it("accepts a newcomer with Read on the roster only, then removes them", async () => {
+    await actAs("outsider");
+    const of = await loadCollective(ofConfig);
+    await updateOwnProfile(cast.outsider.webId, profileEdits.join(of.group));
+    await sendToInbox(of.inbox, buildJoin(cast.outsider.webId, of.group, null));
+    expect(await isListed(of, cast.outsider.webId)).toBeNull();
+
+    await actAs("openfab");
+    const join = (await admin.readInbox(of)).find((m) => m.type === "Join" && m.actor === cast.outsider.webId)!;
+    const person = await admin.readPerson(cast.outsider.webId);
+    expect(admin.requestFlags(join, person, of)).toEqual([]);
+    expect(await admin.memberReadTargets(of, ofOwner)).toEqual([of.roster]);
+    await admin.accept(of, ofOwner, join, person, "outsider");
+    const [member] = await admin.readMembers(of, ofOwner, []);
+    expect(member).toMatchObject({ webId: cast.outsider.webId, state: "member", canReadRoster: true, missing: [] });
+
+    await actAs("outsider");
+    expect(await isListed(of, cast.outsider.webId)).toBe(true);
+    expect(await status(cast.openfab.pod + "principles/charter.md")).toBe(403);
+
+    await actAs("openfab");
+    await admin.removeMember(of, ofOwner, await admin.readPerson(cast.outsider.webId));
+    await actAs("outsider");
+    expect(await status(of.roster)).toBe(403);
+    await updateOwnProfile(cast.outsider.webId, profileEdits.leave(of.group)); // the cast as it was
+  });
+});

@@ -7,14 +7,14 @@ each path is and who may read it:
 
 | Here | On the pod | |
 |---|---|---|
-| `config.ttl` | `config.ttl` | replace every UPPERCASE value; filled examples in [`docs/examples/`](../../docs/examples/) |
-| `membres.ttl` | `membres.ttl` (`hs:roster`) | as is; accepting a request writes each member's lines |
-| `guide/` | `guide/` (`hs:guide`) | onboarding, FAQ and glossary, in French, for members and agents |
+| `config.ttl` | `config.ttl` | replace every UPPERCASE value; filled examples, in the old `hs:` namespace, in [`docs/examples/`](../../docs/examples/). As it is, a collective of members only; its commented `sc:feature sc:Sharing` and `sc:agent` lines switch sharing on once the agent exists (`sc:agent` is the address You shows for it). `schema:url`, optional, is the invitation address an agent hands to a newcomer |
+| `membres.ttl` | `membres.ttl` (`sc:roster`) | as is; accepting a request writes each member's lines |
+| `guide/` | `guide/` (`sc:guide`) | onboarding, FAQ and glossary, in French, for members and agents; public, the whole folder |
 
 The agent's procedures are not here: they ship with the connector they call,
 in solid-css-overlay
 [`mcp-connector/procedures/`](https://github.com/nicolasdb/solid-css-overlay/blob/main/mcp-connector/procedures/README.md),
-and are copied to the pod's `principles/` (`hs:procedures`).
+and are copied to the pod's `principles/` (`sc:procedures`).
 
 **Copied, not shared.** A collective makes its copy its own: its words, its
 annexes. These files are the reference that copies are compared against,
@@ -22,7 +22,12 @@ and where a fix to the generic text lands first. Keeping a copy in step
 (a version in each file, a backoffice command run as a ceremony) is open:
 [collective files](../../docs/reference/collective-files.md#open).
 
+Any agent may greet a newcomer, with no rights on any pod; in a shared
+channel the common agent only greets. The invitation address it hands out is
+read from `config.ttl`.
+
 `config.ttl` is parsed by the backoffice's own tests
-(`src/lib/collective.test.ts`), like the examples, so a property the app
-requires cannot go missing here. The `guide/` files are drafts of
+(`src/lib/collective.test.ts`), like the examples, as it is and with its
+sharing lines uncommented, so a property the app requires cannot go missing
+here. The `guide/` files are drafts of
 2026-10-01, to review before they are versioned.

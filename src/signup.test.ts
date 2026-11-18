@@ -190,6 +190,19 @@ describe("the landing", () => {
     expect(app.querySelector<HTMLInputElement>("#name")!.value).toBe("Zoé");
   });
 
+  it("promises no shared folder for a membership-only collective", async () => {
+    serve(`@prefix sc: <https://w3id.org/solid-collective/vocab#> . @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+      @prefix ldp: <http://www.w3.org/ns/ldp#> .
+      <#of> a sc:Collective ; foaf:name "OpenFab" ; sc:roster <membres.ttl> ; ldp:inbox <inbox/> .`);
+    setInvite("https://pod.example/of/config.ttl?fresh=3");
+    const app = render();
+    await settle();
+    expect(app.textContent).toContain("OpenFab invited you.");
+    expect(app.textContent).toContain("Belonging to the collective shares none of it.");
+    expect(app.textContent).not.toContain("You pick one folder of your pod.");
+    expect(app.textContent).not.toContain("agent");
+  });
+
   it("uses the collective's own slogan and description when it has them", async () => {
     serve(config('; schema:slogan "Look closer, together." ; schema:description "People who read slowly."'));
     setInvite(CONFIG_URL + "?fresh=2");
