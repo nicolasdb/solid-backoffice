@@ -4,6 +4,29 @@ Versions follow `package.json`. A tag `v<version>` publishes the image
 `ghcr.io/nicolasdb/solid-backoffice:<version>` (`.github/workflows/ci.yml`);
 an instance pins it in `instance-template/.env`.
 
+## 0.3.0 — 2026-11-18
+
+Collectives without an agent, and the `sc:` vocabulary (solid-kit ADR 006
+§7, amended). Everything an instance had keeps working.
+
+- **A collective can be membership only**: no agent, nothing shared. Only
+  `sc:feature sc:Sharing` needs an agent (`sc:agent`); without it the app
+  offers no sharing and shows no "Shares", and accepting a member grants
+  Read on the roster (`membres.ttl`) alone.
+- **`sc:` is read beside `hs:`, and written for new data**
+  (`https://w3id.org/solid-collective/vocab#`; `hs:bundleFolder` is now
+  `sc:suggestedFolder`). A `config.ttl` in `hs:` is read exactly as before;
+  a term present in both is refused. `settings/collectives.ttl` and
+  `settings/following.ttl` are read in both and rewritten in `sc:` on their
+  next save.
+- **The collective template starts membership only and in `sc:`**; the
+  set-up how-to is rewritten in two halves (membership, then the pipeline),
+  `guide/` is public, and step 9 gives the agent Read on `membres.ttl`.
+  `schema:url` is documented as the invitation address.
+- **Instance**: bump the pinned version. Nothing to migrate: an existing
+  `hs:` `config.ttl` keeps working, and its owner may move to `sc:` by hand
+  (ADR 006 §7).
+
 ## 0.2.1 — 2026-10-24
 
 - **The descriptor is read fresh** (`cache: "no-cache"`, one small request
