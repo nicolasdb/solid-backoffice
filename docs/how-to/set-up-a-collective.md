@@ -60,10 +60,14 @@ members share; it switches sharing on in `config.ttl` once the agent exists
    with its own subdomain: `https://openfab.pod.mapsofmaking.org/profile/openfab-agent#me`),
    a WebID, never a group. Replace the file with the edited one and keep it
    public. Members are offered to share a folder from then on.
-9. **Give the agent Read on `inbox/`**, with `acl:default` so it applies to
-   the messages inside (Pods → technical rules → Edit these rules, desktop
-   only). Read only: the agent's pull reads the announcements and never
-   deletes; the backoffice deletes a request as the owner.
+9. **Give the agent Read on the roster and the inbox.**
+   - `membres.ttl`: Who can access it → Named people → add the agent's
+     address from step 6, Can read, Save. Its procedures read the roster to
+     know whose folders to pull; without it they stop at the first step.
+   - `inbox/`: Read with `acl:default`, so it applies to the messages inside
+     (Pods → technical rules → Edit these rules, desktop only). Read only:
+     the agent's pull reads the announcements and never deletes; the
+     backoffice deletes a request as the owner.
 10. **Fill `principles/` and `guide/`.** Copy the three `procedure-*.md` from
     the connector's [`procedures/`](https://github.com/nicolasdb/solid-css-overlay/blob/main/mcp-connector/procedures/)
     into `principles/`, then write the collective's principles beside them.

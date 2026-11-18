@@ -130,8 +130,8 @@ of this `config.ttl`. It is for an agent that greets someone who is not a
 member yet: it reads the link here and hands it out. The backoffice ignores
 it and builds the link from its own address, so a wrong one here misleads an
 agent and nothing else. How to write it: [invite people](../how-to/invite-people.md#the-invitation-address-for-agents-optional).
-It is a field of the protocol all the same; recording it in solid-kit
-ADR 006 is still to do.
+It is a field of the protocol all the same, recorded in solid-kit
+[ADR 006 §7](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/006-membership-and-publication-by-pull.md).
 
 ### Requirements
 
