@@ -26,6 +26,9 @@ Collectives without an agent, and the `sc:` vocabulary (solid-kit ADR 006
 - **Instance**: bump the pinned version. Nothing to migrate: an existing
   `hs:` `config.ttl` keeps working, and its owner may move to `sc:` by hand
   (ADR 006 §7).
+- **Not yet run live.** `npm run verify` and `npm run test:pods` pass; the
+  manual section "Creating a collective · OpenFab on Maps of Making"
+  (`docs/manual-tests.md`) is still to run, on this image.
 
 ## 0.2.1 — 2026-10-24
 
