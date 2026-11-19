@@ -18,7 +18,11 @@ members share; it switches sharing on in `config.ttl` once the agent exists
 
 1. **Create the account** for the collective on the provider, like a person's,
    and sign in to the backoffice with it. The name is permanent: it is in the
-   collective's address and in every member's `org:memberOf`.
+   collective's address and in every member's `org:memberOf`. The people
+   are not: on a CSS provider, handing the collective over is adding the
+   new coordinator's login to the account (its own email and password) and
+   deleting the old one, in the provider's account page. Several
+   coordinators may each keep a login.
 2. **Create the inbox** from You → "Create my inbox". It makes `inbox/`, lets
    any signed-in account Append there, then names it `ldp:inbox` in the
    profile, in that order. `config.ttl` points at the same `inbox/`, so the
