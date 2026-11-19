@@ -47,7 +47,11 @@ pipeline half; (d) which Oxigraph holds a collective's graph: the Maps of
 Making one is readable from outside and the connector is its only access
 control, so a collective's graph must not go there, and a dedicated one per
 collective would be new connector code. Then `guide/` at acceptance (moot
-once public) and admin rotation.
+once public). Admin rotation is not a backoffice task any more: on a CSS
+provider the collective's account takes a second login and the first is
+deleted (tried by hand, 18 Nov 2026), so the account, its pod and its WebID
+change hands without moving. Admins by WebID in `config.ttl` stay an idea
+for a collective run by several people at once.
 
 ## Where we were (18 Oct 2026)
 
@@ -780,8 +784,9 @@ every query checked on Oxigraph; not yet run by an agent); (4) Xavier onboarded 
 backoffice, then the loop by hand, then with HyperScope's members.
 
 Not in E, on purpose: **admin rotation** (today "the collective you run" is
-the account signed in; rotating means admins by WebID in `config.ttl`, not
-blocking yet) and **creating a collective** from the app (a recipe not
+the account signed in; handing it over is done at the provider, a login
+added and the old one deleted, tried by hand on 18 Nov 2026; admins by
+WebID in `config.ttl` would be for several at once, not blocking) and **creating a collective** from the app (a recipe not
 settled: pod, `inbox/`, agent, `config.ttl`, `membres.ttl`, procedures,
 required profile fields, members-only documents such as a machines list;
 maybe a script or its own app, with the collective's own landing page;
