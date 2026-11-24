@@ -162,6 +162,10 @@ function bindSignIn(app: HTMLElement, options: WelcomeOptions): void {
 
 /* ── Create an account ─────────────────────────────────────────────────── */
 
+// The passphrase toggle: an open eye shows, a struck one hides.
+const EYE = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_OFF = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>`;
+
 const FIELDS = ["name", "username", "email", "password", "confirm"] as const;
 type Field = (typeof FIELDS)[number];
 
@@ -194,15 +198,19 @@ function signUpForm(provider: string, message?: string): string {
         `<p class="hint">Your pod's address: <code id="pod-address">${esc(podAddress(provider, "your-name"))}</code></p>`)}
       ${field("email", "Email", `<input id="email" name="email" type="email" autocomplete="email" required />`)}
       ${field("password", `Set a passphrase <span class="hint">— a regular password still works</span>`,
-        `<input id="password" name="password" type="password" autocomplete="new-password"
-                placeholder="four random words you'll remember" required />`,
+        `<div class="secret">
+           <input id="password" name="password" type="password" autocomplete="new-password"
+                  placeholder="four random words you'll remember" required />
+           <button id="reveal" class="secret-toggle" type="button" aria-pressed="false"
+                   aria-controls="password confirm" aria-label="Show passphrase"
+                   title="Show passphrase">${EYE}</button>
+         </div>`,
         `<p class="hint">A passphrase, like <code>correct-horse-battery-staple</code>, is easier to
            remember and far harder to guess than a short password. Length beats symbols.
            At least 8 characters.</p>`)}
       ${field("confirm", "Type it again",
         `<input id="confirm" name="confirm" type="password" autocomplete="new-password" required />`)}
       <div class="panel-actions">
-        <button id="reveal" class="ghost small" type="button" aria-pressed="false">Show passphrase</button>
         <button type="submit">Create my account</button>
       </div>
       <p class="hint">
@@ -237,12 +245,16 @@ function bindSignUp(app: HTMLElement, provider: string): void {
   });
 
   // Typed twice and unseen is how a typo becomes a lockout: let the person look.
+  // The eye sits in the first field, where people look for it; it shows both.
   const reveal = form.querySelector<HTMLButtonElement>("#reveal")!;
   reveal.addEventListener("click", () => {
     const show = reveal.getAttribute("aria-pressed") !== "true";
     input("password").type = input("confirm").type = show ? "text" : "password";
+    const label = show ? "Hide passphrase" : "Show passphrase";
     reveal.setAttribute("aria-pressed", String(show));
-    reveal.textContent = show ? "Hide passphrase" : "Show passphrase";
+    reveal.setAttribute("aria-label", label);
+    reveal.title = label;
+    reveal.innerHTML = show ? EYE_OFF : EYE;
   });
 
   const say = (id: Field | "signup", text: string | null) => {
