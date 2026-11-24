@@ -4,7 +4,7 @@ Versions follow `package.json`. A tag `v<version>` publishes the image
 `ghcr.io/nicolasdb/solid-backoffice:<version>` (`.github/workflows/ci.yml`);
 an instance pins it in `instance-template/.env`.
 
-## Unreleased
+## 0.3.1 — 2026-11-24
 
 - **Sign-up: the passphrase toggle is an eye inside the field** (#23). The
   "Show passphrase" button at the bottom of the form was easy to miss; the
