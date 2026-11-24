@@ -44,8 +44,8 @@ daily work, and the setup screens become something you pass through once.
 - **Sign-up form**: Your name → Username (follows the name; the pod address
   appears under it, e.g. `https://pod.nicolasdb.eu/neil-armstrong/`) → Email →
   Passphrase ("four random words you'll remember", with the
-  `correct-horse-battery-staple` hint) → Type it again → Show passphrase →
-  "Create my account". A line under the button says the provider's page will
+  `correct-horse-battery-staple` hint; an eye inside the field shows or hides
+  both passphrase fields) → Type it again → "Create my account". A line under the button says the provider's page will
   sign you in next. Errors sit under their field.
 - **After a taken username**: email and passphrase locked, "Choose another
   username to finish."

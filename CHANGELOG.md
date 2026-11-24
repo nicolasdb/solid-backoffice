@@ -4,6 +4,13 @@ Versions follow `package.json`. A tag `v<version>` publishes the image
 `ghcr.io/nicolasdb/solid-backoffice:<version>` (`.github/workflows/ci.yml`);
 an instance pins it in `instance-template/.env`.
 
+## Unreleased
+
+- **Sign-up: the passphrase toggle is an eye inside the field** (#23). The
+  "Show passphrase" button at the bottom of the form was easy to miss; the
+  eye sits in the first passphrase field, shows or hides both, and says
+  "Show passphrase" / "Hide passphrase" to screen readers.
+
 ## 0.3.0 — 2026-11-18
 
 Collectives without an agent, and the `sc:` vocabulary (solid-kit ADR 006

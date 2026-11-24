@@ -127,16 +127,19 @@ describe("before sign-in", () => {
     expect(app.querySelector("#confirm-error")!.textContent).toMatch(/do not match/);
   });
 
-  it("can show and hide the passphrase, both fields together", () => {
+  it("can show and hide the passphrase from an eye in the first field, both fields together", () => {
+    // The eye is inside the first field, not in the action row.
     setInvite("https://pod.example/hs/config.ttl");
     const app = render();
     const types = () => ["password", "confirm"].map((id) => app.querySelector<HTMLInputElement>(`#${id}`)!.type);
     expect(types()).toEqual(["password", "password"]);
     app.querySelector<HTMLButtonElement>("#reveal")!.click();
     expect(types()).toEqual(["text", "text"]);
-    expect(app.querySelector("#reveal")!.textContent).toBe("Hide passphrase");
+    expect(app.querySelector("#reveal")!.getAttribute("aria-label")).toBe("Hide passphrase");
+    expect(app.querySelector("#reveal")!.getAttribute("aria-pressed")).toBe("true");
     app.querySelector<HTMLButtonElement>("#reveal")!.click();
     expect(types()).toEqual(["password", "password"]);
+    expect(app.querySelector("#reveal")!.getAttribute("aria-label")).toBe("Show passphrase");
   });
 
   it("shows a taken username on its field, and keeps the saved email and passphrase", async () => {
