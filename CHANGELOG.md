@@ -4,7 +4,7 @@ Versions follow `package.json`. A tag `v<version>` publishes the image
 `ghcr.io/nicolasdb/solid-backoffice:<version>` (`.github/workflows/ci.yml`);
 an instance pins it in `instance-template/.env`.
 
-## Unreleased
+## 0.3.2 — 2026-11-27
 
 - **A WebID on your own domain works with every profile step** (#26,
   solid-kit ADR 002 amendment of 2026-11-26). Such a profile is a static
