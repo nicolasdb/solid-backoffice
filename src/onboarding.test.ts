@@ -320,6 +320,19 @@ describe("slice A — the member's side of the handshake", () => {
     vi.mocked(authFetch).mockReset();
   });
 
+  it("gives the two lines to add when the steps wrote to an extended profile the profile does not link", async () => {
+    const about = "https://pod.example/neil/profile/about.ttl";
+    Object.assign(profile, { unlinked: about });
+    const app = await render("#/you");
+    const row = [...app.querySelectorAll("details.you-row")].find((d) => d.textContent!.includes("Link your extended profile"))!;
+    expect(row.hasAttribute("open")).toBe(true);
+    const copy = row.querySelector<HTMLElement>("[data-copy]")!.dataset.copy!;
+    expect(copy.split("\n")).toEqual([
+      `<${WEBID}> <http://www.w3.org/2000/01/rdf-schema#seeAlso> <${about}> .`,
+      `<${WEBID}> <http://xmlns.com/foaf/0.1/isPrimaryTopicOf> <${about}> .`,
+    ]);
+  });
+
   it("says why the source could not be read, and keeps the steps", async () => {
     vi.mocked(authFetch).mockResolvedValue(new Response("", { status: 403 }));
     const app = await render("#/you");

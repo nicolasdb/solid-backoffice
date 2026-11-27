@@ -565,7 +565,7 @@ export async function deleteAgent(session: AccountSession, owner: string, podUrl
   await step("rules", async () => {
     for (const r of agent.reach) await setFolderAccess(r.url, owner, podUrl, agent.webId, []);
   });
-  if (agent.delegate) await step("delegates", () => updateOwnProfile(owner, profileEdits.removeDelegate(agent.webId)));
+  if (agent.delegate) await step("delegates", async () => void (await updateOwnProfile(owner, profileEdits.removeDelegate(agent.webId))));
   await step("unlink", async () => {
     const res = await account(session, agent.link.resource, { method: "DELETE" });
     if (res.status === 401) throw ended();
