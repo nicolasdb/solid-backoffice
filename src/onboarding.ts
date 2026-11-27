@@ -19,6 +19,7 @@ import {
   findRunCollective,
   isListed,
   loadCollective,
+  declaresMembership,
   membershipState,
   readOwnProfile,
   type Collective,
@@ -149,7 +150,7 @@ export async function load(webId: string, podUrl: string): Promise<Loaded> {
       ]);
       return {
         collective,
-        state: membershipState(profile.memberOf.includes(collective.group), listed),
+        state: membershipState(declaresMembership(profile, collective.group), listed),
         folderUrl,
         chosen: Boolean(picked),
         published,

@@ -8,6 +8,8 @@ export const NS = {
   xsd: "http://www.w3.org/2001/XMLSchema#",
   rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
   schema: "http://schema.org/",
+  rdfs: "http://www.w3.org/2000/01/rdf-schema#",
+  pim: "http://www.w3.org/ns/pim/space#",
   /**
    * The collectives' vocabulary (solid-kit ADR 006 §7, amended 2026-11-17;
    * the terms are solid-kit `docs/vocab/vocab.ttl`). Everything this app

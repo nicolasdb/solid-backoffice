@@ -24,9 +24,11 @@ import { readTurtle } from "./read";
 import { NS } from "./vocab";
 import { buildAnswer, buildRemove } from "./activity";
 import {
-  parseProfile,
-  profileDocOf,
+  declaredDelegates,
+  declaresMembership,
+  readProfile,
   sendToInbox,
+  type ProfileReadError,
   type Collective,
   type MemberDeclaration,
   type MembershipState,
@@ -195,13 +197,17 @@ export interface Person {
   problem: string | null;
 }
 
+/**
+ * Their profile and the extended documents it links inside its own
+ * pim:storage (solid-kit ADR 002 amendment, point 3): a membership declared
+ * only in their `profile/about.ttl` counts; one in a document elsewhere does not.
+ */
 export async function readPerson(webId: string): Promise<Person> {
   try {
-    const doc = profileDocOf(webId);
-    const res = await readTurtle(doc);
-    if (!res.ok) return { webId, profile: null, problem: `Their profile could not be read (${res.status}).` };
-    return { webId, profile: parseProfile(await res.text(), doc, webId), problem: null };
+    return { webId, profile: await readProfile(webId), problem: null };
   } catch (err) {
+    const status = (err as ProfileReadError).status;
+    if (status !== undefined) return { webId, profile: null, problem: `Their profile could not be read (${status}).` };
     return { webId, profile: null, problem: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -217,7 +223,7 @@ export function requestFlags(message: InboxMessage, person: Person, collective: 
   }
   if (!person.profile) {
     flags.push("Their profile could not be read, so the request cannot be checked.");
-  } else if (!person.profile.memberOf.includes(collective.group)) {
+  } else if (!declaresMembership(person.profile, collective.group)) {
     flags.push(`Their profile does not say they belong to ${collective.name}.`);
   }
   return flags;
@@ -372,7 +378,8 @@ function memberFolders(collective: Collective): string[] {
  * acts for its human, in the pod and in the collective's graph.
  */
 export function readersOf(person: Person): string[] {
-  return [person.webId, ...(person.profile?.delegates ?? []).filter((d) => d !== person.webId && isValidWebId(d))];
+  const delegates = person.profile ? declaredDelegates(person.profile) : [];
+  return [person.webId, ...delegates.filter((d) => d !== person.webId && isValidWebId(d))];
 }
 
 /**
@@ -478,7 +485,7 @@ export interface MemberView extends Person {
 
 export function memberState(person: Person, group: string): MembershipState {
   if (!person.profile) return "unknown";
-  return person.profile.memberOf.includes(group) ? "member" : "left";
+  return declaresMembership(person.profile, group) ? "member" : "left";
 }
 
 /**

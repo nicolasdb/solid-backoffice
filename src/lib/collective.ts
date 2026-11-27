@@ -30,6 +30,7 @@ import {
 } from "@inrupt/solid-client";
 import { authFetch } from "./auth";
 import { readTurtle } from "./read";
+import { setPublicAccess } from "./acl";
 import { NS } from "./vocab";
 
 export { NS };
@@ -40,6 +41,9 @@ const FOAF_MEMBER = NS.foaf + "member";
 const MEMBER_OF = NS.org + "memberOf";
 const DELEGATES = NS.acl + "delegates";
 const INBOX = NS.ldp + "inbox";
+const SEE_ALSO = NS.rdfs + "seeAlso";
+const PRIMARY_TOPIC_OF = NS.foaf + "isPrimaryTopicOf";
+const STORAGE = NS.pim + "storage";
 
 /**
  * What a collective's `config.ttl` declares.
@@ -237,16 +241,188 @@ export interface MemberDeclaration {
   memberOf: string[];
   delegates: string[];
   inbox: string | null;
+  /**
+   * Your own profile only: the extended profile the steps write to
+   * (`profile/about.ttl`) when your profile is a file apps cannot write and
+   * does not link it yet. What it holds is counted here, for you, but nobody
+   * else finds it until the two lines (`linkLines`) are in your profile.
+   */
+  unlinked?: string;
 }
 
 export function parseProfile(turtle: string, profileDocUrl: string, webId: string): MemberDeclaration {
-  const quads = parse(turtle, profileDocUrl);
+  return declarationOf(parse(turtle, profileDocUrl), webId);
+}
+
+/** What the quads say about `webId`; only triples whose subject is the WebID count. */
+function declarationOf(quads: Quad[], webId: string): MemberDeclaration {
+  const unique = (values: string[]) => [...new Set(values)];
   return {
     name: objectsOf(quads, webId, FOAF_NAME)[0] ?? null,
-    memberOf: objectsOf(quads, webId, MEMBER_OF),
-    delegates: objectsOf(quads, webId, DELEGATES),
+    memberOf: unique(objectsOf(quads, webId, MEMBER_OF)),
+    delegates: unique(objectsOf(quads, webId, DELEGATES)),
     inbox: objectsOf(quads, webId, INBOX)[0] ?? null,
   };
+}
+
+/*
+ * ── The extended profile (solid-kit ADR 002, amendment of 2026-11-26) ──────
+ *
+ * A tier-1 WebID (https://id.openfab.be/profile/card#me) is a static file on
+ * the owner's own domain: no app can write it. It links an extended profile
+ * in the pod, `profile/about.ttl`, with rdfs:seeAlso AND
+ * foaf:isPrimaryTopicOf; either one is followed. What happened before this:
+ * every step that wrote the profile ended in a NetworkError on
+ * pod.syntonie.be (solid-backoffice#26), and the lines were added by hand.
+ *
+ * TRUST: a linked document is read only when it is inside a pim:storage the
+ * WebID profile itself declares (prefix match). Anyone can link anything; only
+ * the owner writes in their storage. One level only: links inside the
+ * extended documents are not followed.
+ */
+
+/** One document of a profile, as read. */
+export interface ProfileDocument {
+  url: string;
+  text: string;
+}
+
+/** A profile and the extended documents it links, read for showing or deciding. */
+export interface ProfileDocuments {
+  profile: ProfileDocument;
+  /** Linked documents inside a declared storage that could be read. One that fails is skipped. */
+  extended: ProfileDocument[];
+  /** Linked documents outside every declared storage: never read. */
+  ignored: string[];
+  /** The storages the profile declares, each ending in "/". */
+  storages: string[];
+  /** Whether the profile's GET answered as writable (`WAC-Allow` / `Allow`). */
+  writable: boolean;
+}
+
+/** A profile that could not be read, with its HTTP status when there was one. */
+export interface ProfileReadError extends Error {
+  status?: number;
+}
+
+/**
+ * Whether a GET's headers say this app may write the document: `WAC-Allow`'s
+ * `user` holds write or append; without a `WAC-Allow`, an `Allow` listing
+ * PATCH or PUT. A static file answers neither. `WAC-Allow` decides when it is
+ * there: CSS lists PATCH in `Allow` whatever the requester may do.
+ */
+export function answersWritable(headers: Headers): boolean {
+  const wac = headers.get("wac-allow");
+  if (wac !== null) {
+    const user = /user\s*=\s*"([^"]*)"/i.exec(wac)?.[1] ?? "";
+    return /\b(write|append)\b/i.test(user);
+  }
+  return /\b(PATCH|PUT)\b/i.test(headers.get("allow") ?? "");
+}
+
+function storagesIn(quads: Quad[], webId: string): string[] {
+  return [...new Set(objectsOf(quads, webId, STORAGE).map((s) => (s.endsWith("/") ? s : s + "/")))];
+}
+
+/**
+ * The documents a profile links with rdfs:seeAlso or foaf:isPrimaryTopicOf,
+ * split by whether they are inside one of `storages` (the only ones read).
+ */
+export function linkedDocuments(
+  quads: Quad[],
+  webId: string,
+  profileDocUrl: string,
+  storages: string[]
+): { inside: string[]; outside: string[] } {
+  const docs = new Set<string>();
+  for (const iri of [...objectsOf(quads, webId, SEE_ALSO), ...objectsOf(quads, webId, PRIMARY_TOPIC_OF)]) {
+    try {
+      const doc = profileDocOf(iri);
+      if (doc !== profileDocUrl && /^https?:/.test(doc)) docs.add(doc);
+    } catch {
+      // Not an IRI a document can be read from (a blank node, a literal).
+    }
+  }
+  const inside = [...docs].filter((d) => storages.some((s) => d.startsWith(s)));
+  return { inside, outside: [...docs].filter((d) => !inside.includes(d)) };
+}
+
+/** A document's text through read.ts, or `null` when it cannot be read or parsed. */
+async function readOptional(url: string): Promise<ProfileDocument | null> {
+  try {
+    const res = await readTurtle(url);
+    if (!res.ok) return null;
+    const text = await res.text();
+    parse(text, url);
+    return { url, text };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reads a WebID's profile and the extended documents it links (one level),
+ * through read.ts (ADR 007: revalidated, never stale). A profile with no
+ * links costs one request, as before. Throws a ProfileReadError when the
+ * profile itself cannot be read.
+ */
+export async function readProfileDocuments(webId: string): Promise<ProfileDocuments> {
+  const url = profileDocOf(webId);
+  const res = await readTurtle(url);
+  if (!res.ok) {
+    const err = new Error(`Could not read the profile at ${url} (${res.status}).`) as ProfileReadError;
+    err.status = res.status;
+    throw err;
+  }
+  const text = await res.text();
+  const quads = parse(text, url);
+  const storages = storagesIn(quads, webId);
+  const { inside, outside } = linkedDocuments(quads, webId, url, storages);
+  const extended = (await Promise.all(inside.map(readOptional))).filter((d): d is ProfileDocument => d !== null);
+  return { profile: { url, text }, extended, ignored: outside, storages, writable: answersWritable(res.headers) };
+}
+
+/** The union of what the documents declare about `webId`, the profile first. */
+export function declarationOfDocuments(docs: ProfileDocument[], webId: string): MemberDeclaration {
+  return declarationOf(docs.flatMap((d) => parse(d.text, d.url)), webId);
+}
+
+/** The merged declaration of anyone's profile: the profile and its extended documents. */
+export async function readProfile(webId: string): Promise<MemberDeclaration> {
+  const docs = await readProfileDocuments(webId);
+  return declarationOfDocuments([docs.profile, ...docs.extended], webId);
+}
+
+/*
+ * Decisions. One function each, so another authorization backend (UMA/ODRL)
+ * can replace it without touching how profiles are read (ADR 002 amendment,
+ * point 3). They take the merged declaration from `readProfile`.
+ */
+
+/** Whether a profile declares membership of `group` (`org:memberOf`). */
+export function declaresMembership(profile: MemberDeclaration, group: string): boolean {
+  return profile.memberOf.includes(group);
+}
+
+/** The agents a profile declares may act for it (`acl:delegates`). */
+export function declaredDelegates(profile: MemberDeclaration): string[] {
+  return profile.delegates;
+}
+
+/** Where the extended profile goes when the profile links none: `profile/about.ttl` in the first storage. */
+export function extendedProfileUrl(storage: string): string {
+  return new URL("profile/about.ttl", storage).href;
+}
+
+/**
+ * The two lines a static profile needs to link its extended profile, absolute
+ * IRIs only (a redirect changes the base a reader parses against).
+ */
+export function linkLines(webId: string, extendedUrl: string): string {
+  return [
+    `<${webId}> <${SEE_ALSO}> <${extendedUrl}> .`,
+    `<${webId}> <${PRIMARY_TOPIC_OF}> <${extendedUrl}> .`,
+  ].join("\n");
 }
 
 /** The WebIDs a roster lists as `foaf:member` of the group. */
@@ -287,38 +463,144 @@ export async function sendToInbox(inbox: string, turtle: string): Promise<string
   return res.headers.get("location");
 }
 
+/** Where a profile step writes, and what the person still has to do by hand. */
+export interface ProfileWrite {
+  /** The document written: the profile, or the extended profile in the pod. */
+  document: string;
+  /** The two lines to add to the profile when it does not link `document` yet; `null` when nothing is left to do. */
+  linkToAdd: string | null;
+}
+
+/** A network failure (CORS, offline) as a sentence, never the browser's "Failed to fetch". */
+function unreachable(url: string, what: string): Error {
+  return new Error(`Could not reach ${url}${what}. Nothing was written.`);
+}
+
 /**
- * Edits the signed-in user's own profile. solid-client sends only the changed
- * triples as a PATCH, so a concurrent edit to some other triple in the same
- * document survives — which is why this is not a read-modify-PUT.
+ * Where a step that edits your profile writes (ADR 002 amendment, point 2):
+ *
+ * 1. the profile itself, when its GET answers as writable;
+ * 2. else the extended document it links inside its own pim:storage;
+ * 3. else `profile/about.ttl` in that storage, to be created (`create`) and
+ *    linked by hand (`linked: false`).
+ *
+ * Read fresh, never through read.ts: this is the base of a write.
+ */
+export async function profileWriteTarget(webId: string): Promise<{ url: string; create: boolean; linked: boolean }> {
+  const docUrl = profileDocOf(webId);
+  let res: Response;
+  try {
+    res = await authFetch(docUrl, { headers: { Accept: "text/turtle" }, cache: "no-store" });
+  } catch {
+    throw unreachable(docUrl, ", your profile, to know where to write");
+  }
+  if (!res.ok) throw new Error(`Could not read your profile (${res.status}), so nothing was written.`);
+  if (answersWritable(res.headers)) return { url: docUrl, create: false, linked: true };
+
+  const quads = parse(await res.text(), docUrl);
+  const storages = storagesIn(quads, webId);
+  if (!storages.length) {
+    throw new Error(
+      `Your profile at ${docUrl} is a file apps cannot write, and it declares no pim:storage, ` +
+        "so there is no pod to write in. Add a pim:storage line to it. Nothing was written."
+    );
+  }
+  const linked = linkedDocuments(quads, webId, docUrl, storages).inside[0];
+  const url = linked ?? extendedProfileUrl(storages[0]);
+  let head: Response;
+  try {
+    head = await authFetch(url, { method: "HEAD", cache: "no-store" });
+  } catch {
+    throw unreachable(url, ", your extended profile");
+  }
+  if (!head.ok && head.status !== 404) throw new Error(`Could not reach your extended profile at ${url} (${head.status}). Nothing was written.`);
+  return { url, create: head.status === 404, linked: Boolean(linked) };
+}
+
+/**
+ * Creates the extended profile: an almost empty document about the WebID,
+ * then its own rules (public Read, you Read/Write/Control: what it holds is
+ * there to be checked by others). In that order: a resource's `.acl` is
+ * found from the resource. Already there (412) counts as created.
+ */
+async function createExtendedProfile(url: string, webId: string): Promise<void> {
+  const body = `<> <${NS.foaf}primaryTopic> <${webId}> .\n`;
+  let res: Response;
+  try {
+    res = await authFetch(url, { method: "PUT", headers: { "Content-Type": "text/turtle", "If-None-Match": "*" }, body });
+  } catch {
+    throw unreachable(url, " to create your extended profile");
+  }
+  if (!res.ok && res.status !== 412) throw new Error(`Could not create your extended profile at ${url} (${res.status}).`);
+  await setPublicAccess(url, webId, ["read"]);
+}
+
+/**
+ * Edits the signed-in user's own profile, in the document
+ * `profileWriteTarget` picks. solid-client sends only the changed triples as
+ * a PATCH, so a concurrent edit to some other triple in the same document
+ * survives — which is why this is not a read-modify-PUT.
  */
 export async function updateOwnProfile(
   webId: string,
   edit: (thing: ReturnType<typeof createThing>) => ReturnType<typeof createThing>
-): Promise<void> {
-  const docUrl = profileDocOf(webId);
-  const dataset = await getSolidDataset(docUrl, { fetch: authFetch });
-  const thing = getThing(dataset, webId) ?? createThing({ url: webId });
-  await saveSolidDatasetAt(docUrl, setThing(dataset, edit(thing)), { fetch: authFetch });
+): Promise<ProfileWrite> {
+  const target = await profileWriteTarget(webId);
+  if (target.create) await createExtendedProfile(target.url, webId);
+  try {
+    const dataset = await getSolidDataset(target.url, { fetch: authFetch });
+    const thing = getThing(dataset, webId) ?? createThing({ url: webId });
+    await saveSolidDatasetAt(target.url, setThing(dataset, edit(thing)), { fetch: authFetch });
+  } catch (err) {
+    // fetch rejects with a TypeError on CORS or a lost network: say where.
+    if (err instanceof TypeError) throw unreachable(target.url, "");
+    throw err;
+  }
+  return { document: target.url, linkToAdd: target.linked ? null : linkLines(webId, target.url) };
 }
 
-export async function readOwnProfile(webId: string): Promise<MemberDeclaration> {
-  const docUrl = profileDocOf(webId);
-  const res = await readTurtle(docUrl);
-  if (!res.ok) throw new Error(`Could not read your profile (${res.status}).`);
-  return parseProfile(await res.text(), docUrl, webId);
+/** Your profile's documents, plus the extended profile the steps wrote but the profile does not link yet. */
+export interface OwnProfileDocuments extends ProfileDocuments {
+  unlinked: ProfileDocument | null;
 }
 
 /**
- * Anyone's `foaf:name`, from the document their WebID points into: a card, or
- * an agent's own document (`profile/claude#me`). `null` when there is none or
- * it cannot be read; the caller falls back to the address.
+ * Your own profile as the steps see it: the merged read, plus, when your
+ * profile cannot be written and links no extended document, the
+ * `profile/about.ttl` the steps write to (so a name just saved there does
+ * not look undone). Others never read that one until it is linked.
+ */
+export async function readOwnProfileDocuments(webId: string): Promise<OwnProfileDocuments> {
+  const docs = await readProfileDocuments(webId);
+  const unlinked =
+    !docs.writable && docs.extended.length === 0 && docs.storages.length > 0
+      ? await readOptional(extendedProfileUrl(docs.storages[0]))
+      : null;
+  return { ...docs, unlinked };
+}
+
+export async function readOwnProfile(webId: string): Promise<MemberDeclaration> {
+  let docs: OwnProfileDocuments;
+  try {
+    docs = await readOwnProfileDocuments(webId);
+  } catch (err) {
+    const status = (err as ProfileReadError).status;
+    if (status !== undefined) throw new Error(`Could not read your profile (${status}).`);
+    throw err;
+  }
+  const declaration = declarationOfDocuments([docs.profile, ...docs.extended, ...(docs.unlinked ? [docs.unlinked] : [])], webId);
+  return docs.unlinked ? { ...declaration, unlinked: docs.unlinked.url } : declaration;
+}
+
+/**
+ * Anyone's `foaf:name`, from the document their WebID points into (a card,
+ * or an agent's own document, `profile/claude#me`) and the extended
+ * documents it links. `null` when there is none or it cannot be read; the
+ * caller falls back to the address.
  */
 export async function readName(webId: string): Promise<string | null> {
   try {
-    const docUrl = profileDocOf(webId);
-    const res = await readTurtle(docUrl);
-    return res.ok ? parseProfile(await res.text(), docUrl, webId).name : null;
+    return (await readProfile(webId)).name;
   } catch {
     return null;
   }
