@@ -769,7 +769,11 @@ and whose pod has no `profile/about.ttl` yet.
    copies them. Add them to the WebID document where it is hosted, reload:
    the step is gone and the extended profile is shown as linked.
 4. **Name and may act for you.** Change the name; add an agent. Both land
-   in `profile/about.ttl`, marked in the source.
+   in `profile/about.ttl`, marked in the source; the new name is the one
+   shown, even though the card keeps its own. Remove an agent the card
+   itself names (a line added by hand): refused, saying to remove it where
+   the file is hosted; nothing is written. Leave a collective the card
+   names: the same.
 5. **Membership, read by the collective.** Join a collective. Signed in as
    its account, the request shows "Profile says they belong to …" (read
    from `about.ttl`). Before the two lines are added, it says the profile

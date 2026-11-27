@@ -382,9 +382,17 @@ export async function readProfileDocuments(webId: string): Promise<ProfileDocume
   return { profile: { url, text }, extended, ignored: outside, storages, writable: answersWritable(res.headers) };
 }
 
-/** The union of what the documents declare about `webId`, the profile first. */
+/**
+ * The union of what the documents declare about `webId`, the profile first
+ * (`docs[0]`), except the name: an extended document's wins. A static card
+ * keeps the name it was written with (OpenFab's says "OpenFab"), and the name
+ * step writes the extended profile, so the card's would hide every change.
+ */
 export function declarationOfDocuments(docs: ProfileDocument[], webId: string): MemberDeclaration {
-  return declarationOf(docs.flatMap((d) => parse(d.text, d.url)), webId);
+  const parsed = docs.map((d) => parse(d.text, d.url));
+  const merged = declarationOf(parsed.flat(), webId);
+  const extendedName = parsed.slice(1).map((q) => objectsOf(q, webId, FOAF_NAME)[0]).find((n) => n !== undefined);
+  return extendedName === undefined ? merged : { ...merged, name: extendedName };
 }
 
 /** The merged declaration of anyone's profile: the profile and its extended documents. */
@@ -486,7 +494,9 @@ function unreachable(url: string, what: string): Error {
  *
  * Read fresh, never through read.ts: this is the base of a write.
  */
-export async function profileWriteTarget(webId: string): Promise<{ url: string; create: boolean; linked: boolean }> {
+export async function profileWriteTarget(
+  webId: string
+): Promise<{ url: string; create: boolean; linked: boolean; card: Quad[] | null }> {
   const docUrl = profileDocOf(webId);
   let res: Response;
   try {
@@ -495,7 +505,7 @@ export async function profileWriteTarget(webId: string): Promise<{ url: string; 
     throw unreachable(docUrl, ", your profile, to know where to write");
   }
   if (!res.ok) throw new Error(`Could not read your profile (${res.status}), so nothing was written.`);
-  if (answersWritable(res.headers)) return { url: docUrl, create: false, linked: true };
+  if (answersWritable(res.headers)) return { url: docUrl, create: false, linked: true, card: null };
 
   const quads = parse(await res.text(), docUrl);
   const storages = storagesIn(quads, webId);
@@ -514,7 +524,7 @@ export async function profileWriteTarget(webId: string): Promise<{ url: string; 
     throw unreachable(url, ", your extended profile");
   }
   if (!head.ok && head.status !== 404) throw new Error(`Could not reach your extended profile at ${url} (${head.status}). Nothing was written.`);
-  return { url, create: head.status === 404, linked: Boolean(linked) };
+  return { url, create: head.status === 404, linked: Boolean(linked), card: quads };
 }
 
 /**
@@ -546,6 +556,19 @@ export async function updateOwnProfile(
   edit: (thing: ReturnType<typeof createThing>) => ReturnType<typeof createThing>
 ): Promise<ProfileWrite> {
   const target = await profileWriteTarget(webId);
+  // Removing a line the static card holds would PATCH the extended profile
+  // with nothing to remove, say "done", and the line would be back on the
+  // next read. Refuse instead, naming where it can be removed.
+  const removes = (edit as ProfileEdit).removes;
+  if (
+    removes &&
+    target.card?.some((q) => q.subject.value === webId && q.predicate.value === removes.predicate && q.object.value === removes.value)
+  ) {
+    throw new Error(
+      `This line is in your profile itself, ${profileDocOf(webId)}, a file apps cannot write: ` +
+        `remove <${removes.value}> there, where the file is hosted. Nothing was written.`
+    );
+  }
   if (target.create) await createExtendedProfile(target.url, webId);
   try {
     const dataset = await getSolidDataset(target.url, { fetch: authFetch });
@@ -606,14 +629,23 @@ export async function readName(webId: string): Promise<string | null> {
   }
 }
 
+type Thing = ReturnType<typeof createThing>;
+
+/** An edit of your profile; one that removes a line says which, so a line held by a static card is refused, not ignored. */
+export type ProfileEdit = ((t: Thing) => Thing) & { removes?: { predicate: string; value: string } };
+
+function removing(predicate: string, value: string, edit: (t: Thing) => Thing): ProfileEdit {
+  return Object.assign(edit, { removes: { predicate, value } });
+}
+
 export const profileEdits = {
   setName: (name: string) => (t: ReturnType<typeof createThing>) => setStringNoLocale(t, FOAF_NAME, name),
   addDelegate: (agent: string) => (t: ReturnType<typeof createThing>) =>
     getUrlAll(t, DELEGATES).includes(agent) ? t : addUrl(t, DELEGATES, agent),
-  removeDelegate: (agent: string) => (t: ReturnType<typeof createThing>) => removeUrl(t, DELEGATES, agent),
+  removeDelegate: (agent: string) => removing(DELEGATES, agent, (t: Thing) => removeUrl(t, DELEGATES, agent)),
   join: (group: string) => (t: ReturnType<typeof createThing>) =>
     getUrlAll(t, MEMBER_OF).includes(group) ? t : addUrl(t, MEMBER_OF, group),
-  leave: (group: string) => (t: ReturnType<typeof createThing>) => removeUrl(t, MEMBER_OF, group),
+  leave: (group: string) => removing(MEMBER_OF, group, (t: Thing) => removeUrl(t, MEMBER_OF, group)),
   setInbox: (inbox: string) => (t: ReturnType<typeof createThing>) => setUrl(t, INBOX, inbox),
 };
 

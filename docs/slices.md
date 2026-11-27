@@ -4,7 +4,20 @@ Each slice is usable on its own and is tested by a real person before the next
 one starts. The order follows who is waiting: new members first, then the admin
 who accepts them, then everyone's daily work.
 
-## Where we are (17 Nov 2026)
+## Where we are (27 Nov 2026)
+
+**A WebID on your own domain, writers and readers** (solid-backoffice#26,
+solid-kit ADR 002 amendment of 2026-11-26). Profiles are read with the
+extended documents they link inside their own `pim:storage`; every profile
+step writes the WebID document only when it answers as writable, else the
+linked extended profile, else a new `profile/about.ttl`, and You gives the
+two lines to link it. A line held in the static card itself is refused on
+removal, never "removed" silently. Run live: not yet
+([manual tests](manual-tests.md#extended-profile--a-webid-on-your-own-domain)).
+Next: the two "Bring your domain" paths (#27, #28); whether the inbox step
+should also give the `ldp:inbox` line for the card.
+
+## Where we were (17 Nov 2026)
 
 **Creating a collective, reviewed on OpenFab (Maps of Making); docs only,
 no code.** Followed as written, the how-to produced a collective whose agent

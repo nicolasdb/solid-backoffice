@@ -152,6 +152,15 @@ describe("writing your profile", () => {
     ]);
   });
 
+  it("refuses to remove a line the static card holds itself, instead of saying it is done", async () => {
+    const agent = POD + "profile/claude#me";
+    routes[CARD] = { status: 200, body: card(`${linked}; <${NS.acl}delegates> <${agent}> `), headers: STATIC };
+    routes[`HEAD ${ABOUT}`] = { status: 200 };
+    await expect(updateOwnProfile(WEBID, profileEdits.removeDelegate(agent))).rejects.toThrow(/where the file is hosted/);
+    await expect(updateOwnProfile(WEBID, profileEdits.leave(GROUP))).resolves.toEqual({ document: ABOUT, linkToAdd: null });
+    expect(calls.filter((c) => c.startsWith("save"))).toEqual([`save ${ABOUT}`]);
+  });
+
   it("refuses, naming the missing line, when a static profile declares no storage", async () => {
     routes[CARD] = { status: 200, body: `<#me> <http://xmlns.com/foaf/0.1/name> "OpenFab".`, headers: STATIC };
     await expect(updateOwnProfile(WEBID, profileEdits.setName("x"))).rejects.toThrow(/pim:storage/);
@@ -199,6 +208,13 @@ describe("reading a profile and its extended profile", () => {
     expect(profile.memberOf).toEqual([]);
     expect(calls).not.toContain(`GET ${deeper}`);
     expect(await readName(WEBID)).toBe("OpenFab");
+  });
+
+  it("shows the name the step saved in about.ttl, not the one the static card was written with", async () => {
+    routes[CARD] = { status: 200, body: card(linked), headers: STATIC };
+    routes[ABOUT] = { status: 200, body: `<${WEBID}> <${NS.foaf}name> "OpenFab asbl" .` };
+    expect((await readOwnProfile(WEBID)).name).toBe("OpenFab asbl");
+    expect((await admin.readPerson(WEBID)).profile!.name).toBe("OpenFab asbl");
   });
 
   it("a profile with no links costs one request, as before", async () => {

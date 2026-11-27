@@ -59,7 +59,9 @@ anyone, written by you only: what it holds is there to be checked by
 others), writes there, and You shows the two lines to add to your WebID
 document by hand, with a copy button. Until they are added, only you see
 what the steps saved there: a collective reading your request finds no
-`org:memberOf` and says so.
+`org:memberOf` and says so. The name the steps saved there is the one
+shown, over the card's. A line the card itself holds (added by hand) cannot
+be removed by an app: the step refuses and says where to remove it.
 
 ## Newcomers
 
