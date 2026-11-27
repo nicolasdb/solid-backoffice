@@ -32,6 +32,37 @@ What depends on it (agents) is offered when the provider says it offers it
 (`/.well-known/css/provider.json`, solid-kit ADR 010), and otherwise shown
 with why not.
 
+## A profile no app can write
+
+"Your profile" is usually `profile/card` in your pod, which the steps on
+You write. A WebID on your own domain
+(`https://id.openfab.be/profile/card#me`, solid-kit
+[ADR 002](https://github.com/nicolasdb/solid-kit/blob/main/docs/adr/002-portability-tiers.md),
+tier 1, amendment of 2026-11-26) is a static file: no app can write it, and
+before this every step that wrote it ended in a NetworkError.
+
+So a profile is read as **the WebID document plus the extended documents it
+links** with `rdfs:seeAlso` or `foaf:isPrimaryTopicOf` (either one), one
+level only, and only when they are inside a `pim:storage` the WebID
+document itself declares: anyone can link anything, only you write in your
+pod. A linked document outside it is ignored; one that fails to load is
+skipped. This is how the collective checks a request (`org:memberOf`) and
+how a member's agents are found (`acl:delegates`): one function per
+decision in `src/lib/collective.ts` (`declaresMembership`,
+`declaredDelegates`), so another authorization backend can replace it.
+
+Writing follows the same rule. A step writes your WebID document only if
+the server says you may (`WAC-Allow`, else `Allow`, on its GET; a static
+file says neither). Otherwise it writes the extended document your profile
+links in your pod. With none, it creates `profile/about.ttl` (readable by
+anyone, written by you only: what it holds is there to be checked by
+others), writes there, and You shows the two lines to add to your WebID
+document by hand, with a copy button. Until they are added, only you see
+what the steps saved there: a collective reading your request finds no
+`org:memberOf` and says so. The name the steps saved there is the one
+shown, over the card's. A line the card itself holds (added by hand) cannot
+be removed by an app: the step refuses and says where to remove it.
+
 ## Newcomers
 
 Most newcomers have no Solid account and already know the collective that

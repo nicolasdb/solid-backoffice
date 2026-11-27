@@ -659,7 +659,8 @@ both themes.
    only, the lines `foaf:name`, `ldp:inbox`, `acl:delegates` and each
    `org:memberOf` marked ("Your name", "Joined HyperScope"…). Change your
    name: the marked line changes with it. "Open in Pods" opens the same
-   file in Pods.
+   file in Pods. A profile that links an extended profile in your pod
+   shows it below, with its address ([extended profile](#extended-profile--a-webid-on-your-own-domain)).
 
 ## E · A member's agents read what the member reads
 
@@ -743,6 +744,43 @@ subdomains: the address is `https://openfab.pod.mapsofmaking.org/`.
     written) and one step; it starts no pull.
 12. **A member.** The newcomer follows the link, asks to join, is accepted,
     shares a folder: J1 to J4 on this pod.
+
+## Extended profile · a WebID on your own domain
+
+Not yet run (solid-backoffice#26, solid-kit ADR 002 amendment of
+2026-11-26). Signed in as a tier-1 WebID, such as
+`https://id.openfab.be/profile/card#me` (a static file declaring
+`pim:storage <https://openfab.pod.syntonie.be/>`). Do it twice: once with
+the profile linking `profile/about.ttl` (`rdfs:seeAlso` and
+`foaf:isPrimaryTopicOf`), once on an account whose profile links nothing
+and whose pod has no `profile/about.ttl` yet.
+
+1. **You, read.** "Source · …/profile/card" says the file cannot be
+   written by apps; a linked `profile/about.ttl` is shown below it with
+   its address and "Open in Pods", its lines marked like the profile's.
+2. **The inbox step.** Without an inbox: "Create my inbox" (or "Use this
+   inbox"). No NetworkError, no "Failed to fetch". In Pods,
+   `profile/about.ttl` now holds `ldp:inbox`; the WebID document is
+   unchanged.
+3. **No extended profile yet.** On the second account, the same step
+   creates `profile/about.ttl`. Its access: anyone can read, only you edit
+   (Pods → "Who can access it"); in a private window it opens. You shows
+   "Link your extended profile" with the two lines; "Copy the two lines"
+   copies them. Add them to the WebID document where it is hosted, reload:
+   the step is gone and the extended profile is shown as linked.
+4. **Name and may act for you.** Change the name; add an agent. Both land
+   in `profile/about.ttl`, marked in the source; the new name is the one
+   shown, even though the card keeps its own. Remove an agent the card
+   itself names (a line added by hand): refused, saying to remove it where
+   the file is hosted; nothing is written. Leave a collective the card
+   names: the same.
+5. **Membership, read by the collective.** Join a collective. Signed in as
+   its account, the request shows "Profile says they belong to …" (read
+   from `about.ttl`). Before the two lines are added, it says the profile
+   does not, and the join's message says why.
+6. **Tier 0 unchanged.** As a WebID in its own pod (`…/profile/card#me`
+   on the provider), every step still writes `profile/card`, and no
+   `profile/about.ttl` appears.
 
 ## H · Mermaid in the Markdown preview
 

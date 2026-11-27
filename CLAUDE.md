@@ -57,7 +57,13 @@ one changes, change the other. Never point it at the real provider.
   `getAccess` is a write's base (always fresh); `readAccess` is for showing
   (the `.acl`'s location from memory, the document through `read.ts`).
 - `src/lib/collective.ts` — ADR 006, member side: config, profile and roster
-  parsing, the membership state table, `as:Join` / `as:Announce`.
+  parsing, the membership state table, `as:Join` / `as:Announce`. A
+  profile is read with the extended documents it links (`rdfs:seeAlso` /
+  `foaf:isPrimaryTopicOf`, one level, only inside a `pim:storage` it
+  declares), and `updateOwnProfile` writes the WebID document only when its
+  GET answers as writable, else the linked extended document, else a new
+  `profile/about.ttl` (solid-kit ADR 002 amendment, solid-backoffice#26;
+  `docs/explanation/membership.md`).
 - `src/lib/admin.ts` — ADR 006, collective side: read the inbox, check each
   requester's profile, accept / refuse / remove (order pinned in
   `src/lib/admin.test.ts`), members from both sides. `src/lib/activity.ts`
@@ -94,7 +100,9 @@ one changes, change the other. Never point it at the real provider.
   to, joining); one collective opens inside it as `src/member.ts`
   (sharing, leaving, its members and agent) or `src/admin.ts` (the one you
   run). `src/you.ts` is You (name, inbox, may act for you, your agents on our
-  provider, and `profile/card` read only with the steps' lines marked). `src/steps.ts` holds the pieces they
+  provider, and `profile/card` read only with the steps' lines marked,
+  the extended profile below it, and the two lines to add when the profile
+  cannot be written and does not link it). `src/steps.ts` holds the pieces they
   share. No role, progress or tab state is stored.
 - `src/places.ts` — Pods (slice C, the tab once called Places): your pod
   as a file explorer, built as an iceberg (list → `···` menu → access

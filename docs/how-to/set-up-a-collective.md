@@ -21,7 +21,11 @@ members share; it switches sharing on in `config.ttl` once the agent exists
    collective's address and in every member's `org:memberOf`.
 2. **Create the inbox** from You → "Create my inbox". It makes `inbox/`, lets
    any signed-in account Append there, then names it `ldp:inbox` in the
-   profile, in that order. `config.ttl` points at the same `inbox/`, so the
+   profile, in that order (for a WebID on the collective's own domain, a
+   file apps cannot write, these profile lines go to `profile/about.ttl` in
+   the pod instead, and You gives the two lines that link it:
+   [a profile no app can write](../explanation/membership.md#a-profile-no-app-can-write)).
+   `config.ttl` points at the same `inbox/`, so the
    account and the collective share one.
 3. **Upload `config.ttl`** at the pod root, from the
    [template](../../templates/collective/config.ttl): replace every
@@ -51,7 +55,7 @@ members share; it switches sharing on in `config.ttl` once the agent exists
    compare it with what step 3 wrote.
 7. **Let it act for the collective**: on You, the step "May act for you",
    offers the agent in one click. That writes `acl:delegates` in the
-   account's profile, which is how the agent's skill checks it acts for this
+   account's profile (or its `profile/about.ttl`, as in step 2), which is how the agent's skill checks it acts for this
    collective. Creating the agent does not do it.
 8. **Switch sharing on** in `config.ttl`: uncomment `sc:feature sc:Sharing`,
    `sc:agent` and, if you suggest a folder, `sc:suggestedFolder`. `sc:agent`

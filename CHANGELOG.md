@@ -4,6 +4,23 @@ Versions follow `package.json`. A tag `v<version>` publishes the image
 `ghcr.io/nicolasdb/solid-backoffice:<version>` (`.github/workflows/ci.yml`);
 an instance pins it in `instance-template/.env`.
 
+## Unreleased
+
+- **A WebID on your own domain works with every profile step** (#26,
+  solid-kit ADR 002 amendment of 2026-11-26). Such a profile is a static
+  file no app can write, so "Use this inbox", the name, "May act for you"
+  and joining ended in a NetworkError. Each step now writes the profile
+  only when its server says it may (`WAC-Allow` / `Allow`), else the
+  extended profile it links in your pod, else a new `profile/about.ttl`
+  (public read, you edit), and You shows the two lines to add to your
+  profile, with a copy button.
+- **Profiles are read with their extended profile**: the documents linked
+  with `rdfs:seeAlso` or `foaf:isPrimaryTopicOf`, one level, only inside a
+  `pim:storage` the profile declares. A collective checking a request, the
+  members table and the agents found for a member count a membership or a
+  delegation written only there. You shows the extended profile under the
+  profile, with its address.
+
 ## 0.3.1 — 2026-11-24
 
 - **Sign-up: the passphrase toggle is an eye inside the field** (#23). The

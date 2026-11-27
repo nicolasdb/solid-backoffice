@@ -25,7 +25,7 @@ import {
   type MemberView,
   type Person,
 } from "./lib/admin";
-import type { Collective } from "./lib/collective";
+import { declaresMembership, type Collective } from "./lib/collective";
 import { describePodError } from "./lib/pod";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
@@ -136,8 +136,8 @@ function renderRequest(request: Request, i: number, collective: Collective): str
   const name = esc(collective.name);
   const facts = profile
     ? `<ul class="checks">
-         ${check(profile.memberOf.includes(collective.group),
-           profile.memberOf.includes(collective.group) ? `Profile says they belong to ${name}` : `Profile does not say they belong to ${name}`)}
+         ${check(declaresMembership(profile, collective.group),
+           declaresMembership(profile, collective.group) ? `Profile says they belong to ${name}` : `Profile does not say they belong to ${name}`)}
          ${check(!!profile.inbox, profile.inbox ? "Has an inbox for the answer" : "No inbox: the answer cannot be sent; tell them another way")}
          ${check(profile.delegates.length > 0, `Agents: ${profile.delegates.length ? profile.delegates.map((d) => `<code>${esc(d)}</code>`).join(", ") : "none"}`)}
        </ul>`

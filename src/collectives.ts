@@ -112,7 +112,7 @@ export function bindCollectives(app: HTMLElement, data: Loaded, ctx: ViewContext
       // Profile first: if the message then fails, the screen shows the
       // request as pending and offers to send it again. The other order
       // would leave the collective holding a request the profile denies.
-      await updateOwnProfile(webId, profileEdits.join(collective.group));
+      const written = await updateOwnProfile(webId, profileEdits.join(collective.group));
       // Already listed: declaring completes the handshake, and a request
       // would ask the collective for something it has already done.
       if (view.state !== "left") {
@@ -120,7 +120,15 @@ export function bindCollectives(app: HTMLElement, data: Loaded, ctx: ViewContext
       }
       // The profile now carries the link; the invitation has done its job.
       setInvite(null);
-      announce(`Request sent to ${collective.name}.`);
+      // Written to an extended profile your profile does not link yet: the
+      // collective cannot see it until the two lines on You are added.
+      if (written?.linkToAdd) {
+        const msg = `Request sent to ${collective.name}. It sees your membership once your profile links your extended profile: You shows the two lines to add.`;
+        toast(msg);
+        announce(msg);
+      } else {
+        announce(`Request sent to ${collective.name}.`);
+      }
     }, rerender);
   });
 }

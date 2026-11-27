@@ -7,30 +7,67 @@
  * holds. Editing it by hand is Pods' job (its editor saves with If-Match);
  * a broken card can break sign-in, so not here.
  *
+ * A WebID on your own domain (solid-kit ADR 002, tier 1) is a static file no
+ * app can write: the steps then write to your extended profile in the pod
+ * (`profile/about.ttl`, `updateOwnProfile`), and the source shows it below
+ * the profile, with its address. When the profile does not link it yet, a
+ * step gives the two lines to add by hand.
+ *
  * Every write here is on the signed-in user's own pod.
  */
 import { isValidWebId } from "./lib/acl";
 import { createInbox } from "./lib/newcomer";
-import { NS, profileDocOf, profileEdits, updateOwnProfile, type Collective, type MemberDeclaration } from "./lib/collective";
-import { readTurtle } from "./lib/read";
+import {
+  NS,
+  linkLines,
+  profileDocOf,
+  profileEdits,
+  readOwnProfileDocuments,
+  updateOwnProfile,
+  type Collective,
+  type MemberDeclaration,
+  type ProfileReadError,
+} from "./lib/collective";
 import { describePodError } from "./lib/pod";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { bindButton, bindForm } from "./bind";
 import { routeHref } from "./router";
-import { copyable } from "./steps";
+import { bindCopy, copyable } from "./steps";
 import type { Loaded, ViewContext } from "./onboarding";
 import { agentsSlot, agentSuggestionsFromAccount, mountAgents } from "./agents-view";
 
-/** Your profile document as the pod holds it, or why it could not be read. */
-export type Source = { text: string } | { error: string };
+/** An extended profile document shown under the profile; `linked: false` when the profile does not link it yet. */
+export interface ExtendedSource {
+  url: string;
+  text: string;
+  linked: boolean;
+}
+
+/**
+ * Your profile document as the server holds it, the extended documents it
+ * links inside your storage, and the links it has outside it (never read);
+ * or why it could not be read.
+ */
+export type Source =
+  | { text: string; writable: boolean; extended: ExtendedSource[]; ignored: string[] }
+  | { error: string };
 
 export async function readSource(webId: string): Promise<Source> {
   try {
-    const res = await readTurtle(profileDocOf(webId));
-    if (!res.ok) return { error: `Could not read your profile (${res.status}).` };
-    return { text: await res.text() };
+    const docs = await readOwnProfileDocuments(webId);
+    return {
+      text: docs.profile.text,
+      writable: docs.writable,
+      extended: [
+        ...docs.extended.map((d) => ({ ...d, linked: true })),
+        ...(docs.unlinked ? [{ ...docs.unlinked, linked: false }] : []),
+      ],
+      ignored: docs.ignored,
+    };
   } catch (err) {
+    const status = (err as ProfileReadError).status;
+    if (status !== undefined) return { error: `Could not read your profile (${status}).` };
     return { error: describePodError(err) };
   }
 }
@@ -101,16 +138,39 @@ export function renderYouView(data: Loaded, webId: string, podUrl: string, sourc
   ]);
   const doc = profileDocOf(webId);
   const inPod = doc.startsWith(podUrl) ? doc.slice(podUrl.length) : null;
+  const pre = (text: string, label: string) =>
+    `<pre class="source" aria-label="${esc(label)}"><code>${sourceLines(text, names)
+      .map(({ line, mark }) =>
+        mark
+          ? `<span class="src-line is-marked"><span class="src-mark">${esc(mark)}</span>${esc(line)}</span>`
+          : `<span class="src-line">${esc(line) || " "}</span>`
+      )
+      .join("")}</code></pre>`;
+  const extended = (e: ExtendedSource) => {
+    const path = e.url.startsWith(podUrl) ? e.url.slice(podUrl.length) : null;
+    return `
+        <div class="source-head">
+          <h3 class="section-title">Extended profile · ${esc(path ?? e.url)}</h3>
+          ${path !== null ? `<a href="${routeHref({ name: "places", path })}">Open in Pods</a>` : ""}
+        </div>
+        <p class="meta">${
+          e.linked
+            ? "Linked from your profile. Read with it, by you and by others."
+            : "Your profile does not link it yet: only you see these lines. Add the two lines of “Link your extended profile”."
+        }</p>
+        ${pre(e.text, `Your extended profile, ${path ?? e.url}`)}`;
+  };
   const src =
     "error" in source
       ? `<p class="error" role="alert">${esc(source.error)}</p>`
-      : `<pre class="source" aria-label="Your profile document"><code>${sourceLines(source.text, names)
-          .map(({ line, mark }) =>
-            mark
-              ? `<span class="src-line is-marked"><span class="src-mark">${esc(mark)}</span>${esc(line)}</span>`
-              : `<span class="src-line">${esc(line) || " "}</span>`
-          )
-          .join("")}</code></pre>`;
+      : [
+          source.writable ? "" : `<p class="meta">A file apps cannot write: the steps write to your extended profile, below.</p>`,
+          pre(source.text, "Your profile document"),
+          ...source.extended.map(extended),
+          ...source.ignored.map(
+            (url) => `<p class="meta">Your profile also links <code>${esc(url)}</code>, outside your pod: it is not read, so what it says counts for nothing here.</p>`
+          ),
+        ].join("");
   return `
     <div class="you-grid">
       <div class="stack">
@@ -119,6 +179,7 @@ export function renderYouView(data: Loaded, webId: string, podUrl: string, sourc
           <h1 data-view-title>${esc(profile.name ?? "You")}</h1>
         </div>
         <div class="you-card">
+          ${profile.unlinked ? stepLink(webId, profile.unlinked) : ""}
           ${stepName(profile)}
           ${stepInbox(profile, unadvertisedInbox)}
           ${stepAgent(profile, run?.collective ?? null)}
@@ -132,7 +193,7 @@ export function renderYouView(data: Loaded, webId: string, podUrl: string, sourc
         </div>
         ${copyable(webId, "WebID copied.")}
         ${src}
-        <p class="meta">Your profile as your pod holds it, read just now: everything the steps beside it write, marked. Collectives read it; they never write it. Read only here; in Pods, its editor saves only if nobody changed it meanwhile.</p>
+        <p class="meta">Your profile as its server holds it, read just now, and the extended profile it links in your pod, if any: everything the steps beside it write, marked. Collectives read them; they never write them. Read only here; in Pods, its editor saves only if nobody changed it meanwhile.</p>
         <p class="meta">An agent's own document is separate: <code>profile/&lt;name&gt;</code>, public, so servers can check who it is. Your profile only names it when it may act for you.</p>
       </section>
     </div>`;
@@ -142,6 +203,7 @@ export function bindYou(app: HTMLElement, data: Loaded, ctx: ViewContext): void 
   const { webId, podUrl, rerender } = ctx;
   const { unadvertisedInbox } = data;
   mountAgents(app, ctx);
+  bindCopy(app);
 
   bindForm(app, "#name-form", async (form) => {
     const name = (form.elements.namedItem("name") as HTMLInputElement).value.trim();
@@ -184,9 +246,32 @@ export function bindYou(app: HTMLElement, data: Loaded, ctx: ViewContext): void 
   }
 }
 
-/** Steps of You still to do: a name and an inbox (the agent is optional). */
+/** Steps of You still to do: a name, an inbox, and the link to an extended profile nobody finds yet (the agent is optional). */
 export function youTodo(profile: MemberDeclaration): number {
-  return (profile.name ? 0 : 1) + (profile.inbox ? 0 : 1);
+  return (profile.name ? 0 : 1) + (profile.inbox ? 0 : 1) + (profile.unlinked ? 1 : 0);
+}
+
+/**
+ * Your profile is a file apps cannot write and does not link the extended
+ * profile the steps wrote: the two lines to add to it by hand, to copy. Until
+ * then nobody else reads what the steps saved (ADR 002 amendment, point 2).
+ */
+function stepLink(webId: string, extended: string): string {
+  const lines = linkLines(webId, extended);
+  return youRow(
+    "Link your extended profile",
+    false,
+    "",
+    `<p class="lead">
+       Your profile, <code>${esc(profileDocOf(webId))}</code>, is a file apps
+       cannot write. What the steps here save goes to
+       <code>${esc(extended)}</code> in your pod instead. Collectives and
+       agents find it only once your profile links it: add these two lines at
+       the end of your profile, where it is hosted.
+     </p>
+     <pre class="source"><code>${esc(lines)}</code></pre>
+     <p>${copyable(lines, "The two lines are copied.", "Copy the two lines")}</p>`
+  );
 }
 
 function stepName(profile: MemberDeclaration): string {
