@@ -27,6 +27,7 @@ import {
 } from "./lib/admin";
 import { declaresMembership, type Collective } from "./lib/collective";
 import { describePodError } from "./lib/pod";
+import { webIdName } from "./ui/address";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { bindButton, bindForm, run } from "./bind";
@@ -130,6 +131,19 @@ function check(ok: boolean, text: string): string {
   return `<li class="check"><span class="dot ${ok ? "is-done" : "is-todo"}" aria-hidden="true"></span>${text}</li>`;
 }
 
+/**
+ * Agents are not a condition to accept, so no dot: a plain line. Accepting
+ * also gives each agent their profile declares Read on the roster, so the
+ * line says so before the owner clicks.
+ */
+function agentsLine(delegates: string[]): string {
+  if (!delegates.length) return "No agent acts for them.";
+  const list = delegates.map((d) => copyable(d, "WebID copied.", webIdName(d))).join(", ");
+  return delegates.length === 1
+    ? `Their agent reads the roster too once accepted: ${list}`
+    : `Their agents read the roster too once accepted: ${list}`;
+}
+
 function renderRequest(request: Request, i: number, collective: Collective): string {
   const { message, person, flags, listed, knownNick, nick, nickTakenBy } = request;
   const profile = person.profile;
@@ -139,8 +153,8 @@ function renderRequest(request: Request, i: number, collective: Collective): str
          ${check(declaresMembership(profile, collective.group),
            declaresMembership(profile, collective.group) ? `Profile says they belong to ${name}` : `Profile does not say they belong to ${name}`)}
          ${check(!!profile.inbox, profile.inbox ? "Has an inbox for the answer" : "No inbox: the answer cannot be sent; tell them another way")}
-         ${check(profile.delegates.length > 0, `Agents: ${profile.delegates.length ? profile.delegates.map((d) => `<code>${esc(d)}</code>`).join(", ") : "none"}`)}
-       </ul>`
+       </ul>
+       <p class="meta">${agentsLine(profile.delegates)}</p>`
     : `<p class="meta">${esc(person.problem ?? "Their profile could not be read.")}</p>`;
   const sent = message.published ? `<span class="meta">${esc(new Date(message.published).toLocaleDateString())}</span>` : "";
 

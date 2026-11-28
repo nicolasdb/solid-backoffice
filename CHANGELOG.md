@@ -4,6 +4,15 @@ Versions follow `package.json`. A tag `v<version>` publishes the image
 `ghcr.io/nicolasdb/solid-backoffice:<version>` (`.github/workflows/ci.yml`);
 an instance pins it in `instance-template/.env`.
 
+## Unreleased
+
+- **A request says what accepting gives its agents**: "Agents: none" with
+  an empty dot read like something missing, though agents are no condition.
+  It is now a plain line: "No agent acts for them.", or "Their agent reads
+  the roster too once accepted: …", since accepting grants it Read. Each
+  agent shows by its name (`intern-agent`), the whole WebID one click away
+  to copy, so two long addresses no longer squeeze the line.
+
 ## 0.3.2 — 2026-11-27
 
 - **A WebID on your own domain works with every profile step** (#26,
