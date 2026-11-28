@@ -4,7 +4,7 @@ Versions follow `package.json`. A tag `v<version>` publishes the image
 `ghcr.io/nicolasdb/solid-backoffice:<version>` (`.github/workflows/ci.yml`);
 an instance pins it in `instance-template/.env`.
 
-## Unreleased
+## 0.3.3 — 2026-11-28
 
 - **A request says what accepting gives its agents**: "Agents: none" with
   an empty dot read like something missing, though agents are no condition.
