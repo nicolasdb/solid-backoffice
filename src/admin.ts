@@ -27,6 +27,7 @@ import {
 } from "./lib/admin";
 import { declaresMembership, type Collective } from "./lib/collective";
 import { describePodError } from "./lib/pod";
+import { webIdName } from "./ui/address";
 import { announce } from "./ui/a11y";
 import { esc, toast } from "./ui/patterns";
 import { bindButton, bindForm, run } from "./bind";
@@ -137,7 +138,7 @@ function check(ok: boolean, text: string): string {
  */
 function agentsLine(delegates: string[]): string {
   if (!delegates.length) return "No agent acts for them.";
-  const list = delegates.map((d) => `<code>${esc(d)}</code>`).join(", ");
+  const list = delegates.map((d) => copyable(d, "WebID copied.", webIdName(d))).join(", ");
   return delegates.length === 1
     ? `Their agent reads the roster too once accepted: ${list}`
     : `Their agents read the roster too once accepted: ${list}`;
